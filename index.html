@@ -349,21 +349,37 @@ dialog::backdrop{background:rgba(5,15,10,.55)}
       <div class="leaders" id="bLeaders"></div>
       <div class="scroll"><table id="bTbl"></table></div>
       <p class="hint" id="qualHint"></p>
-      <details><summary class="sub" style="cursor:pointer">Glosario y fórmulas</summary>
-        <div class="glossary" style="margin-top:10px">
-          <div><b>PA</b> Apariciones: AB+BB+HBP+SF+SH</div>
-          <div><b>AVG</b> H / AB</div>
-          <div><b>OBP</b> (H+BB+HBP) / (AB+BB+HBP+SF)</div>
-          <div><b>SLG</b> TB / AB</div>
-          <div><b>OPS</b> OBP + SLG</div>
-          <div><b>ISO</b> SLG − AVG (poder aislado)</div>
-          <div><b>BABIP</b> (H−HR) / (AB−SO−HR+SF)</div>
-          <div><b>wOBA</b> Pesos lineales tipo MLB: BB .69, HBP .72, 1B .89, 2B 1.27, 3B 1.62, HR 2.10</div>
-          <div><b>K% / BB%</b> SO / PA · BB / PA</div>
-          <div><b>SB%</b> SB / (SB+CS)</div>
-          <div><b>Calificado</b> 3.1 PA por juego del equipo (regla MLB)</div>
-        </div>
-      </details>
+      <div><h3 style="margin-bottom:8px">Qué significa cada columna</h3>
+        <div class="glossary">
+          <div><b>G</b> Juegos: Partidos en los que tuvo al menos una aparición al bat.</div>
+          <div><b>PA</b> Apariciones al plato: AB + BB + HBP + SF + SH. Todas las veces que llegó a batear.</div>
+          <div><b>AB</b> Turnos oficiales: Apariciones sin contar BB, HBP, SF ni SH.</div>
+          <div><b>R</b> Carreras anotadas: Veces que cruzó el home.</div>
+          <div><b>H</b> Hits: Llegó a base por batazo limpio (sencillo, doble, triple o HR).</div>
+          <div><b>2B</b> Dobles: Hits en los que llegó a segunda.</div>
+          <div><b>3B</b> Triples: Hits en los que llegó a tercera.</div>
+          <div><b>HR</b> Home runs: Cuadrangulares.</div>
+          <div><b>RBI</b> Carreras impulsadas: Carreras que anotaron gracias a su turno (CI).</div>
+          <div><b>BB</b> Bases por bolas: Incluye las intencionales.</div>
+          <div><b>SO</b> Ponches: Tirándole o cantados.</div>
+          <div><b>HBP</b> Golpeado: Base por golpe (BG).</div>
+          <div><b>SF</b> Fly de sacrificio: Elevado que impulsa carrera; no cuenta como AB.</div>
+          <div><b>SH</b> Toque de sacrificio: Toque para avanzar corredores; no cuenta como AB.</div>
+          <div><b>SB</b> Bases robadas: Bases que se robó (BR).</div>
+          <div><b>CS</b> Atrapado robando: Veces que lo sacaron out intentando robar (AR).</div>
+          <div><b>TB</b> Bases totales: 1B + 2×2B + 3×3B + 4×HR.</div>
+          <div><b>AVG</b> Promedio de bateo: H / AB. Arriba de .300 es excelente.</div>
+          <div><b>OBP</b> Porcentaje de embasado: (H + BB + HBP) / (AB + BB + HBP + SF). Qué tan seguido se embasa.</div>
+          <div><b>SLG</b> Slugging: TB / AB. Mide el poder: bases por turno.</div>
+          <div><b>OPS</b> Embasado + slugging: OBP + SLG. Resume la producción ofensiva; arriba de .800 es muy bueno.</div>
+          <div><b>ISO</b> Poder aislado: SLG − AVG. Cuántas bases extra produce por turno.</div>
+          <div><b>BABIP</b> Promedio en bolas en juego: (H − HR) / (AB − SO − HR + SF). Muy alto o muy bajo suele indicar suerte.</div>
+          <div><b>wOBA</b> Embasado ponderado: Da un valor a cada forma de embasarse: BB .69, HBP .72, 1B .89, 2B 1.27, 3B 1.62, HR 2.10, entre AB + BB + SF + HBP. Se lee como el OBP.</div>
+          <div><b>K%</b> Porcentaje de ponches: SO / PA.</div>
+          <div><b>BB%</b> Porcentaje de bases por bolas: BB / PA. Mide la disciplina en el plato.</div>
+          <div><b>SB%</b> Efectividad robando: SB / (SB + CS). Arriba de 75% conviene seguir corriendo.</div>
+          <div><b>Calificado</b> Mínimo de turnos: 3.1 PA por cada juego del equipo (regla de MLB) para entrar en los líderes de porcentajes.</div>
+        </div></div>
     </div>
   </section>
 
@@ -379,7 +395,30 @@ dialog::backdrop{background:rgba(5,15,10,.55)}
       </div>
       <div class="leaders" id="pLeaders"></div>
       <div class="scroll"><table id="pTbl"></table></div>
-      <p class="hint">ERA = CL × entradas por juego / IP. WHIP = (BB + H) / IP. K/9 y BB/9 se escalan igual que la ERA. Calificado para líderes de ERA y WHIP: 1 IP por juego del equipo (regla MLB).</p>
+      <div><h3 style="margin-bottom:8px">Qué significa cada columna</h3>
+        <div class="glossary">
+          <div><b>JL</b> Juegos lanzados: Partidos en los que lanzó.</div>
+          <div><b>JI</b> Juegos iniciados: Partidos en los que abrió como pitcher.</div>
+          <div><b>G</b> Ganados: Juegos en los que fue pitcher ganador.</div>
+          <div><b>P</b> Perdidos: Juegos en los que fue pitcher perdedor.</div>
+          <div><b>SV</b> Salvamentos: Cerró el juego conservando una ventaja corta.</div>
+          <div><b>IP</b> Entradas lanzadas: 5.2 = cinco entradas y dos outs (cada out es 1/3 de entrada).</div>
+          <div><b>H</b> Hits permitidos: Hits que le conectaron.</div>
+          <div><b>C</b> Carreras permitidas: Todas las carreras, limpias o no.</div>
+          <div><b>CL</b> Carreras limpias: Carreras que no vinieron de errores ni passed balls.</div>
+          <div><b>HR</b> Jonrones permitidos: Cuadrangulares que le conectaron.</div>
+          <div><b>BB</b> Bases por bolas: Bases por bolas que otorgó.</div>
+          <div><b>K</b> Ponches: Bateadores que ponchó.</div>
+          <div><b>BG</b> Golpeados: Bateadores que golpeó.</div>
+          <div><b>WP</b> Lanzamientos salvajes: Wild pitches que dejaron avanzar corredores.</div>
+          <div><b>ERA</b> Efectividad: CL × entradas por juego / IP. Carreras limpias que permitiría en un juego completo; menos es mejor.</div>
+          <div><b>WHIP</b> Corredores por entrada: (BB + H) / IP. Cuántos se le embasan por entrada; abajo de 1.20 es muy bueno.</div>
+          <div><b>K/9</b> Ponches por juego: K × entradas por juego / IP.</div>
+          <div><b>BB/9</b> Bases por bolas por juego: BB × entradas por juego / IP; menos es mejor.</div>
+          <div><b>K/BB</b> Control: K / BB. Ponches por cada base por bolas; arriba de 3 es excelente.</div>
+          <div><b>Calificado</b> Mínimo de entradas: 1 IP por cada juego del equipo (regla de MLB) para entrar en los líderes de ERA y WHIP.</div>
+        </div>
+        <p class="hint" style="margin-top:8px">"Entradas por juego" se elige arriba: 9 como en MLB o 7 para ligas de 7 entradas. Cambia ERA, K/9 y BB/9.</p></div>
     </div>
   </section>
 
@@ -1132,8 +1171,10 @@ function sortRows(rows, st) {
     x = isNaN(x) ? Infinity * st.dir : x; y = isNaN(y) ? Infinity * st.dir : y; return st.dir * (x - y);
   });
 }
+const BTIPS = {"g": "Juegos", "pa": "Apariciones al plato", "ab": "Turnos oficiales", "r": "Carreras anotadas", "h": "Hits", "d": "Dobles", "t": "Triples", "hr": "Home runs", "rbi": "Carreras impulsadas", "bb": "Bases por bolas", "so": "Ponches", "hbp": "Golpeado", "sf": "Fly de sacrificio", "sh": "Toque de sacrificio", "sb": "Bases robadas", "cs": "Atrapado robando", "tb": "Bases totales", "avg": "Promedio de bateo H/AB", "obp": "Porcentaje de embasado", "slg": "Slugging TB/AB", "ops": "OBP + SLG", "iso": "Poder aislado SLG-AVG", "babip": "Promedio en bolas en juego", "woba": "Embasado ponderado", "kp": "Porcentaje de ponches", "bbp": "Porcentaje de bases por bolas", "sbp": "Efectividad robando"};
+const PTIPS = {"g": "Juegos lanzados", "gs": "Juegos iniciados", "w": "Ganados", "l": "Perdidos", "sv": "Salvamentos", "outs": "Entradas lanzadas", "h": "Hits permitidos", "r": "Carreras permitidas", "er": "Carreras limpias", "hr": "Jonrones permitidos", "bb": "Bases por bolas", "so": "Ponches", "hbp": "Golpeados", "wp": "Lanzamientos salvajes", "era": "Efectividad", "whip": "Corredores por entrada (BB+H)/IP", "k9": "Ponches por juego", "bb9": "Bases por bolas por juego", "kbb": "Ponches por base por bolas"};
 const TIPS = { po: 'Outs realizados', a: 'Asistencias', e: 'Errores', dp: 'Dobles matanzas', tc: 'Oportunidades totales (PO+A+E)', fpct: 'Porcentaje de fildeo (PO+A)/TC', rf: 'Factor de alcance (PO+A) por juego' };
-const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${TIPS[c[0]] && cols === fCols ? ` title="${TIPS[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
+const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${(cols === fCols ? TIPS : cols === bCols ? BTIPS : cols === pCols ? PTIPS : {})[c[0]] ? ` title="${(cols === fCols ? TIPS : cols === bCols ? BTIPS : PTIPS)[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
 const emptyStats = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Las estadísticas aparecen en cuanto guardes el primer juego.</td></tr></tbody>';
 function leaderCard(arr, k, lab, fmt) { const p = arr.filter(p => !isNaN(p[k])).sort((a, b) => fmt.asc ? a[k] - b[k] : b[k] - a[k])[0]; return `<div class="leader"><span class="k">${lab}</span><span class="v">${p ? fmt.f(p[k]) : '—'}</span><span class="who">${p ? (p.pid ? plink(p.pid, p.name) : esc(p.name)) : 'Sin datos'}</span></div>`; }
 const F3 = { f: v => fmtRate(v) }, F2a = { f: v => fmtRate(v, 2), asc: true }, FI = { f: v => v };
