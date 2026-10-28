@@ -395,7 +395,18 @@ dialog::backdrop{background:rgba(5,15,10,.55)}
       </div>
       <div class="leaders" id="fLeaders"></div>
       <div class="scroll"><table id="fTbl"></table></div>
-      <p class="hint">TC = oportunidades totales (PO+A+E). FPCT = (PO+A) / TC. RF/G = (PO+A) por juego.</p>
+      <div><h3 style="margin-bottom:8px">Qué significa cada columna</h3>
+        <div class="glossary">
+          <div><b>G</b> Juegos: partidos en los que el jugador estuvo en el lineup o lanzó.</div>
+          <div><b>Pos</b> Posición o posiciones defensivas que jugó (1B, SS, CF…).</div>
+          <div><b>PO</b> Outs realizados (putouts): el jugador que completa el out, por ejemplo al pisar la base, atrapar un elevado o, el catcher, en un ponche.</div>
+          <div><b>A</b> Asistencias: tiros o toques que ayudan a hacer un out, como el tiro del SS a primera en un 6-3.</div>
+          <div><b>E</b> Errores: jugadas que con esfuerzo normal debieron ser out y permitieron al corredor avanzar o seguir vivo.</div>
+          <div><b>DP</b> Dobles matanzas (double plays) en las que participó, ya sea con out o asistencia.</div>
+          <div><b>TC</b> Oportunidades totales: PO + A + E. Indica cuántas jugadas le llegaron.</div>
+          <div><b>FPCT</b> Porcentaje de fildeo: (PO + A) / TC. 1.000 significa cero errores; en MLB un buen promedio ronda .980.</div>
+          <div><b>RF/G</b> Factor de alcance por juego: (PO + A) / G. Mide cuántas jugadas resuelve por partido; compáralo entre jugadores de la misma posición.</div>
+        </div></div>
     </div>
   </section>
 
@@ -1121,7 +1132,8 @@ function sortRows(rows, st) {
     x = isNaN(x) ? Infinity * st.dir : x; y = isNaN(y) ? Infinity * st.dir : y; return st.dir * (x - y);
   });
 }
-const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}">${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
+const TIPS = { po: 'Outs realizados', a: 'Asistencias', e: 'Errores', dp: 'Dobles matanzas', tc: 'Oportunidades totales (PO+A+E)', fpct: 'Porcentaje de fildeo (PO+A)/TC', rf: 'Factor de alcance (PO+A) por juego' };
+const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${TIPS[c[0]] && cols === fCols ? ` title="${TIPS[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
 const emptyStats = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Las estadísticas aparecen en cuanto guardes el primer juego.</td></tr></tbody>';
 function leaderCard(arr, k, lab, fmt) { const p = arr.filter(p => !isNaN(p[k])).sort((a, b) => fmt.asc ? a[k] - b[k] : b[k] - a[k])[0]; return `<div class="leader"><span class="k">${lab}</span><span class="v">${p ? fmt.f(p[k]) : '—'}</span><span class="who">${p ? (p.pid ? plink(p.pid, p.name) : esc(p.name)) : 'Sin datos'}</span></div>`; }
 const F3 = { f: v => fmtRate(v) }, F2a = { f: v => fmtRate(v, 2), asc: true }, FI = { f: v => v };
