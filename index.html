@@ -280,6 +280,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <div class="row">
           <button class="btn" id="btnNewGame">Box score en blanco</button>
           <button class="btn primary" id="btnSave">Guardar juego</button>
+          <button type="button" class="btn" id="btnPdfSheet">Reporte PDF</button>
           <button type="button" class="btn fs-btn" id="btnFs" aria-pressed="false"></button>
         </div>
       </div>
@@ -1528,6 +1529,125 @@ $('#btnPdfB').addEventListener('click', () => pdfStats('b'));
 $('#btnPdfP').addEventListener('click', () => pdfStats('p'));
 $('#btnPdfF').addEventListener('click', () => pdfStats('f'));
 $('#btnPdfSeason').addEventListener('click', pdfSeason);
+
+/* Reporte PDF de la hoja de anotación (pestaña Box score): rombos por entrada de los dos equipos, pizarra, lanzadores y defensiva */
+const DIA_V = [[1, -1], [-1, -1], [-1, 1], [1, 1]];
+function pdfDiamond(doc, x, y, w, h, pa, extra) {
+  const cx = x + w / 2, cy = y + h / 2 - 1, s = Math.min(w, h) * 0.3, v = DIA_V.map(([a, b]) => [a * s, b * s]);
+  const ok = pa && RES[pa.res], reach = ok ? num(pa.reach) : 0;
+  if (reach === 4) { doc.setFillColor(...ROSE); doc.lines(v, cx, cy + s, [1, 1], 'F', true); }
+  doc.setDrawColor(211, 182, 184); doc.setLineWidth(.6); doc.lines(v, cx, cy + s, [1, 1], 'S', true);
+  if (!ok) return;
+  if (reach > 0) { doc.setDrawColor(...RED); doc.setLineWidth(1.5); doc.lines(v.slice(0, reach), cx, cy + s, [1, 1], 'S', false); }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(pa.res.length > 2 ? 6 : 7.5); doc.setTextColor(...(RES[pa.res].hit ? RED : INK));
+  doc.text(pdfSafe(pa.res), cx, cy + 2.6, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  if (pa.play) { doc.setFontSize(5.2); doc.setTextColor(110); doc.text(pdfSafe(pa.play), cx, y + h - 2, { align: 'center' }); }
+  if (num(pa.out)) { doc.setDrawColor(122, 24, 32); doc.setLineWidth(.7); doc.circle(x + w - 5.5, y + 5.5, 3.8, 'S'); doc.setFontSize(5.5); doc.setTextColor(122, 24, 32); doc.text(String(num(pa.out)), x + w - 5.5, y + 7.4, { align: 'center' }); }
+  doc.setFillColor(...INK); for (let i = 0; i < Math.min(num(pa.rbi), 4); i++) doc.circle(x + 3.5 + i * 3.6, y + 3.8, 1.2, 'F');
+  if (num(pa.sb) || pa.cs) { doc.setFontSize(5); doc.setTextColor(...(pa.cs ? [122, 24, 32] : [110, 110, 110])); doc.text(pa.cs ? 'AR' : 'BR' + (num(pa.sb) > 1 ? num(pa.sb) : ''), x + 1.8, y + h - 2.2); }
+  if (extra) { doc.setFillColor(...RED); doc.rect(x + w - 10.5, y + h - 8.5, 9.5, 7, 'F'); doc.setFontSize(5.2); doc.setTextColor(255); doc.text('+' + extra, x + w - 5.75, y + h - 3.4, { align: 'center' }); }
+}
+function pdfScoreCard(doc, y, isUs, der) {
+  const n = draft.inns, slots = isUs ? draft.slots : draft.oslots, cells = isUs ? draft.cells : draft.ocells;
+  const avail = doc.internal.pageSize.getWidth() - 64 - 16 - 118 - TOTC.length * 21;
+  const innW = Math.min(46, avail / n), rowH = Math.min(innW, 38);
+  const who = p => isUs ? [pNum(p.pid), pName(p.pid)].filter(x => x !== '').join(' ') : [p.num ? '#' + p.num : '', p.name].filter(Boolean).join(' ');
+  const body = slots.map((s, si) => {
+    let name = (who(s) || '-') + (s.pos ? '  ' + s.pos : '');
+    if (s.sub && (isUs ? s.sub.pid : (s.sub.name || s.sub.num))) name += `\n> ${who(s.sub)}${s.sub.pos ? '  ' + s.sub.pos : ''}${s.sub.from ? ' (desde la ' + s.sub.from + 'a)' : ''}`;
+    const t = der.slotTot[si];
+    return [String(si + 1), pdfSafe(name), ...Array(n).fill(''), ...TOTC.map(([k]) => String(t[k] || 0))];
+  });
+  const tt = {}; TOTC.forEach(([k]) => tt[k] = der.slotTot.reduce((a, t) => a + (t[k] || 0), 0));
+  const WARN = [251, 241, 220];
+  const sumRow = (lab, key, tail) => [{ content: pdfSafe(lab), colSpan: 2, styles: { halign: 'right' } },
+    ...der.inn.map(I => ({ content: I.pa ? String(I[key]) : '', styles: key === 'outs' && I.pa && I.outs !== 3 ? { fillColor: WARN, textColor: [154, 100, 0] } : {} })), ...tail];
+  const blank = [{ content: '', colSpan: TOTC.length }];
+  const foot = [
+    sumRow('C - carreras', 'c', TOTC.map(([k]) => String(tt[k]))),
+    sumRow('H - hits', 'h', blank),
+    sumRow(isUs ? 'E - errores del rival' : 'E - errores de ' + S.team, 'e', blank),
+    sumRow('DB - dejados en base', 'lob', blank),
+    sumRow('Outs', 'outs', [{ content: '*VB = apariciones al plato', colSpan: TOTC.length, styles: { halign: 'left', fontStyle: 'normal' } }]),
+  ];
+  const colStyles = { 0: { cellWidth: 16, textColor: [110, 110, 110] }, 1: { cellWidth: 118, halign: 'left', fontSize: 7.2 } };
+  for (let i = 0; i < n; i++) colStyles[2 + i] = { cellWidth: innW, minCellHeight: rowH };
+  TOTC.forEach((_, i) => colStyles[2 + n + i] = { cellWidth: 21 });
+  doc.autoTable({
+    startY: y, theme: 'grid', margin: { left: 32, right: 32 }, tableWidth: 'wrap',
+    head: [['#', 'Nombre - Pos', ...Array.from({ length: n }, (_, i) => String(i + 1)), ...TOTC.map(([, l]) => l)]],
+    body, foot, columnStyles: colStyles, rowPageBreak: 'avoid',
+    styles: { fontSize: 7.5, cellPadding: 2.2, halign: 'center', valign: 'middle', lineColor: [207, 169, 172], lineWidth: .5, textColor: INK },
+    headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold', fontSize: 7, cellPadding: 1.8 },
+    didParseCell: d => { if (d.section === 'head' && d.column.index === 1) d.cell.styles.halign = 'left'; if (d.section === 'body' && d.column.index === 2 + n) d.cell.styles.fontStyle = 'bold'; },
+    didDrawCell: d => {
+      if (d.section !== 'body' || d.column.index < 2 || d.column.index >= 2 + n) return;
+      const arr = cells[d.row.index + '_' + (d.column.index - 1)] || [];
+      pdfDiamond(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, arr[0], arr.length > 1 ? arr.length - 1 : 0);
+    },
+  });
+  return doc.lastAutoTable.finalY + 18;
+}
+function pdfSheet() {
+  const der = deriveSheet(draft), od = deriveOpp(), pt = pitTotals(od), n = draft.inns;
+  const oppHas = od.anyCell || draft.oslots.some(s => s.name || s.num);
+  if (!der.anyCell && !od.anyCell && !draft.slots.some(s => s.pid)) { toast('Llena el lineup o anota algún turno antes de crear el reporte.'); return; }
+  const opp = draft.opp.trim() || 'Rival';
+  const doc = pdfDoc('landscape', `Box score${draft.no ? ' #' + draft.no : ''} · ${draft.date || ''} · Hoja de anotación`, draft.liga || ''); if (!doc) return;
+  const H = doc.internal.pageSize.getHeight();
+  const themR = od.anyCell ? od.runs : sumA(draft.them);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...INK);
+  doc.text(pdfSafe(`${S.team} ${der.runs}, ${opp} ${themR}`), 32, 90);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110);
+  doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
+  let y = pdfSection(doc, `${S.team} al bat`, 122);
+  y = pdfScoreCard(doc, y, true, der);
+  if (oppHas) { doc.addPage(); y = pdfSection(doc, `${opp} al bat`, 40); y = pdfScoreCard(doc, y, false, od); }
+  // Pizarra
+  const fldE = Object.entries(draft.fld).filter(([pid]) => draftPids().includes(pid)).reduce((a, [, f]) => a + num(f.e), 0);
+  const order = draft.ha === 'L' ? ['them', 'us'] : ['us', 'them'];
+  const lsRows = order.map(sd => sd === 'us'
+    ? [`${S.team} (${draft.ha === 'L' ? 'LOC' : 'VIS'})`, ...der.us.map(String), der.runs, der.hits, fldE]
+    : [`${opp} (${draft.ha === 'L' ? 'VIS' : 'LOC'})`, ...(od.anyCell ? od.us : draft.them).slice(0, n).map(v => String(v ?? '')), themR, od.anyCell ? od.hits : pt.h, num(draft.themE)]);
+  const room = rows => { if (y + 36 + rows * 16 > H - 36) { doc.addPage(); y = 40; } };
+  room(3);
+  y = pdfSection(doc, 'Pizarra', y);
+  const tblBase = { theme: 'grid', margin: { left: 32, right: 32 }, styles: { fontSize: 8, cellPadding: 2.6, halign: 'center', lineColor: [225, 205, 207], lineWidth: .5, textColor: INK },
+    headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold' }, columnStyles: { 0: { halign: 'left' } } };
+  doc.autoTable({ ...tblBase, startY: y, head: [['Equipos', ...Array.from({ length: n }, (_, i) => String(i + 1)), 'C', 'H', 'E']],
+    body: lsRows.map(r => r.map(c => pdfSafe(String(c)))),
+    didParseCell: d => { if (d.section === 'body' && d.column.index > n) { d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = ROSE; } } });
+  y = doc.lastAutoTable.finalY + 18;
+  // Lanzadores
+  const eff = effPit(od).filter(p => p.pid);
+  if (eff.length) {
+    room(eff.length + 2); y = pdfSection(doc, 'Lanzadores', y);
+    const decL = { G: 'Ganador', P: 'Perdedor', S: 'Salvamento' };
+    doc.autoTable({ ...tblBase, startY: y, head: [['Lanzador', 'Entró', 'IP', ...PIT.map(([, l]) => l), 'Decisión']],
+      body: eff.map((p, i) => [`${pNum(p.pid)} ${pName(p.pid)}`.trim(), p.from || (i === 0 ? '1' : ''), outsToIp(isNaN(p.outs) ? 0 : p.outs), ...PITK.map(k => String(num(p[k]))), decL[p.dec] || ''].map(c => pdfSafe(String(c)))),
+      foot: [['Totales', '', outsToIp(pt.outs), ...PITK.map(k => String(pt[k])), '']] });
+    y = doc.lastAutoTable.finalY + 18;
+  }
+  // Defensiva
+  const ids = draftPids();
+  if (ids.length) {
+    const ft = fldTotals();
+    room(ids.length + 2); y = pdfSection(doc, 'Defensiva', y);
+    doc.autoTable({ ...tblBase, startY: y, head: [['Jugador', 'Pos', ...FLD.map(([, l]) => l)]], columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' } },
+      body: ids.map(pid => { const f = draft.fld[pid] || {}; return [`${pNum(pid)} ${pName(pid)}`.trim(), posOf(pid), ...FLDK.map(k => String(num(f[k])))].map(c => pdfSafe(String(c))); }),
+      foot: [['Totales', '', ...FLDK.map(k => String(ft[k]))]] });
+    y = doc.lastAutoTable.finalY + 18;
+  }
+  // Abreviaturas
+  room(3);
+  y = pdfSection(doc, 'Abreviaturas', y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...INK);
+  const leg = pdfSafe(LEGEND.map(([k, v]) => `${k} ${v}`).join('   ·   ') + '   ·   Rombo rojo: bases que recorrió; relleno: anotó. Círculo: número de out. Puntos: carreras impulsadas.');
+  doc.text(doc.splitTextToSize(leg, doc.internal.pageSize.getWidth() - 64), 32, y + 4);
+  pdfSave(doc, 'hoja_boxscore_' + (draft.no || draft.date || today()));
+}
+$('#btnPdfSheet').addEventListener('click', pdfSheet);
 
 /* ---------- Respaldo ---------- */
 $('#btnBackup').addEventListener('click', () => {
