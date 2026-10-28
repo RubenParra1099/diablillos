@@ -65,6 +65,9 @@ nav.tabs button{font-family:var(--f-display);font-size:17px;font-weight:600;lett
 nav.tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--bulb)}
 nav.tabs button:hover{opacity:1}
 nav.tabs button:focus-visible{outline:2px solid var(--bulb);outline-offset:-2px}
+nav.tabs .theme-btn{margin-left:auto;align-self:center;font-family:var(--f-body);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;opacity:1;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:5px 12px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+nav.tabs .theme-btn:hover{background:rgba(255,255,255,.14)}
+nav.tabs .theme-btn svg{width:15px;height:15px}
 main .wrap{padding-block:22px 60px;display:flex;flex-direction:column;gap:20px}
 .notice{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
@@ -220,6 +223,7 @@ dialog::backdrop{background:rgba(5,15,10,.55)}
 .inline-check{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink)}
 @media (prefers-reduced-motion:no-preference){.btn,nav.tabs button,.seg button{transition:background .12s,opacity .12s}}
 </style>
+<script>try{var t=localStorage.getItem("dugout-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
 <body>
 <header class="board">
@@ -249,6 +253,7 @@ dialog::backdrop{background:rgba(5,15,10,.55)}
       <button role="tab" data-v="pitcheo">Pitcheo</button>
       <button role="tab" data-v="fildeo">Fildeo</button>
       <button role="tab" data-v="roster">Roster</button>
+      <button type="button" class="theme-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro"></button>
     </nav>
   </div>
 </header>
@@ -672,11 +677,11 @@ function renderHeader() {
 }
 $('#teamName').addEventListener('change', e => guarded(() => saveTeam(e.target.value.trim() || 'Mi equipo')));
 function showView(v) {
-  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  document.querySelectorAll('nav.tabs button[role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
   document.querySelectorAll('.view').forEach(s => s.hidden = s.id !== 'v-' + v);
   if (location.hash !== '#' + v) history.replaceState(null, '', '#' + v);
 }
-document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => showView(b.dataset.v)));
+document.querySelectorAll('nav.tabs button[role=tab]').forEach(b => b.addEventListener('click', () => showView(b.dataset.v)));
 window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (document.getElementById('v-' + v)) showView(v); });
 
 /* ---------- HOJA: encabezado ---------- */
@@ -1537,6 +1542,27 @@ $('#backupYes').addEventListener('click', () => {
     if (j.team) await saveTeam(j.team);
   }, 'Respaldo cargado');
 });
+
+/* ---------- Tema claro / oscuro ---------- */
+const THEME_ICONS = {
+  auto: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg>',
+  light: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 .9v2M8 13.1v2M.9 8h2M13.1 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3"/></g></svg>',
+  dark: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 10.4A6 6 0 0 1 5.6 2.4a6 6 0 1 0 8 8z" fill="currentColor"/></svg>',
+};
+const THEME_LABEL = { auto: 'Automático', light: 'Claro', dark: 'Oscuro' };
+let themeMode = 'auto';
+try { const t = localStorage.getItem('dugout-theme'); if (t === 'light' || t === 'dark') themeMode = t; } catch {}
+function applyTheme() {
+  if (themeMode === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', themeMode);
+  $('#themeBtn').innerHTML = THEME_ICONS[themeMode] + '<span>' + THEME_LABEL[themeMode] + '</span>';
+  $('#themeBtn').title = 'Tema: ' + THEME_LABEL[themeMode] + ' (toca para cambiar)';
+}
+$('#themeBtn').addEventListener('click', () => {
+  themeMode = themeMode === 'auto' ? 'light' : themeMode === 'light' ? 'dark' : 'auto';
+  try { if (themeMode === 'auto') localStorage.removeItem('dugout-theme'); else localStorage.setItem('dugout-theme', themeMode); } catch {}
+  applyTheme();
+});
+applyTheme();
 
 /* ---------- Render global ---------- */
 function renderAll() {
