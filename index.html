@@ -2305,7 +2305,9 @@ function renderAuthUI() {
   $('#userBtn').innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.2" r="3" fill="currentColor"/><path d="M2.2 14.6c.6-3 3-4.6 5.8-4.6s5.2 1.6 5.8 4.6" fill="currentColor"/></svg><span>' + esc(me.name || me.email) + '</span>';
   const sel = $('#teamSel');
   sel.hidden = me.teams.length < 2;
-  sel.innerHTML = me.teams.map(t => `<option value="${esc(t.id)}"${t.id === curTeam ? ' selected' : ''}>${esc(t.name)}${t.category ? ' · ' + esc(t.category) : ''}</option>`).join('');
+  const opt = t => `<option value="${esc(t.id)}"${t.id === curTeam ? ' selected' : ''}>${esc(t.name)}${t.category ? ' · ' + esc(t.category) : ''}</option>`;
+  const mine = me.teams.filter(t => t.own), rest = me.teams.filter(t => !t.own);
+  sel.innerHTML = (me.isAdmin || me.isSupervisor) && mine.length && rest.length ? `<optgroup label="Mis equipos">${mine.map(opt).join('')}</optgroup><optgroup label="Todos los demás">${rest.map(opt).join('')}</optgroup>` : me.teams.map(opt).join('');
   const where = curTeamObj ? `${curTeamObj.name} · ${ROLE_LAB[role] || ''}` : (me.isAdmin ? 'Sin equipos todavía: crea uno en Admin' : 'Tu usuario no tiene equipos asignados. Pide acceso a un administrador.');
   setSync(true, `${me.name || me.email} · ${where}`);
   if (!apiCanEdit && document.querySelector('nav.tabs button[data-v="captura"][aria-selected="true"]')) showView('juegos');
@@ -2370,7 +2372,8 @@ const tLabel = t => t ? t.name + (t.category ? ' · ' + t.category : '') : '';
 const normTxt = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
 const fmtDay = d => { if (!d) return '—'; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return String(d).slice(0, 10); return `${m[3]} ${['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+m[2] - 1]}`; };
 const LV_CHIP = { admin: '<span class="chip adm">Administrador</span>', supervisor: '<span class="chip sup">Supervisor</span>', user: '<span class="chip">Usuario</span>' };
-const teamUsers = id => adm.users.filter(u => levelOf(u) === 'user' && u.teams.some(m => m.team === id));
+const teamUsers = id => adm.users.filter(u => u.teams.some(m => m.team === id));
+const ownLab = u => levelOf(u) === 'admin' ? 'Administrador' : 'Supervisor';
 async function admLoad() {
   try { adm = await apiCall({ op: 'adminList' }); renderAdmin(); }
   catch (e) { toast(e.message); }
@@ -2490,10 +2493,11 @@ function checkDup() {
 function renderAccess() {
   const users = adm.users.filter(u => levelOf(u) === 'user');
   $('#atAccess').innerHTML = (admAccess.map(a => { const u = adm.users.find(u => u.id === a.user); if (!u) return '';
-    return `<div class="adm-arow"><span><b>${esc(u.name || u.email)}</b> <span class="sub">· ${esc(u.email)}</span>${u.active ? '' : ' <span class="chip l">Inactiva</span>'}</span><div class="adm-pill" data-acc="${esc(u.id)}"><button type="button" data-r="editor" aria-pressed="${a.role === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${a.role === 'viewer'}">Lectura</button><button type="button" data-r="" class="rm" aria-pressed="false">Quitar</button></div></div>`; }).join('') || '<p class="hint" style="margin:4px 0">Nadie tiene acceso a este equipo todavía.</p>') +
-    (() => { const hi = adm.users.filter(u => levelOf(u) !== 'user'); return hi.length ? `<div class="adm-arow"><span class="sub">${hi.map(u => esc(u.name || u.email)).join(', ')} ${hi.length === 1 ? 've' : 'ven'} este equipo por su nivel (Supervisor / Administrador).</span></div>` : ''; })();
-  const free = users.filter(u => !admAccess.some(a => a.user === u.id));
-  $('#atAddUser').innerHTML = free.length ? '<option value="">Agregar persona…</option>' + free.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)} · ${esc(u.email)}</option>`).join('') : '<option value="">No hay más usuarios para agregar</option>';
+    const hi = levelOf(u) !== 'user';
+    return `<div class="adm-arow"><span><b>${esc(u.name || u.email)}</b> <span class="sub">· ${esc(u.email)}</span>${hi ? ` ${LV_CHIP[levelOf(u)]}` : ''}${u.active ? '' : ' <span class="chip l">Inactiva</span>'}</span><div class="adm-pill" data-acc="${esc(u.id)}">${hi ? '<button type="button" data-r="editor" aria-pressed="true">Su equipo</button>' : `<button type="button" data-r="editor" aria-pressed="${a.role === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${a.role === 'viewer'}">Lectura</button>`}<button type="button" data-r="" class="rm" aria-pressed="false">Quitar</button></div></div>`; }).join('') || '<p class="hint" style="margin:4px 0">Nadie tiene acceso a este equipo todavía.</p>') +
+    (() => { const hi = adm.users.filter(u => levelOf(u) !== 'user' && !admAccess.some(a => a.user === u.id)); return hi.length ? `<div class="adm-arow"><span class="sub">${hi.map(u => esc(u.name || u.email)).join(', ')} también ${hi.length === 1 ? 've' : 'ven'} este equipo por su nivel (Supervisor / Administrador). Si es su equipo, agrégalo abajo.</span></div>` : ''; })();
+  const free = adm.users.filter(u => !admAccess.some(a => a.user === u.id));
+  $('#atAddUser').innerHTML = free.length ? '<option value="">Agregar persona…</option>' + free.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)} · ${levelOf(u) === 'user' ? esc(u.email) : ownLab(u) + ' (su equipo)'}</option>`).join('') : '<option value="">No hay más usuarios para agregar</option>';
   $('#atAddUser').disabled = $('#atAddBtn').disabled = !free.length;
 }
 $('#atAccess').addEventListener('click', e => {
@@ -2504,7 +2508,8 @@ $('#atAccess').addEventListener('click', e => {
 $('#atAddRole').addEventListener('click', e => { const b = e.target.closest('button[data-r]'); if (b) $$('#atAddRole button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
 $('#atAddBtn').addEventListener('click', () => {
   const id = $('#atAddUser').value; if (!id) return;
-  admAccess.push({ user: id, role: $('#atAddRole button[aria-pressed="true"]').dataset.r }); renderAccess();
+  const u = adm.users.find(u => u.id === id);
+  admAccess.push({ user: id, role: levelOf(u) !== 'user' ? 'editor' : $('#atAddRole button[aria-pressed="true"]').dataset.r }); renderAccess();
 });
 function showLogo(src) { const el = $('#atLogoPrev'); if (src) { el.src = src; el.hidden = false; $('#atLogoClear').hidden = false; } else { el.hidden = true; el.removeAttribute('src'); $('#atLogoClear').hidden = true; } previewColors(); }
 function showWord(src) { const el = $('#atWordPrev'); if (src) { el.src = src; el.hidden = false; $('#atWordClear').hidden = false; } else { el.hidden = true; el.removeAttribute('src'); $('#atWordClear').hidden = true; } previewColors(); }
@@ -2566,7 +2571,7 @@ function renderAdmUsers() {
   const q = normTxt($('#aqUser').value), lv = $('#aqLevel').value, tm = $('#aqUTeam').value;
   const list = adm.users.filter(u => (!lv || levelOf(u) === lv) && (!tm || levelOf(u) !== 'user' || u.teams.some(m => m.team === tm)) && (!q || normTxt(u.name + ' ' + u.email).includes(q)));
   $('#admUsers').innerHTML = '<thead><tr><th class="l">Nombre</th><th class="l">Nivel</th><th class="l">Equipos</th><th class="l">Estado</th><th class="l">Último acceso</th><th></th></tr></thead><tbody>' + (list.map(u => {
-    const teams = levelOf(u) !== 'user' ? '<span class="sub">Todos</span>' : (u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return `<span class="adm-tm">${esc(tLabel(t) || m.team)} <span class="chip">${ROLE_LAB[m.role]}</span></span>`; }).join('') || '<span class="sub">Ninguno</span>');
+    const teams = levelOf(u) !== 'user' ? '<span class="sub">Todos</span>' + u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return t ? `<span class="adm-tm">${esc(tLabel(t))} <span class="chip">Su equipo</span></span>` : ''; }).join('') : (u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return `<span class="adm-tm">${esc(tLabel(t) || m.team)} <span class="chip">${ROLE_LAB[m.role]}</span></span>`; }).join('') || '<span class="sub">Ninguno</span>');
     const st = (u.active ? 'Activa' : '<span class="chip l">Inactiva</span>') + (u.mustChange ? '<br><span class="chip tmp">Contraseña temporal</span>' : '');
     return `<tr><td class="l name"><b>${esc(u.name || '—')}</b>${me && u.id === me.id ? ' <span class="sub">(tú)</span>' : ''}<br><span class="sub">${esc(u.email)}</span></td><td class="l">${LV_CHIP[levelOf(u)]}</td><td class="l">${teams}</td><td class="l">${st}</td><td class="l">${u.lastLogin ? fmtDay(u.lastLogin) : '<span class="sub">Nunca</span>'}</td>
       <td style="position:relative;text-align:right">${admMenu && admMenu.id === u.id ? userMenu(u) : ''}<button type="button" class="adm-dots" data-m="${esc(u.id)}" aria-label="Opciones de ${esc(u.name || u.email)}">⋯</button></td></tr>`;
@@ -2616,8 +2621,8 @@ function paintWz() {
   $('#auSteps').hidden = s === 4;
   $('#auActiveWrap').hidden = !ed || (me && wz.edit.id === me.id);
   $$('.adm-lv').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.lv === wz.lv)));
-  $('#auTeams').innerHTML = !user ? `<div class="check ok"><b>TODOS</b><span>Como <strong>${wz.lv === 'admin' ? 'Administrador' : 'Supervisor'}</strong> entra a todos los equipos (${adm.teams.length}), incluidos los que se creen después, así que no hace falta asignarle equipos. Si quieres limitarlo a algunos equipos, regresa a <button type="button" class="adm-link" data-gost="2">Nivel</button> y elige <strong>Usuario</strong>.</span></div>` : adm.teams.length ? adm.teams.map(t => { const r = wz.teams[t.id] || ''; return `<div class="adm-arow"><span><b>${esc(t.name)}</b>${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><div class="adm-pill" data-team="${esc(t.id)}"><button type="button" data-r="" aria-pressed="${!r}">Sin acceso</button><button type="button" data-r="editor" aria-pressed="${r === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${r === 'viewer'}">Lectura</button></div></div>`; }).join('') : '<p class="hint">Primero crea un equipo en la sección Equipos.</p>';
-  const last = s === 3 || (s === 2 && !user && !ed);
+  $('#auTeams').innerHTML = !user ? `<div class="check ok"><b>TODOS</b><span>Como <strong>${wz.lv === 'admin' ? 'Administrador' : 'Supervisor'}</strong> entra y captura en todos los equipos (${adm.teams.length}), incluidos los que se creen después. Si además lleva algún equipo, márcalo como <strong>Su equipo</strong>: le abrirá primero y saldrá arriba en su lista. Para limitarlo a algunos equipos, regresa a <button type="button" class="adm-link" data-gost="2">Nivel</button> y elige <strong>Usuario</strong>.</span></div>` + adm.teams.map(t => `<div class="adm-arow"><span><b>${esc(t.name)}</b>${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><div class="adm-pill" data-team="${esc(t.id)}"><button type="button" data-r="" aria-pressed="${!wz.teams[t.id]}">No</button><button type="button" data-r="editor" aria-pressed="${!!wz.teams[t.id]}">Su equipo</button></div></div>`).join('') : adm.teams.length ? adm.teams.map(t => { const r = wz.teams[t.id] || ''; return `<div class="adm-arow"><span><b>${esc(t.name)}</b>${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><div class="adm-pill" data-team="${esc(t.id)}"><button type="button" data-r="" aria-pressed="${!r}">Sin acceso</button><button type="button" data-r="editor" aria-pressed="${r === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${r === 'viewer'}">Lectura</button></div></div>`; }).join('') : '<p class="hint">Primero crea un equipo en la sección Equipos.</p>';
+  const last = s === 3;
   $('#auBack').style.visibility = s > 1 && s < 4 ? 'visible' : 'hidden';
   $('#auNext').textContent = s === 4 ? 'Terminar' : last ? (ed ? 'Guardar cambios' : 'Crear usuario') : 'Siguiente';
   $('#auSaveEdit').hidden = !ed || last || s === 4;
@@ -2628,7 +2633,8 @@ function paintDone() {
   $('#auDoneTag').textContent = wz.reset ? 'LISTO' : 'CREADO';
   $('#auDoneTxt').textContent = wz.reset ? `${name || email} ya tiene una contraseña temporal nueva. La anterior dejó de servir; al entrar tendrá que cambiarla.` : `${name || email} ya puede entrar. Al iniciar sesión tendrá que cambiar su contraseña.`;
   $('#auPwd').textContent = wz.pw;
-  const acc = wz.lv === 'admin' ? 'Nivel: Administrador (todos los equipos)' : wz.lv === 'supervisor' ? 'Nivel: Supervisor (ves y corriges todos los equipos)'
+  const own = Object.entries(wz.teams).filter(([, r]) => r).map(([id]) => tLabel(adm.teams.find(t => t.id === id)) || id).join(', ');
+  const acc = wz.lv !== 'user' ? (wz.lv === 'admin' ? 'Nivel: Administrador (todos los equipos)' : 'Nivel: Supervisor (ves y corriges todos los equipos)') + (own ? `\nTu equipo: ${own}` : '')
     : 'Equipos: ' + (Object.entries(wz.teams).filter(([, r]) => r).map(([id, r]) => `${tLabel(adm.teams.find(t => t.id === id)) || id} (${ROLE_LAB[r]})`).join(', ') || 'ninguno todavía');
   const msg = `¡Hola ${(name.split(' ')[0]) || ''}! ${wz.reset ? 'Te restablecí la contraseña de' : 'Ya tienes acceso a'} la plataforma de box score ⚾\nEntra en: ${location.origin}\nCorreo: ${email}\nContraseña temporal: ${wz.pw}\nAl entrar te pedirá cambiarla.\n${acc}`;
   $('#auMsg').textContent = msg; $('#auWa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
@@ -2646,7 +2652,7 @@ function validStep1() {
 $('#auTeams').addEventListener('click', e => { const g = e.target.closest('[data-gost]'); if (g) { wz.step = +g.dataset.gost; paintWz(); } });
 $('#auBack').addEventListener('click', () => { auErr(''); wz.step = wz.step === 3 ? 2 : 1; paintWz(); });
 async function saveUser() {
-  const ed = wz.edit, teams = wz.lv === 'user' ? Object.entries(wz.teams).filter(([, r]) => r).map(([team, role]) => ({ team, role })) : [];
+  const ed = wz.edit, teams = Object.entries(wz.teams).filter(([, r]) => r).map(([team, role]) => ({ team, role: wz.lv === 'user' ? role : 'editor' }));
   const body = { op: 'adminUserSave', id: ed ? ed.id : undefined, name: $('#auName').value, email: $('#auEmail').value, level: wz.lv, active: ed ? $('#auActive').checked : true, teams };
   if (!ed) { wz.pw = genPw(); body.password = wz.pw; }
   const r = await apiCall(body);
@@ -2659,7 +2665,7 @@ $('#admUserForm').addEventListener('submit', async e => {
   e.preventDefault();
   if (wz.step === 4) { $('#admUserDlg').close(); return; }
   if (wz.step === 1) { if (!validStep1()) return; wz.step = 2; paintWz(); return; }
-  if (wz.step === 2 && (wz.lv === 'user' || wz.edit)) { wz.step = 3; paintWz(); return; }
+  if (wz.step === 2) { wz.step = 3; paintWz(); return; }
   const btn = $('#auNext'); btn.disabled = true;
   try { await saveUser(); } catch (er) { auErr(er.message); if (er.code === 'email_taken') { wz.step = 1; paintWz(); auErr(er.message); } }
   finally { btn.disabled = false; }

@@ -17,7 +17,7 @@ Plataforma para capturar box scores de béisbol (tradicional y categoría Chupó
 | Captura | Por equipo: captura box scores y edita el roster de ese equipo. |
 | Lectura | Por equipo: solo ve estadísticas y PDF. |
 
-Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno. Los permisos se revisan en el servidor en cada consulta.
+Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno. A un Supervisor o Administrador también se le pueden marcar **sus equipos**: no cambia sus permisos, pero se le abren primero y salen arriba en su selector. Los permisos se revisan en el servidor en cada consulta.
 
 ## Pestaña Admin
 

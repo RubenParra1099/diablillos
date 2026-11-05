@@ -112,7 +112,9 @@ async function loadUser(p, req) {
   // La sesión deja de valer si cambió la contraseña
   if (s.ph !== u.pass_hash.slice(-12)) return null;
   const teams = (u.is_admin || u.is_supervisor)
-    ? (await p.query('select id, name, category, data, $1::text as role from bs_teams order by name', [u.is_admin ? 'admin' : 'supervisor'])).rows
+    ? (await p.query(`select t.id, t.name, t.category, t.data, $1::text as role, (m.user_id is not null) as own
+                      from bs_teams t left join bs_members m on m.team_id = t.id and m.user_id = $2
+                      order by (m.user_id is null), t.name`, [u.is_admin ? 'admin' : 'supervisor', u.id])).rows
     : (await p.query('select t.id, t.name, t.category, t.data, m.role from bs_members m join bs_teams t on t.id = m.team_id where m.user_id = $1 order by t.name', [u.id])).rows;
   return { id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, mustChange: u.must_change, ph: u.pass_hash, teams };
 }
@@ -121,7 +123,7 @@ const canRead = (u, teamId) => !!roleIn(u, teamId);
 const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
 const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad' });
-const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), role: t.role });
+const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), role: t.role, own: t.own !== false });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
 async function body(req) { return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); }
@@ -302,7 +304,7 @@ export default async function handler(req, res) {
         const name = String(b.name || '').trim().slice(0, 80);
         const level = ['admin', 'supervisor'].includes(b.level) ? b.level : (b.isAdmin ? 'admin' : 'user');
         const isAdmin = level === 'admin', isSup = level === 'supervisor', active = b.active !== false;
-        const teams = Array.isArray(b.teams) ? b.teams.filter(m => validId(m.team) && ['editor', 'viewer'].includes(m.role)) : [];
+        const teams = (Array.isArray(b.teams) ? b.teams.filter(m => m && validId(m.team) && ['editor', 'viewer'].includes(m.role)) : []).map(m => ({ team: m.team, role: isAdmin || isSup ? 'editor' : m.role }));
         if (b.id === me.id && (!isAdmin || !active)) fail(400, 'self', 'No puedes quitarte a ti mismo el rol de administrador ni desactivarte.');
         const client = await p.connect();
         try {
