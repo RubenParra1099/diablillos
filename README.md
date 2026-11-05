@@ -4,29 +4,43 @@ Plataforma para capturar box scores de béisbol (tradicional y categoría Chupó
 
 ## Cómo está armado
 
-- `index.html` · toda la aplicación (pantallas, estadísticas, PDF).
-- `api/data.js` · función de Vercel que guarda y lee los datos en **Postgres**.
+- `index.html` · toda la aplicación (pantallas, estadísticas, PDF, inicio de sesión y panel de administración).
+- `api/data.js` · función de Vercel que guarda y lee los datos en **Postgres** y controla usuarios y permisos.
 - `package.json` · dependencia `pg` para conectarse a Postgres.
 
-Los datos viven en tres tablas que la API crea sola la primera vez:
+## Usuarios y roles
+
+| Rol | Alcance |
+|---|---|
+| Administrador | Ve, corrige y administra todo: crea equipos y usuarios y asigna roles. |
+| Supervisor | Ve y corrige todos los equipos (captura y roster), pero no da de alta usuarios ni equipos. |
+| Captura | Por equipo: captura box scores y edita el roster de ese equipo. |
+| Lectura | Por equipo: solo ve estadísticas y PDF. |
+
+Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno. Los permisos se revisan en el servidor en cada consulta.
+
+## Tablas (las crea la API sola)
 
 | Tabla | Contenido |
 |---|---|
-| `bs_roster` | un renglón por jugador (`id`, `data` jsonb con nombre, número, posición y foto) |
-| `bs_games` | un renglón por juego (`id`, `data` jsonb con el box score completo) |
-| `bs_config` | nombre del equipo |
+| `bs_teams` | equipos (nombre, categoría, logo) |
+| `bs_users` | usuarios (correo, nombre, contraseña cifrada con scrypt, administrador, supervisor, activo) |
+| `bs_members` | acceso de cada usuario a cada equipo (`editor` o `viewer`) |
+| `bs_roster` | jugadores (`team_id`, `data` jsonb) |
+| `bs_games` | juegos (`team_id`, `data` jsonb con el box score completo) |
 
 ## Variables de entorno en Vercel
 
 | Variable | Para qué |
 |---|---|
-| `DIABLILLOS_DB_URL` | Cadena de conexión de Neon (base DIABLILLOS, con pooling). Tiene prioridad sobre `DATABASE_URL`. |
-| `EDIT_KEY` | Clave para capturar y editar. Quien no la tenga solo puede ver. |
-| `VIEW_KEY` | Opcional. Si la defines, también se pide una clave para ver los datos. |
+| `DIABLILLOS_DB_URL` | Cadena de conexión de Neon (con pooling). Tiene prioridad sobre `DATABASE_URL`. |
+| `EDIT_KEY` | Clave de instalación: solo se pide al crear el primer administrador. |
+| `AUTH_SECRET` | Opcional: secreto para firmar las sesiones. Si falta, se deriva de la cadena de conexión. |
 
-## Cargar los datos existentes
+## Primer uso
 
-1. Abre el sitio, toca **Ingresar clave** y escribe tu `EDIT_KEY`.
-2. Ve a **Roster → Cargar respaldo** y elige el archivo `Diablillos_respaldo_*.json`.
+1. Abre el sitio: aparece **Configurar administrador**. Escribe tu nombre, correo, contraseña y la `EDIT_KEY`.
+2. Los jugadores y juegos que ya existían quedan en un primer equipo.
+3. En la pestaña **Admin** crea más equipos y usuarios.
 
-Los archivos de respaldo están en `.gitignore` y no se suben a GitHub.
+Los archivos `*respaldo*.json` están en `.gitignore` y no se suben a GitHub.

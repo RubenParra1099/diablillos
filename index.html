@@ -192,6 +192,24 @@ td.cell.off button{opacity:.45}
 td.cell.closer{box-shadow:inset 0 -3px 0 var(--accent)}
 th.inn small{display:block;font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0}
 .modo-chip{display:inline-block;margin-left:8px;font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:3px;background:var(--accent);color:var(--accent-ink);vertical-align:middle}
+body.ro .edit-only,body.ro nav.tabs button[data-v="captura"],body.ro #demoBar{display:none!important}
+.team-sel{margin-top:6px;background:rgba(0,0,0,.18);color:var(--board-ink);border:1px solid rgba(255,255,255,.45);font-family:var(--f-body);font-size:13px;max-width:100%}
+.team-sel option{color:#1e1f22;background:#fff}
+nav.tabs .user-btn{margin-left:6px}
+.team-logo{width:38px;height:38px;object-fit:contain;border-radius:6px;background:var(--chip);vertical-align:middle}
+.hero .team-name{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,7vw,72px);color:#fff;text-transform:uppercase;letter-spacing:.02em;text-shadow:0 4px 14px rgba(60,0,4,.55);justify-self:center;text-align:center;line-height:1}
+.auth{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:radial-gradient(ellipse at 50% 30%,#e3232c 0%,#a50d15 55%,#5e0a10 100%);overflow:auto}
+.auth-card{width:min(400px,100%);background:var(--paper);color:var(--ink);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(40,0,4,.45)}
+.auth-logo{width:96px;height:auto;align-self:center;filter:drop-shadow(0 6px 10px rgba(60,0,4,.4))}
+.auth-card h2{text-align:center}
+.auth-form{display:flex;flex-direction:column;gap:12px}
+.adm-form{border:1px dashed var(--line-strong);border-radius:6px;padding:12px}
+.adm-user{display:flex;flex-direction:column;gap:12px;border:1px dashed var(--line-strong);border-radius:6px;padding:12px}
+.au-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-top:6px}
+.au-team{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:13px}
+.au-team select{padding:4px 6px;font-size:13px}
+.ud-teams{display:flex;flex-direction:column;gap:6px}
+.ud-teams div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:6px 0;font-size:13.5px}
 .checks{display:flex;flex-direction:column;gap:6px}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:7px 10px;border-radius:4px}
 .check.ok{background:var(--ok-bg)} .check.warn{background:var(--warn-bg)} .check.bad{background:var(--bad-bg)}
@@ -255,6 +273,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <div style="min-width:0;flex:1 1 220px">
         <div class="eyebrow">Temporada · Box score</div>
         <h1><input id="teamName" aria-label="Nombre del equipo" value="Mi equipo" maxlength="40"></h1>
+        <select id="teamSel" class="team-sel" hidden aria-label="Cambiar de equipo"></select>
       </div>
       <div class="record" aria-label="Récord">
         <div><b id="recW">0</b><span>Ganados</span></div>
@@ -270,13 +289,15 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <button role="tab" data-v="pitcheo">Pitcheo</button>
       <button role="tab" data-v="fildeo">Fildeo</button>
       <button role="tab" data-v="roster">Roster</button>
+      <button role="tab" data-v="admin" id="tabAdmin" hidden>Admin</button>
       <button type="button" class="theme-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro"></button>
+      <button type="button" class="theme-btn user-btn" id="userBtn" hidden></button>
     </nav>
   </div>
 </header>
 
 <main><div class="wrap">
-  <div class="notice"><span class="dot" id="syncDot"></span><span id="syncTxt">Conectando con el almacenamiento…</span><button type="button" class="btn sm" id="keyBtn" hidden style="margin-left:auto"></button></div>
+  <div class="notice"><span class="dot" id="syncDot"></span><span id="syncTxt">Conectando con el almacenamiento…</span></div>
 
   <section id="v-captura" class="view">
     <div class="panel">
@@ -487,7 +508,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
   <section id="v-roster" class="view" hidden>
     <div class="panel">
       <h2>Roster</h2>
-      <form class="row" id="rosterForm">
+      <form class="row edit-only" id="rosterForm">
         <label class="f">Núm.<input id="rNum" type="number" min="0" max="99" style="width:70px"></label>
         <label class="f" style="flex:1;min-width:180px">Nombre<input id="rName" required placeholder="Nombre y apellido"></label>
         <label class="f">Posición<select id="rPos"></select></label>
@@ -500,20 +521,82 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <div class="scroll"><table id="rTbl"></table></div>
       <div class="backup">
         <div><h3>Respaldo de datos</h3><p class="hint">Descarga un archivo con el roster, las fotos y todos los juegos. Sirve para guardar una copia o para pasar los datos a otra computadora o a otra versión de la plataforma.</p></div>
-        <div class="row"><button class="btn sm primary" id="btnBackup">Descargar respaldo</button><label class="btn sm" for="backupFile" style="cursor:pointer">Cargar respaldo</label><input type="file" id="backupFile" accept="application/json,.json" class="sr-only"></div>
+        <div class="row"><button class="btn sm primary" id="btnBackup">Descargar respaldo</button><label class="btn sm edit-only" for="backupFile" style="cursor:pointer">Cargar respaldo</label><input type="file" id="backupFile" accept="application/json,.json" class="sr-only"></div>
         <div class="confirm" id="backupConfirm" hidden style="background:var(--warn-bg)"><span id="backupTxt" style="flex:1;min-width:200px"></span><button class="btn sm primary" id="backupYes">Cargar</button><button class="btn sm" id="backupNo">Cancelar</button></div>
       </div>
     </div>
   </section>
+  <section id="v-admin" class="view" hidden>
+    <div class="panel">
+      <div class="row spread"><h2>Administración</h2><button class="btn sm" id="admRefresh">Actualizar</button></div>
+      <div>
+        <h3 style="margin-bottom:8px">Equipos</h3>
+        <div class="scroll"><table id="admTeams"></table></div>
+      </div>
+      <form class="row adm-form" id="admTeamForm">
+        <label class="f" style="flex:1;min-width:180px">Nombre del equipo<input id="atName" required maxlength="60" placeholder="Ej. Diablillos Chupón"></label>
+        <label class="f" style="min-width:160px">Categoría<input id="atCat" maxlength="60" placeholder="Ej. Chupón 4-6 años"></label>
+        <div class="f photo-field"><span>Logo</span><div class="row" style="gap:6px;align-items:center"><img id="atLogoPrev" class="team-logo" alt="Logo" hidden><label class="btn sm" for="atLogo" style="cursor:pointer">Elegir logo</label><input type="file" id="atLogo" accept="image/*" class="sr-only"><button type="button" class="icon-btn" id="atLogoClear" hidden aria-label="Quitar logo">✕</button></div></div>
+        <button class="btn primary" type="submit" id="atSubmit">Crear equipo</button>
+        <button class="btn" type="button" id="atCancel" hidden>Cancelar</button>
+      </form>
+      <div>
+        <h3 style="margin-bottom:8px">Usuarios</h3>
+        <div class="scroll"><table id="admUsers"></table></div>
+      </div>
+      <form class="adm-user" id="admUserForm">
+        <h3 id="auTitle">Nuevo usuario</h3>
+        <div class="row">
+          <label class="f" style="flex:1;min-width:170px">Nombre<input id="auName" maxlength="80" placeholder="Nombre y apellido"></label>
+          <label class="f" style="flex:1;min-width:200px">Correo<input id="auEmail" type="email" required maxlength="160" autocomplete="off"></label>
+          <label class="f" style="min-width:190px"><span id="auPwLab">Contraseña temporal</span><input id="auPw" type="text" minlength="8" maxlength="200" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
+        </div>
+        <div class="row">
+          <label class="f" style="min-width:280px">Nivel<select id="auLevel"><option value="user">Usuario · solo los equipos que le asignes</option><option value="supervisor">Supervisor · ve y corrige todos los equipos</option><option value="admin">Administrador · además da de alta usuarios y equipos</option></select></label>
+          <label class="inline-check"><input type="checkbox" id="auActive" checked> Cuenta activa</label>
+        </div>
+        <div id="auTeamsWrap"><span class="sub">Acceso por equipo</span><div class="au-teams" id="auTeams"></div></div>
+        <div class="row"><button class="btn primary" type="submit" id="auSubmit">Crear usuario</button><button class="btn" type="button" id="auCancel" hidden>Cancelar</button></div>
+        <p class="hint">Al entrar por primera vez, el usuario debe cambiar su contraseña temporal. <b>Supervisor</b>: ve y corrige todos los equipos, pero no da de alta usuarios ni equipos. Para usuarios normales, por equipo: <b>Captura</b> captura box scores y edita el roster; <b>Lectura</b> solo ve estadísticas y PDF.</p>
+      </form>
+    </div>
+  </section>
 </div></main>
 
-<dialog id="keyDlg" class="narrow"><form class="dlg" id="keyForm">
-  <h2>Clave del equipo</h2>
-  <p class="hint" id="keyHint">Escribe la clave para capturar box scores y editar el roster. Sin clave puedes ver todo, pero no modificar.</p>
-  <label class="f">Clave<input type="password" id="keyInput" autocomplete="current-password" required></label>
-  <div class="check bad" id="keyErr" hidden><b>ERROR</b><span>Clave incorrecta.</span></div>
-  <div class="row spread"><button type="button" class="btn sm" id="keyOut" hidden>Salir del modo captura</button><div class="row"><button type="button" class="btn" id="keyCancel">Cancelar</button><button type="submit" class="btn primary">Entrar</button></div></div>
+<div class="auth" id="authScreen" hidden>
+  <div class="auth-card">
+    <img class="auth-logo" id="authLogo" alt="">
+    <h2 id="authTitle">Iniciar sesión</h2>
+    <p class="hint" id="authHint">Entra con el correo y la contraseña que te dio el administrador.</p>
+    <form class="auth-form" id="loginForm">
+      <label class="f">Correo<input type="email" id="lgEmail" autocomplete="username" required></label>
+      <label class="f">Contraseña<input type="password" id="lgPw" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+    <form class="auth-form" id="setupForm" hidden>
+      <label class="f">Tu nombre<input id="suName" maxlength="80" required></label>
+      <label class="f">Correo<input type="email" id="suEmail" autocomplete="username" required></label>
+      <label class="f">Contraseña<input type="password" id="suPw" minlength="8" autocomplete="new-password" required></label>
+      <label class="f">Clave de instalación (EDIT_KEY)<input type="password" id="suKey" required></label>
+      <button class="btn primary" type="submit">Crear administrador</button>
+    </form>
+    <div class="check bad" id="authErr" hidden><b>ERROR</b><span id="authErrTxt"></span></div>
+  </div>
+</div>
+<dialog id="pwDlg" class="narrow"><form class="dlg" id="pwForm">
+  <h2>Cambiar contraseña</h2>
+  <p class="hint" id="pwHint"></p>
+  <label class="f">Contraseña actual<input type="password" id="pwCur" autocomplete="current-password" required></label>
+  <label class="f">Contraseña nueva<input type="password" id="pwNew" minlength="8" autocomplete="new-password" required></label>
+  <label class="f">Repite la contraseña nueva<input type="password" id="pwNew2" minlength="8" autocomplete="new-password" required></label>
+  <div class="check bad" id="pwErr" hidden><b>ERROR</b><span id="pwErrTxt"></span></div>
+  <div class="row spread"><span></span><div class="row"><button type="button" class="btn" id="pwCancel">Cancelar</button><button type="submit" class="btn primary">Guardar</button></div></div>
 </form></dialog>
+<dialog id="userDlg" class="narrow"><div class="dlg">
+  <div class="boxhead"><div><div class="sub" id="udEmail"></div><h2 id="udName"></h2></div></div>
+  <div id="udTeams" class="ud-teams"></div>
+  <div class="row spread"><button type="button" class="btn" id="udPw">Cambiar contraseña</button><div class="row"><button type="button" class="btn" id="udClose">Cerrar</button><button type="button" class="btn primary" id="udLogout">Cerrar sesión</button></div></div>
+</div></dialog>
 <dialog id="playerDlg"><div class="dlg" id="playerBody"></div></dialog>
 <dialog id="boxDlg"><div class="dlg" id="boxDlgBody"></div></dialog>
 
@@ -595,37 +678,43 @@ let db = null;
 const LSK = 'dugout-boxscore-v1';
 function lsLoad() { try { let j = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!j || (!Object.keys(j.roster || {}).length && !Object.keys(j.games || {}).length)) { try { j = JSON.parse(document.getElementById('seedData').textContent); localStorage.setItem(LSK, JSON.stringify(j)); } catch {} } if (j) { S.roster = j.roster || {}; S.games = j.games || {}; S.team = j.team || S.team; } } catch {} }
 function lsSave() { try { localStorage.setItem(LSK, JSON.stringify({ roster: S.roster, games: S.games, team: S.team })); } catch {} }
-/* API de Postgres (sitio en Vercel): /api/data */
-let api = false, apiCanEdit = false, apiTimer = null, needView = false, dbInfo = null;
-function startPoll() { clearInterval(apiTimer); apiTimer = setInterval(() => { if (document.visibilityState === 'visible') apiLoad().catch(() => {}); }, 45000); }
-document.addEventListener('visibilitychange', () => { if (api && document.visibilityState === 'visible') apiLoad().catch(() => {}); });
-const KEYK = 'dugout-key';
-const getKey = () => { try { return localStorage.getItem(KEYK) || ''; } catch { return ''; } };
-const setKey = k => { try { k ? localStorage.setItem(KEYK, k) : localStorage.removeItem(KEYK); } catch {} };
-async function apiCall(body) {
-  const r = await fetch('/api/data', { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', 'x-key': getKey() }, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+/* API de Postgres (sitio en Vercel): /api/data, con usuarios, equipos y roles */
+let api = false, apiCanEdit = false, apiTimer = null, me = null, curTeam = null, curTeamObj = null;
+const TEAMK = 'bs-team';
+function startPoll() { clearInterval(apiTimer); apiTimer = setInterval(() => { if (document.visibilityState === 'visible' && me) apiLoad().catch(() => {}); }, 45000); }
+document.addEventListener('visibilitychange', () => { if (api && me && document.visibilityState === 'visible') apiLoad().catch(() => {}); });
+async function apiCall(body, query = '') {
+  let r;
+  try { r = await fetch('/api/data' + query, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', credentials: 'same-origin' }); }
+  catch { const e = new Error('Sin conexión'); e.code = 'network'; e.status = 0; throw e; }
   let j = {}; try { j = await r.json(); } catch {}
-  if (!r.ok) { const e = new Error(j.message || 'error'); e.code = j.error || 'server'; e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(j.message || 'error'); e.code = j.error || 'server'; e.status = r.status; e.data = j; throw e; }
   return j;
 }
 async function apiLoad() {
-  const j = await apiCall();
-  S.roster = j.roster || {}; S.games = j.games || {}; if (j.team) S.team = j.team;
-  apiCanEdit = !!j.canEdit; dbInfo = j.db || null; renderKeyUI(j.needsEditKey); renderAll();
+  let want = curTeam; if (!want) { try { want = localStorage.getItem(TEAMK) || ''; } catch {} }
+  const j = await apiCall(null, '?team=' + encodeURIComponent(want || ''));
+  const changed = curTeam && j.team && j.team.id !== curTeam;
+  me = j.me; curTeamObj = j.team; curTeam = j.team ? j.team.id : null; apiCanEdit = !!j.canEdit;
+  try { if (curTeam) localStorage.setItem(TEAMK, curTeam); } catch {}
+  S.roster = j.roster || {}; S.games = j.games || {}; S.team = j.team ? j.team.name : 'Sin equipo';
+  if (changed) { draft = blankDraft(); syncMetaInputs(); }
+  applyBrand(j.team); renderAuthUI(); renderAll();
+  if (me.mustChange && !$('#pwDlg').open) openPwDlg(true);
 }
 async function put(col, id, data) {
   if (db) await db.collection(col).doc(id).set(data);
-  else if (api) { await apiCall({ op: 'put', col, id, data }); S[col][id] = data; renderAll(); }
+  else if (api) { await apiCall({ op: 'put', team: curTeam, col, id, data }); S[col][id] = data; renderAll(); }
   else { S[col][id] = data; lsSave(); renderAll(); }
 }
 async function del(col, id) {
   if (db) await db.collection(col).doc(id).delete();
-  else if (api) { await apiCall({ op: 'del', col, id }); delete S[col][id]; renderAll(); }
+  else if (api) { await apiCall({ op: 'del', team: curTeam, col, id }); delete S[col][id]; renderAll(); }
   else { delete S[col][id]; lsSave(); renderAll(); }
 }
 async function saveTeam(name) {
   if (db) await db.doc('config/team').set({ name });
-  else if (api) await apiCall({ op: 'team', name });
+  else if (api) { await apiCall({ op: 'teamName', team: curTeam, name }); if (curTeamObj) curTeamObj.name = name; const t = me && me.teams.find(t => t.id === curTeam); if (t) t.name = name; renderAuthUI(); }
   else lsSave();
   S.team = name; renderHeader(); renderClubs();
 }
@@ -637,8 +726,8 @@ async function initStore() {
       api = true; await apiLoad(); startPoll();
       return;
     } catch (e) {
+      if (e.code === 'auth' || e.code === 'setup') { api = true; showAuth(e.code === 'setup' ? 'setup' : 'login'); return; }
       api = false;
-      if (e.code === 'view_key') { api = true; needView = true; renderKeyUI(false, true); setSync(false, 'Se necesita la clave del equipo para ver los datos.'); openKeyDlg(); return; }
       if (e.code === 'no_db') { setSync(false, 'Falta conectar la base de datos en Vercel. Mientras tanto, los datos se guardan en este navegador.'); lsLoad(); renderAll(); return; }
     }
   }
@@ -652,7 +741,7 @@ async function initStore() {
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2800); }
 async function guarded(fn, okMsg) {
   try { await fn(); if (okMsg) toast(okMsg); }
-  catch (e) { const c = e && e.code; if (c === 'edit_key') { toast('Para capturar necesitas la clave del equipo.'); openKeyDlg(); return; } if (c === 'too_big') { toast('El registro es demasiado grande. Usa una foto más pequeña.'); return; } if (e && e.status === 0 || c === 'server') { toast(e.message && e.message !== 'error' ? e.message : 'No se pudo guardar. Revisa tu conexión.'); return; } toast(c === 'invalid_argument' ? 'No tienes permiso para modificar estos datos.' : c === 'quota_exceeded' ? 'Se llenó el almacenamiento: elimina juegos viejos.' : 'No se pudo guardar. Intenta de nuevo.'); }
+  catch (e) { const c = e && e.code; if (c === 'auth') { showAuth('login'); return; } if (c === 'forbidden' || c === 'network') { toast(e.message); return; } if (c === 'too_big') { toast('El registro es demasiado grande. Usa una foto más pequeña.'); return; } if (e && e.status === 0 || c === 'server') { toast(e.message && e.message !== 'error' ? e.message : 'No se pudo guardar. Revisa tu conexión.'); return; } toast(c === 'invalid_argument' ? 'No tienes permiso para modificar estos datos.' : c === 'quota_exceeded' ? 'Se llenó el almacenamiento: elimina juegos viejos.' : 'No se pudo guardar. Intenta de nuevo.'); }
 }
 
 const players = () => Object.entries(S.roster).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.num ?? 999) - (b.num ?? 999) || String(a.name).localeCompare(b.name));
@@ -1177,7 +1266,7 @@ function renderGames() {
     return `<div class="game"><span class="date">${g.no ? '#' + esc(g.no) + ' · ' : ''}${esc(g.date)}</span>
       <span class="opp">${g.ha === 'L' ? 'vs' : '@'} ${esc(g.opp)}</span>
       <span class="score"><span class="chip ${s.res === 'G' ? 'w' : s.res === 'P' ? 'l' : ''}">${s.res}</span> ${s.us}–${s.them}</span>
-      <span class="acts"><button class="btn sm" data-act="view" data-id="${g.id}">Resumen</button><button class="btn sm" data-act="edit" data-id="${g.id}">Abrir box score</button><button class="btn sm danger" data-act="del" data-id="${g.id}">Eliminar</button></span>${conf}</div>`;
+      <span class="acts"><button class="btn sm" data-act="view" data-id="${g.id}">Resumen</button><button class="btn sm edit-only" data-act="edit" data-id="${g.id}">Abrir box score</button><button class="btn sm danger edit-only" data-act="del" data-id="${g.id}">Eliminar</button></span>${conf}</div>`;
   }).join('');
 }
 $('#gamesList').addEventListener('click', e => {
@@ -1415,7 +1504,7 @@ function renderRoster() {
   if (!ps.length) { $('#rTbl').innerHTML = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Agrega a tus jugadores con el formulario de arriba. Después podrás elegirlos en cada box score.</td></tr></tbody>'; return; }
   $('#rTbl').innerHTML = '<thead><tr><th class="l">#</th><th class="l">Nombre</th><th class="l">Pos</th><th class="l">B/T</th><th>Juegos</th><th></th></tr></thead><tbody>' +
     ps.map(p => `<tr><td class="num l">${esc(p.num ?? '')}</td><td class="l name"><span class="rname">${avatarHTML(p.id, 34)}${plink(p.id, p.name)}</span></td><td class="l">${esc(p.pos)}</td><td class="l">${esc(p.bats || 'D')}/${esc(p.throws || 'D')}</td><td>${cnt[p.id] || 0}</td>
-    <td class="l">${pendingDelete === 'r:' + p.id ? `<span class="confirm" style="display:inline-flex">${cnt[p.id] ? 'Sus juegos quedarán como "Jugador eliminado".' : '¿Eliminar?'} <button class="btn sm danger" data-act="rdel-yes" data-id="${p.id}">Eliminar</button><button class="btn sm" data-act="rdel-no">Cancelar</button></span>` : `<button class="btn sm" data-act="redit" data-id="${p.id}">Editar</button> <button class="btn sm danger" data-act="rdel" data-id="${p.id}">Eliminar</button>`}</td></tr>`).join('') + '</tbody>';
+    <td class="l">${pendingDelete === 'r:' + p.id ? `<span class="confirm" style="display:inline-flex">${cnt[p.id] ? 'Sus juegos quedarán como "Jugador eliminado".' : '¿Eliminar?'} <button class="btn sm danger" data-act="rdel-yes" data-id="${p.id}">Eliminar</button><button class="btn sm" data-act="rdel-no">Cancelar</button></span>` : `<span class="edit-only"><button class="btn sm" data-act="redit" data-id="${p.id}">Editar</button> <button class="btn sm danger" data-act="rdel" data-id="${p.id}">Eliminar</button></span>`}</td></tr>`).join('') + '</tbody>';
 }
 $('#rTbl').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.dataset.id;
@@ -1548,7 +1637,7 @@ function pdfDoc(orientation, title, subtitle) {
   const W = doc.internal.pageSize.getWidth();
   doc.setFillColor(...RED); doc.rect(0, 0, W, 64, 'F');
   doc.setFillColor(141, 144, 150); doc.rect(0, 64, W, 4, 'F');
-  try { const dv = $('.hero .devil'); if (dv) doc.addImage(dv.src, 'PNG', 20, 8, 52, 50); } catch {}
+  try { const dv = $('.hero .devil'); if (dv && !dv.hidden) doc.addImage(dv.src, /^data:image\/jpe?g/.test(dv.src) ? 'JPEG' : 'PNG', 20, 8, 52, 50); } catch {}
   doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pdfSafe(S.team).toUpperCase(), 84, 32);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(pdfSafe(title), 84, 50);
   if (subtitle) { doc.setFontSize(9); doc.text(pdfSafe(subtitle), W - 20, 50, { align: 'right' }); }
@@ -1803,7 +1892,7 @@ $('#backupNo').addEventListener('click', () => { pendingBackup = null; $('#backu
 $('#backupYes').addEventListener('click', () => {
   const j = pendingBackup; if (!j) return; $('#backupConfirm').hidden = true; pendingBackup = null;
   guarded(async () => {
-    if (api) { await apiCall({ op: 'import', roster: j.roster, games: j.games, team: j.team }); await apiLoad(); return; }
+    if (api) { await apiCall({ op: 'import', team: curTeam, roster: j.roster, games: j.games }); await apiLoad(); return; }
     if (!db) { Object.assign(S.roster, j.roster); Object.assign(S.games, j.games); if (j.team) S.team = j.team; lsSave(); renderAll(); return; }
     for (const [id, d] of Object.entries(j.roster)) await db.collection('roster').doc(id).set(d);
     for (const [id, d] of Object.entries(j.games)) await db.collection('games').doc(id).set(d);
@@ -1857,27 +1946,165 @@ $('#btnFs').addEventListener('click', () => setFs(!document.body.classList.conta
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs') && !document.querySelector('dialog[open]')) setFs(false); });
 renderFsBtn(false);
 
-/* ---------- Clave de captura (sitio con Postgres) ---------- */
-function renderKeyUI(needsEditKey, viewLocked) {
-  const b = $('#keyBtn'); b.hidden = !api && !viewLocked;
-  b.textContent = apiCanEdit ? 'Modo captura ✓' : 'Ingresar clave';
-  b.classList.toggle('primary', !apiCanEdit);
-  const dbTxt = dbInfo ? ` · base ${dbInfo.name} (${dbInfo.endpoint})` : '';
-  if (api) setSync(true, (needsEditKey ? 'Datos en Postgres · falta configurar EDIT_KEY en Vercel para poder capturar' : apiCanEdit ? 'Datos en Postgres · modo captura activo' : 'Datos en Postgres · solo lectura (ingresa la clave para capturar)') + dbTxt);
+/* ---------- Sesión, equipos y roles (sitio con Postgres) ---------- */
+const ROLE_LAB = { admin: 'Administrador', supervisor: 'Supervisor', editor: 'Captura', viewer: 'Lectura' };
+const levelOf = u => u.isAdmin ? 'admin' : u.isSupervisor ? 'supervisor' : 'user';
+const heroImgs = () => ({ devil: $('.hero .devil'), word: $('.hero .word') });
+const ORIG = (() => { const h = heroImgs(); return { devil: h.devil && h.devil.src, word: h.word && h.word.src }; })();
+function applyBrand(team) {
+  const h = heroImgs(); if (!h.devil) return;
+  let nameEl = $('.hero .team-name');
+  if (!nameEl) { nameEl = document.createElement('div'); nameEl.className = 'team-name'; h.word.after(nameEl); }
+  const name = team ? team.name : '';
+  const isDiablillos = /diablillos/i.test(name);
+  if (team && team.logo) { h.devil.src = team.logo; h.devil.hidden = false; }
+  else { h.devil.src = ORIG.devil; h.devil.hidden = !!team && !isDiablillos; }
+  const useWord = !team || (isDiablillos && !team.logo);
+  h.word.hidden = !useWord; nameEl.hidden = useWord; nameEl.textContent = name;
+  $('#authLogo').src = (team && team.logo) || ORIG.devil;
 }
-function openKeyDlg() { $('#keyErr').hidden = true; $('#keyInput').value = ''; $('#keyOut').hidden = !getKey(); $('#keyDlg').showModal(); setTimeout(() => $('#keyInput').focus(), 30); }
-$('#keyBtn').addEventListener('click', openKeyDlg);
-$('#keyCancel').addEventListener('click', () => $('#keyDlg').close());
-$('#keyOut').addEventListener('click', async () => { setKey(''); apiCanEdit = false; $('#keyDlg').close(); try { await apiLoad(); } catch { renderKeyUI(false, true); } toast('Saliste del modo captura'); });
-$('#keyForm').addEventListener('submit', async e => {
-  e.preventDefault(); const k = $('#keyInput').value.trim(); if (!k) return;
-  const prev = getKey(); setKey(k);
-  try {
-    const r = await apiCall({ op: 'check' });
-    if (!r.canEdit && !(needView && r.canView)) throw 0;
-    $('#keyDlg').close(); needView = false; await apiLoad(); api = true; startPoll();
-    toast(r.canEdit ? 'Modo captura activo' : 'Clave de consulta aceptada');
-  } catch { setKey(prev); $('#keyErr').hidden = false; }
+function renderAuthUI() {
+  if (!me) return;
+  const role = curTeamObj ? curTeamObj.role : (me.isAdmin ? 'admin' : null);
+  document.body.classList.toggle('ro', !apiCanEdit);
+  $('#teamName').readOnly = !apiCanEdit;
+  $('#tabAdmin').hidden = !me.isAdmin;
+  $('#userBtn').hidden = false;
+  $('#userBtn').innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.2" r="3" fill="currentColor"/><path d="M2.2 14.6c.6-3 3-4.6 5.8-4.6s5.2 1.6 5.8 4.6" fill="currentColor"/></svg><span>' + esc(me.name || me.email) + '</span>';
+  const sel = $('#teamSel');
+  sel.hidden = me.teams.length < 2;
+  sel.innerHTML = me.teams.map(t => `<option value="${esc(t.id)}"${t.id === curTeam ? ' selected' : ''}>${esc(t.name)}${t.category ? ' · ' + esc(t.category) : ''}</option>`).join('');
+  const where = curTeamObj ? `${curTeamObj.name} · ${ROLE_LAB[role] || ''}` : (me.isAdmin ? 'Sin equipos todavía: crea uno en Admin' : 'Tu usuario no tiene equipos asignados. Pide acceso a un administrador.');
+  setSync(true, `${me.name || me.email} · ${where}`);
+  if (!apiCanEdit && document.querySelector('nav.tabs button[data-v="captura"][aria-selected="true"]')) showView('juegos');
+}
+$('#teamSel').addEventListener('change', async e => {
+  curTeam = e.target.value; try { localStorage.setItem(TEAMK, curTeam); } catch {}
+  draft = blankDraft(); syncMetaInputs();
+  try { await apiLoad(); toast('Equipo: ' + S.team); } catch (er) { toast(er.message); }
+});
+function showAuth(mode) {
+  me = null; document.body.classList.add('ro');
+  $('#authScreen').hidden = false; $('#authErr').hidden = true;
+  $('#loginForm').hidden = mode !== 'login'; $('#setupForm').hidden = mode !== 'setup';
+  $('#authTitle').textContent = mode === 'setup' ? 'Configurar administrador' : 'Iniciar sesión';
+  $('#authHint').textContent = mode === 'setup' ? 'Es la primera vez que se usa la plataforma. Crea tu cuenta de administrador; los datos que ya existían quedarán en tu primer equipo.' : 'Entra con el correo y la contraseña que te dio el administrador.';
+  $('#authLogo').src = ORIG.devil;
+  setSync(false, 'Inicia sesión para ver los datos.');
+  setTimeout(() => (mode === 'setup' ? $('#suName') : $('#lgEmail')).focus(), 50);
+}
+function authError(msg) { $('#authErrTxt').textContent = msg; $('#authErr').hidden = false; }
+async function afterLogin() { $('#authScreen').hidden = true; try { await apiLoad(); startPoll(); } catch (e) { if (e.code === 'auth') showAuth('login'); else toast(e.message); } }
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('#authErr').hidden = true;
+  try { await apiCall({ op: 'login', email: $('#lgEmail').value, password: $('#lgPw').value }); $('#lgPw').value = ''; await afterLogin(); }
+  catch (er) { authError(er.message === 'error' ? 'No se pudo iniciar sesión.' : er.message); }
+});
+$('#setupForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('#authErr').hidden = true;
+  try { await apiCall({ op: 'setup', name: $('#suName').value, email: $('#suEmail').value, password: $('#suPw').value, key: $('#suKey').value }); await afterLogin(); }
+  catch (er) { authError(er.message); }
+});
+function openPwDlg(forced) {
+  $('#pwErr').hidden = true; ['#pwCur', '#pwNew', '#pwNew2'].forEach(s => $(s).value = '');
+  $('#pwHint').textContent = forced ? 'Tu cuenta tiene una contraseña temporal. Por seguridad, cámbiala ahora.' : 'Escribe tu contraseña actual y la nueva (mínimo 8 caracteres).';
+  $('#pwCancel').hidden = !!forced; $('#pwDlg').dataset.forced = forced ? '1' : '';
+  if (!$('#pwDlg').open) $('#pwDlg').showModal();
+}
+$('#pwDlg').addEventListener('cancel', e => { if ($('#pwDlg').dataset.forced) e.preventDefault(); });
+$('#pwCancel').addEventListener('click', () => $('#pwDlg').close());
+$('#pwForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = m => { $('#pwErrTxt').textContent = m; $('#pwErr').hidden = false; };
+  if ($('#pwNew').value !== $('#pwNew2').value) return err('Las contraseñas nuevas no coinciden.');
+  try { await apiCall({ op: 'password', current: $('#pwCur').value, password: $('#pwNew').value }); $('#pwDlg').close(); if (me) me.mustChange = false; toast('Contraseña actualizada'); }
+  catch (er) { err(er.message); }
+});
+$('#userBtn').addEventListener('click', () => {
+  if (!me) return;
+  $('#udName').textContent = me.name || me.email; $('#udEmail').textContent = me.email + (me.isAdmin ? ' · Administrador' : me.isSupervisor ? ' · Supervisor (todos los equipos)' : '');
+  $('#udTeams').innerHTML = me.teams.length ? me.teams.map(t => `<div><span>${esc(t.name)}${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><span class="chip">${ROLE_LAB[t.role] || t.role}</span></div>`).join('') : '<p class="hint">Sin equipos asignados.</p>';
+  $('#userDlg').showModal();
+});
+$('#udClose').addEventListener('click', () => $('#userDlg').close());
+$('#udPw').addEventListener('click', () => { $('#userDlg').close(); openPwDlg(false); });
+$('#udLogout').addEventListener('click', async () => { try { await apiCall({ op: 'logout' }); } catch {} try { localStorage.removeItem(TEAMK); } catch {} location.reload(); });
+
+/* ---------- Administración ---------- */
+let adm = { teams: [], users: [] }, admEditTeam = null, admEditUser = null, admLogo, admPending = null;
+async function admLoad() {
+  try { adm = await apiCall({ op: 'adminList' }); renderAdmin(); }
+  catch (e) { toast(e.message); }
+}
+function renderAdmin() {
+  const tt = $('#admTeams');
+  tt.innerHTML = adm.teams.length ? '<thead><tr><th class="l">Equipo</th><th class="l">Categoría</th><th>Jugadores</th><th>Juegos</th><th>Último juego</th><th class="l">Usuarios</th><th></th></tr></thead><tbody>' + adm.teams.map(t => {
+    const us = adm.users.filter(u => u.teams.some(m => m.team === t.id)).map(u => esc(u.name || u.email)).join(', ');
+    const conf = admPending === 't:' + t.id ? `<span class="confirm" style="display:inline-flex">¿Eliminar? <button class="btn sm danger" data-a="tdel-yes" data-id="${esc(t.id)}">Eliminar</button><button class="btn sm" data-a="no">Cancelar</button></span>` : '';
+    return `<tr><td class="l name"><span class="rname">${t.logo ? `<img class="team-logo" src="${esc(t.logo)}" alt="">` : ''}${esc(t.name)}</span></td><td class="l">${esc(t.category || '—')}</td><td>${t.players}</td><td>${t.games}</td><td>${esc(t.lastGame || '—')}</td><td class="l" style="white-space:normal;min-width:140px">${us || '<span class="sub">Nadie</span>'}</td>
+      <td class="l">${conf || `<button class="btn sm primary" data-a="tview" data-id="${esc(t.id)}">Ver datos</button> <button class="btn sm" data-a="tedit" data-id="${esc(t.id)}">Editar</button> <button class="btn sm danger" data-a="tdel" data-id="${esc(t.id)}">Eliminar</button>`}</td></tr>`;
+  }).join('') + '</tbody>' : '<tbody><tr><td class="l" style="padding:16px;font-family:var(--f-body);color:var(--muted)">Todavía no hay equipos. Crea el primero con el formulario de abajo.</td></tr></tbody>';
+  const ut = $('#admUsers');
+  ut.innerHTML = '<thead><tr><th class="l">Nombre</th><th class="l">Correo</th><th class="l">Rol</th><th class="l">Equipos</th><th class="l">Estado</th><th class="l">Último acceso</th><th></th></tr></thead><tbody>' + adm.users.map(u => {
+    const teams = (u.isAdmin || u.isSupervisor) ? '<span class="sub">Todos</span>' : (u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return `${esc(t ? t.name : m.team)} <span class="sub">(${ROLE_LAB[m.role]})</span>`; }).join('<br>') || '<span class="sub">Ninguno</span>');
+    const conf = admPending === 'u:' + u.id ? `<span class="confirm" style="display:inline-flex">¿Eliminar? <button class="btn sm danger" data-a="udel-yes" data-id="${esc(u.id)}">Eliminar</button><button class="btn sm" data-a="no">Cancelar</button></span>` : '';
+    return `<tr><td class="l name">${esc(u.name || '—')}</td><td class="l">${esc(u.email)}</td><td class="l">${u.isAdmin ? '<span class="chip w">Admin</span>' : u.isSupervisor ? '<span class="chip">Supervisor</span>' : 'Usuario'}</td><td class="l" style="white-space:normal;min-width:160px">${teams}</td>
+      <td class="l">${u.active ? 'Activa' : '<span class="chip l">Inactiva</span>'}${u.mustChange ? '<br><span class="sub">Contraseña temporal</span>' : ''}</td><td class="l">${u.lastLogin ? esc(String(u.lastLogin).slice(0, 10)) : '<span class="sub">Nunca</span>'}</td>
+      <td class="l">${conf || `<button class="btn sm" data-a="uedit" data-id="${esc(u.id)}">Editar</button>${me && u.id === me.id ? '' : ` <button class="btn sm danger" data-a="udel" data-id="${esc(u.id)}">Eliminar</button>`}`}</td></tr>`;
+  }).join('') + '</tbody>';
+  renderAuTeams();
+}
+function renderAuTeams(sel = (admEditUser && admEditUser.teams) || []) {
+  $('#auTeamsWrap').hidden = $('#auLevel').value !== 'user';
+  $('#auTeams').innerHTML = adm.teams.length ? adm.teams.map(t => { const r = (sel.find(m => m.team === t.id) || {}).role || ''; return `<label class="au-team"><span>${esc(t.name)}${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><select data-team="${esc(t.id)}"><option value="">Sin acceso</option><option value="editor"${r === 'editor' ? ' selected' : ''}>Captura</option><option value="viewer"${r === 'viewer' ? ' selected' : ''}>Lectura</option></select></label>`; }).join('') : '<p class="hint">Primero crea un equipo.</p>';
+}
+$('#auLevel').addEventListener('change', () => { $('#auTeamsWrap').hidden = $('#auLevel').value !== 'user'; });
+$('#admRefresh').addEventListener('click', admLoad);
+document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('click', admLoad);
+$('#admTeams').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return; const id = b.dataset.id, a = b.dataset.a;
+  if (a === 'tview') { curTeam = id; try { localStorage.setItem(TEAMK, id); } catch {} draft = blankDraft(); syncMetaInputs(); await apiLoad().catch(er => toast(er.message)); showView('juegos'); return; }
+  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
+  if (a === 'tdel') { admPending = 't:' + id; renderAdmin(); return; }
+  if (a === 'no') { admPending = null; renderAdmin(); return; }
+  if (a === 'tdel-yes') { admPending = null; try { await apiCall({ op: 'adminTeamDelete', id }); toast('Equipo eliminado'); await admLoad(); await apiLoad(); } catch (er) { toast(er.message); renderAdmin(); } }
+});
+function showLogo(src) { const el = $('#atLogoPrev'); if (src) { el.src = src; el.hidden = false; $('#atLogoClear').hidden = false; } else { el.hidden = true; el.removeAttribute('src'); $('#atLogoClear').hidden = true; } }
+function resetTeamForm() { admEditTeam = null; admLogo = undefined; $('#admTeamForm').reset(); showLogo(''); $('#atSubmit').textContent = 'Crear equipo'; $('#atCancel').hidden = true; }
+$('#atCancel').addEventListener('click', resetTeamForm);
+$('#atLogoClear').addEventListener('click', () => { admLogo = ''; $('#atLogo').value = ''; showLogo(''); });
+$('#atLogo').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => {
+    const M = 256, k = Math.min(1, M / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    admLogo = c.toDataURL('image/png'); if (admLogo.length > 280 * 1024) admLogo = c.toDataURL('image/jpeg', .85); showLogo(admLogo);
+  }; img.onerror = () => toast('No se pudo leer la imagen.'); img.src = fr.result; }; fr.readAsDataURL(f);
+});
+$('#admTeamForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = { op: 'adminTeamSave', id: admEditTeam || undefined, name: $('#atName').value, category: $('#atCat').value };
+  if (admLogo !== undefined) body.logo = admLogo;
+  try { const r = await apiCall(body); toast(admEditTeam ? 'Equipo guardado' : 'Equipo creado'); resetTeamForm(); await admLoad(); if (!curTeam) curTeam = r.id; await apiLoad(); }
+  catch (er) { toast(er.message); }
+});
+function resetUserForm() { admEditUser = null; $('#admUserForm').reset(); $('#auActive').checked = true; $('#auTitle').textContent = 'Nuevo usuario'; $('#auSubmit').textContent = 'Crear usuario'; $('#auPwLab').textContent = 'Contraseña temporal'; $('#auPw').placeholder = 'Mínimo 8 caracteres'; $('#auCancel').hidden = true; renderAuTeams([]); }
+$('#auCancel').addEventListener('click', resetUserForm);
+$('#admUsers').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return; const id = b.dataset.id, a = b.dataset.a;
+  if (a === 'uedit') { const u = adm.users.find(u => u.id === id); admEditUser = u; $('#auName').value = u.name || ''; $('#auEmail').value = u.email; $('#auPw').value = ''; $('#auLevel').value = levelOf(u); $('#auActive').checked = u.active;
+    $('#auTitle').textContent = 'Editar usuario'; $('#auSubmit').textContent = 'Guardar usuario'; $('#auPwLab').textContent = 'Nueva contraseña temporal (opcional)'; $('#auPw').placeholder = 'Déjala vacía para no cambiarla'; $('#auCancel').hidden = false; renderAuTeams(u.teams); $('#auName').focus(); return; }
+  if (a === 'udel') { admPending = 'u:' + id; renderAdmin(); return; }
+  if (a === 'no') { admPending = null; renderAdmin(); return; }
+  if (a === 'udel-yes') { admPending = null; try { await apiCall({ op: 'adminUserDelete', id }); toast('Usuario eliminado'); await admLoad(); } catch (er) { toast(er.message); renderAdmin(); } }
+});
+$('#admUserForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const teams = [...$('#auTeams').querySelectorAll('select[data-team]')].filter(s => s.value).map(s => ({ team: s.dataset.team, role: s.value }));
+  const body = { op: 'adminUserSave', id: admEditUser ? admEditUser.id : undefined, name: $('#auName').value, email: $('#auEmail').value, level: $('#auLevel').value, active: $('#auActive').checked, teams };
+  if ($('#auPw').value) body.password = $('#auPw').value;
+  try { await apiCall(body); toast(admEditUser ? 'Usuario guardado' : 'Usuario creado'); const self = admEditUser && me && admEditUser.id === me.id; resetUserForm(); await admLoad(); if (self) await apiLoad(); }
+  catch (er) { toast(er.message); }
 });
 
 /* ---------- Render global ---------- */
