@@ -187,6 +187,11 @@ tr.sum td.badouts{background:var(--warn-bg);color:var(--warn);font-weight:700}
 .ptile .k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted)}
 .ptile .v{font-family:var(--f-display);font-size:26px;font-weight:700;color:var(--accent);line-height:1}
 .backup{display:flex;flex-direction:column;gap:10px;border-top:1px dashed var(--line-strong);padding-top:14px}
+td.cell.off{background:repeating-linear-gradient(135deg,var(--chip) 0 6px,transparent 6px 12px)}
+td.cell.off button{opacity:.45}
+td.cell.closer{box-shadow:inset 0 -3px 0 var(--accent)}
+th.inn small{display:block;font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0}
+.modo-chip{display:inline-block;margin-left:8px;font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:3px;background:var(--accent);color:var(--accent-ink);vertical-align:middle}
 .checks{display:flex;flex-direction:column;gap:6px}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:7px 10px;border-radius:4px}
 .check.ok{background:var(--ok-bg)} .check.warn{background:var(--warn-bg)} .check.bad{background:var(--bad-bg)}
@@ -291,6 +296,8 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <label class="f">Fecha<input type="date" id="gDate"></label>
         <label class="f">Rival<input id="gOpp" placeholder="Nombre del rival"></label>
         <label class="f">Nosotros somos<select id="gHA"><option value="L">Club local</option><option value="V">Club visitante</option></select></label>
+        <label class="f">Modalidad<select id="gMode"><option value="trad">Tradicional</option><option value="chupon">Chupón (10 bateadores por entrada)</option></select></label>
+        <label class="f" id="gBpiWrap" hidden>Bateadores por entrada<input type="number" id="gBpi" min="1" max="15" value="10"></label>
         <label class="f">Entradas<input type="number" id="gInns" min="1" max="15" value="9"></label>
         <label class="f">Estadio / notas<input id="gNotes" placeholder="Opcional"></label>
         <div class="clubs"><span>Club local: <b id="clubLocal">—</b></span><span>Club visitante: <b id="clubVis">—</b></span></div>
@@ -327,12 +334,12 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <p class="hint" style="margin-top:6px" id="lineHint"></p>
       </div>
 
-      <div>
+      <div id="pitWrap"><div>
         <div class="row spread" style="margin-bottom:8px"><h3>Lanzadores</h3><button class="btn sm" id="btnAddPit">+ Lanzador</button></div>
         <div class="scroll"><table class="mini" id="pitTbl"></table></div>
         <p class="hint" style="margin-top:6px" id="pitHint"></p>
       </div>
-      <div class="decision" id="decBox"></div>
+      <div class="decision" id="decBox"></div></div>
 
       <div>
         <h3 style="margin-bottom:8px">Defensiva</h3>
@@ -360,6 +367,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <h2>Estadísticas de bateo</h2>
         <div class="row">
           <label class="f">Juegos<select id="bRange"><option value="all">Temporada completa</option><option value="5">Últimos 5</option><option value="10">Últimos 10</option></select></label>
+          <label class="f">Modalidad<select class="modeSel" id="mSelB"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
           <label class="inline-check"><input type="checkbox" id="bQual"> Solo calificados</label>
           <button class="btn sm" id="btnCsvB">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfB">Reporte PDF</button>
@@ -397,6 +405,11 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
           <div><b>K%</b> Porcentaje de ponches: SO / PA.</div>
           <div><b>BB%</b> Porcentaje de bases por bolas: BB / PA. Mide la disciplina en el plato.</div>
           <div><b>SB%</b> Efectividad robando: SB / (SB + CS). Arriba de 75% conviene seguir corriendo.</div>
+          <div><b>EB</b> Veces en base (Chupón): turnos en los que llegó al menos a primera, por hit, error u ocupada.</div>
+          <div><b>BT</b> Bases recorridas (Chupón): suma de las bases que avanzó en todos sus turnos, contando cuando anotó (4).</div>
+          <div><b>EB%</b> Porcentaje en base (Chupón): EB / VB.</div>
+          <div><b>BT/VB</b> Bases por turno (Chupón): BT / VB. Mide cuánto avanza cada vez que batea; 4.00 sería anotar siempre.</div>
+          <div><b>Contacto</b> Porcentaje de contacto (Chupón): turnos sin ponche / VB. En esta edad es la estadística clave.</div>
           <div><b>Calificado</b> Mínimo de turnos: 3.1 PA por cada juego del equipo (regla de MLB) para entrar en los líderes de porcentajes.</div>
         </div></div>
     </div>
@@ -407,6 +420,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <div class="row spread">
         <h2>Estadísticas de pitcheo</h2>
         <div class="row">
+          <label class="f">Modalidad<select class="modeSel" id="mSelP"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
           <label class="f">Entradas por juego (ERA)<select id="pInnBase"><option value="9">9 (MLB)</option><option value="7">7 (sóftbol / ligas de 7)</option></select></label>
           <button class="btn sm" id="btnCsvP">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfP">Reporte PDF</button>
@@ -446,6 +460,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <div class="row spread">
         <h2>Estadísticas de fildeo</h2>
         <div class="row">
+          <label class="f">Modalidad<select class="modeSel" id="mSelF"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
           <label class="f">Agrupar<select id="fGroup"><option value="player">Por jugador</option><option value="pos">Por posición</option></select></label>
           <button class="btn sm" id="btnCsvF">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfF">Reporte PDF</button>
@@ -461,6 +476,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
           <div><b>A</b> Asistencias: tiros o toques que ayudan a hacer un out, como el tiro del SS a primera en un 6-3.</div>
           <div><b>E</b> Errores: jugadas que con esfuerzo normal debieron ser out y permitieron al corredor avanzar o seguir vivo.</div>
           <div><b>DP</b> Dobles matanzas (double plays) en las que participó, ya sea con out o asistencia.</div>
+          <div><b>EC</b> Entradas en el campo: cuántas entradas jugó a la defensiva. Sirve en Chupón para repartir el juego entre todos los niños.</div>
           <div><b>TC</b> Oportunidades totales: PO + A + E. Indica cuántas jugadas le llegaron.</div>
           <div><b>FPCT</b> Porcentaje de fildeo: (PO + A) / TC. 1.000 significa cero errores; en MLB un buen promedio ronda .980.</div>
           <div><b>RF/G</b> Factor de alcance por juego: (PO + A) / G. Mide cuántas jugadas resuelve por partido; compáralo entre jugadores de la misma posición.</div>
@@ -498,10 +514,11 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
   <div class="boxhead"><div><div class="sub" id="paWhere"></div><h2 id="paWho">Turno</h2></div><div class="pa-tabs" id="paTabs"></div></div>
   <div class="resgrid" id="paRes"></div>
   <div class="res-desc" id="paDesc"></div>
+  <div class="check warn" id="paNote" hidden></div>
   <label class="f">Jugada (opcional)<input id="paPlay" placeholder="Ej. 6-3, F8, L4, 5-4-3" maxlength="10"></label>
   <div class="row">
     <div style="display:flex;flex-direction:column;gap:4px"><span class="sub">Llegó hasta</span><div class="seg" id="paReach"></div></div>
-    <div style="display:flex;flex-direction:column;gap:4px"><span class="sub">Out número</span><div class="seg" id="paOut"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><span class="sub" id="paOutLab">Out número</span><div class="seg" id="paOut"></div></div>
   </div>
   <div class="row">
     <label class="f">CI (impulsadas)<input id="paRbi" type="number" min="0" max="4" style="width:80px"></label>
@@ -522,9 +539,9 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 (() => {
-const POS = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH','BE','CE'];
-const BAT = [['ab','AB'],['r','R'],['h','H'],['d','2B'],['t','3B'],['hr','HR'],['rbi','RBI'],['bb','BB'],['so','SO'],['hbp','HBP'],['sf','SF'],['sh','SH'],['sb','SB'],['cs','CS']];
-const FLD = [['po','PO'],['a','A'],['e','E'],['dp','DP']];
+const POS = ['P','C','1B','2B','3B','SS','LF','CF','RF','4J','DH','BE','CE'];
+const BAT = [['ab','AB'],['r','R'],['h','H'],['d','2B'],['t','3B'],['hr','HR'],['rbi','RBI'],['bb','BB'],['so','SO'],['hbp','HBP'],['sf','SF'],['sh','SH'],['sb','SB'],['cs','CS'],['onb','EB'],['bases','BT']];
+const FLD = [['ec','EC'],['po','PO'],['a','A'],['e','E'],['dp','DP']];
 const PIT = [['h','H'],['r','C'],['er','CL'],['bb','BB'],['so','K'],['hbp','BG'],['wp','WP'],['hr','HR']];
 const BATK = BAT.map(x => x[0]), FLDK = FLD.map(x => x[0]), PITK = PIT.map(x => x[0]);
 const RES = {
@@ -563,7 +580,7 @@ let editingRoster = null, pendingDelete = null, noTouched = false;
 function blankDraft() {
   return { id: null, no: '', liga: '', date: today(), opp: '', ha: 'L', inns: 9, notes: '',
     slots: Array.from({ length: 9 }, () => ({ pid: '', pos: '', sub: null })), cells: {},
-    them: Array(9).fill(''), themE: '', pit: [], fld: {}, legacy: null,
+    them: Array(9).fill(''), themE: '', pit: [], fld: {}, legacy: null, mode: 'trad', bpi: 10,
     oslots: Array.from({ length: 9 }, () => ({ num: '', name: '', pos: '', sub: null })), ocells: {} };
 }
 
@@ -607,6 +624,7 @@ function applyPA(b, pa) {
   if (R.hit) { b.h++; if (R.hit === 2) b.d++; if (R.hit === 3) b.t++; if (R.hit === 4) b.hr++; }
   if (R.bb) b.bb++; if (R.hbp) b.hbp++; if (R.so) b.so++; if (R.sf) b.sf++; if (R.sh) b.sh++;
   if (num(pa.reach) === 4) b.r++;
+  b.bases = (b.bases || 0) + num(pa.reach); if (num(pa.reach) >= 1) b.onb = (b.onb || 0) + 1;
   b.rbi += num(pa.rbi); b.sb += num(pa.sb); if (pa.cs) b.cs++;
 }
 const slotPidAt = (s, inn) => (s.sub && s.sub.pid && inn >= (num(s.sub.from) || 1)) ? s.sub.pid : s.pid;
@@ -638,6 +656,16 @@ function deriveSide(slots, cells, n, keyAt, pitOf) {
     }
   });
   return { bat, pit, noPit, slotTot, inn, anyCell, us: inn.map(I => I.pa ? String(I.c) : ''), runs: inn.reduce((a, I) => a + I.c, 0), hits: inn.reduce((a, I) => a + I.h, 0) };
+}
+/* Modalidad Chupón: batean N por entrada en orden corrido; los outs no cierran la entrada */
+const isCh = () => draft.mode === 'chupon';
+const bpiOf = () => Math.max(1, num(draft.bpi) || 10);
+const slotFilled = s => !!(s && (s.pid || s.name || s.num));
+function lineupLen(slots) { let L = slots.length; while (L > 0 && !slotFilled(slots[L - 1])) L--; return L || slots.length; }
+function rotation(slots, inn) {
+  const L = lineupLen(slots), b = bpiOf(), start = ((inn - 1) * b) % L;
+  const order = Array.from({ length: b }, (_, k) => (start + k) % L);
+  return { start, order, last: order[b - 1], L };
 }
 const deriveSheet = d => deriveSide(d.slots, d.cells, d.inns, (s, i) => slotPidAt(s, i));
 // Rival: llave por fila ('3' titular, '3s' sustituto)
@@ -706,7 +734,9 @@ function renderClubs() {
   $('#clubLocal').textContent = draft.ha === 'L' ? us : opp;
   $('#clubVis').textContent = draft.ha === 'L' ? opp : us;
 }
+function syncMode() { $('#gMode').value = draft.mode || 'trad'; $('#gBpi').value = draft.bpi || 10; $('#gBpiWrap').hidden = !isCh(); $('#pitWrap').hidden = isCh(); }
 function syncMetaInputs() {
+  syncMode();
   $('#gNo').value = draft.no; $('#gLiga').value = draft.liga; $('#gDate').value = draft.date; $('#gOpp').value = draft.opp;
   $('#gHA').value = draft.ha; $('#gInns').value = draft.inns; $('#gNotes').value = draft.notes;
   $('#capTitle').textContent = draft.id ? 'Editando box score' : 'Nuevo box score';
@@ -715,6 +745,12 @@ function syncMetaInputs() {
 }
 const META = { gNo: 'no', gLiga: 'liga', gDate: 'date', gOpp: 'opp', gHA: 'ha', gNotes: 'notes' };
 Object.keys(META).forEach(id => $('#' + id).addEventListener('input', e => { if (id === 'gNo') noTouched = true; draft[META[id]] = e.target.value; renderClubs(); if (id === 'gOpp' || id === 'gHA') { renderLine(); renderChecks(); renderSideTabs(); } }));
+$('#gMode').addEventListener('change', e => {
+  draft.mode = e.target.value;
+  if (isCh()) { while (draft.slots.length < 12) draft.slots.push({ pid: '', pos: '', sub: null }); while (draft.oslots.length < 12) draft.oslots.push({ num: '', name: '', pos: '', sub: null }); }
+  syncMode(); renderSheet();
+});
+$('#gBpi').addEventListener('change', e => { draft.bpi = Math.max(1, Math.min(15, num(e.target.value) || 10)); e.target.value = draft.bpi; renderSheet(); });
 $('#gInns').addEventListener('change', e => {
   const n = Math.max(1, Math.min(15, num(e.target.value) || 9)); draft.inns = n; e.target.value = n;
   draft.them = draft.them.slice(0, n); while (draft.them.length < n) draft.them.push('');
@@ -734,7 +770,7 @@ function diamondSVG(pa, extra) {
   const isHit = RES[pa.res].hit;
   p += `<text x="30" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="${pa.res.length > 2 ? 10 : 12}" font-weight="700" fill="${isHit ? 'var(--accent)' : 'var(--ink)'}">${esc(pa.res)}</text>`;
   if (pa.play) p += `<text x="30" y="58" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--muted)">${esc(pa.play)}</text>`;
-  if (num(pa.out)) p += `<circle cx="52" cy="8" r="6.5" fill="none" stroke="var(--loss)" stroke-width="1.4"/><text x="52" y="11" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="700" fill="var(--loss)">${num(pa.out)}</text>`;
+  if (num(pa.out)) p += `<circle cx="52" cy="8" r="6.5" fill="none" stroke="var(--loss)" stroke-width="1.4"/><text x="52" y="11" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="700" fill="var(--loss)">${isCh() ? '×' : num(pa.out)}</text>`;
   for (let i = 0; i < num(pa.rbi); i++) p += `<circle cx="${5 + i * 6}" cy="6" r="2.4" fill="var(--ink)"/>`;
   if (num(pa.sb)) p += `<text x="2" y="48" font-family="IBM Plex Mono, monospace" font-size="7.5" fill="var(--muted)">BR${num(pa.sb) > 1 ? num(pa.sb) : ''}</text>`;
   if (pa.cs) p += `<text x="2" y="48" font-family="IBM Plex Mono, monospace" font-size="7.5" fill="var(--loss)">AR</text>`;
@@ -759,21 +795,22 @@ function renderSheet() {
   const n = draft.inns, c = cur();
   const der = side === 'us' ? deriveSheet(draft) : deriveOpp();
   let h = '<thead><tr><th colspan="2" style="text-align:left;padding-left:8px">Nombre · Pos</th>';
-  for (let i = 1; i <= n; i++) h += `<th class="inn">${i}</th>`;
+  for (let i = 1; i <= n; i++) h += `<th class="inn">${i}${isCh() ? `<small>Abre ${rotation(c.slots, i).start + 1}</small>` : ''}</th>`;
   TOTC.forEach(([k, lab], i) => h += `<th class="${i === 0 ? 'first' : ''}">${lab}</th>`);
   h += '</tr></thead><tbody>';
   c.slots.forEach((s, si) => {
     h += `<tr data-si="${si}"><td class="slotno">${si + 1}</td><td class="slot">${slotCellHTML(s, si)}</td>`;
     for (let i = 1; i <= n; i++) {
       const arr = c.cells[si + '_' + i] || [];
-      h += `<td class="cell"><button type="button" data-si="${si}" data-inn="${i}" aria-label="Turno ${si + 1}, entrada ${i}${arr[0] ? ': ' + esc(arr[0].res) : ''}">${diamondSVG(arr[0], arr.length > 1 ? arr.length - 1 : 0)}</button></td>`;
+      const rot = isCh() ? rotation(c.slots, i) : null, cls = rot ? (rot.order.includes(si) ? (rot.last === si ? ' closer' : '') : ' off') : '';
+      h += `<td class="cell${cls}"><button type="button" data-si="${si}" data-inn="${i}" aria-label="Turno ${si + 1}, entrada ${i}${arr[0] ? ': ' + esc(arr[0].res) : ''}">${diamondSVG(arr[0], arr.length > 1 ? arr.length - 1 : 0)}</button></td>`;
     }
     const t = der.slotTot[si];
     TOTC.forEach(([k], i) => h += `<td class="tot${i === 0 ? ' first' : ''}">${t[k] || 0}</td>`);
     h += '</tr>';
   });
   const tt = {}; TOTC.forEach(([k]) => tt[k] = der.slotTot.reduce((a, t) => a + (t[k] || 0), 0));
-  const sumRow = (lab, key) => `<tr class="sum"><td colspan="2" class="lab">${lab}</td>` + der.inn.map(I => `<td class="${key === 'outs' && I.pa && I.outs !== 3 ? 'badouts' : ''}">${I.pa ? I[key] : ''}</td>`).join('');
+  const sumRow = (lab, key) => `<tr class="sum"><td colspan="2" class="lab">${lab}</td>` + der.inn.map(I => `<td class="${key === 'outs' && !isCh() && I.pa && I.outs !== 3 ? 'badouts' : ''}">${I.pa ? I[key] : ''}</td>`).join('');
   h += '</tbody><tfoot>';
   h += sumRow('C · carreras', 'c') + TOTC.map(([k], i) => `<td class="tot${i === 0 ? ' first' : ''}" style="font-weight:700">${tt[k]}</td>`).join('') + '</tr>';
   h += sumRow('H · hits', 'h') + `<td colspan="${TOTC.length}" class="first"></td></tr>`;
@@ -824,6 +861,7 @@ $('#btnFillLineup').addEventListener('click', () => {
 /* ---------- Editor de turno ---------- */
 let paCtx = null;
 function nextOut(si, inn, idx) {
+  if (isCh()) return 1;
   const c = cur(); let n = 0;
   c.slots.forEach((s, k) => (c.cells[k + '_' + inn] || []).forEach((pa, j) => { if (!(k === si && j === idx) && num(pa.out)) n++; }));
   return Math.min(3, n + 1);
@@ -834,7 +872,10 @@ function openPA(si, inn, idx) {
   paCtx = { si, inn, idx, pa, isNew: !arr[idx], side };
   const s = c.slots[si];
   $('#paWho').textContent = side === 'us' ? (pName(slotPidAt(s, inn)) || `Bateador ${si + 1}`) : oLabel(oKeyAt(s, inn, si));
-  $('#paWhere').textContent = `${side === 'us' ? esc(S.team) : (draft.opp || 'Rival')} · Turno ${si + 1} · Entrada ${inn}`;
+  $('#paWhere').textContent = `${side === 'us' ? S.team : (draft.opp || 'Rival')} · Turno ${si + 1} · Entrada ${inn}`;
+  const rotP = isCh() ? rotation(c.slots, inn) : null, closer = rotP && rotP.last === si;
+  $('#paNote').hidden = !rotP || (!closer && rotP.order.includes(si));
+  if (rotP) $('#paNote').innerHTML = closer ? `<b>CIERRE</b><span>Último bateador (${bpiOf()}°) de la entrada: corre todas las bases hasta que la defensa pise una base más adelante que él. Marca hasta dónde llegó o si anotó, y marca "Anotó" en los corredores que alcanzaron a entrar.</span>` : `<b>FUERA DE TURNO</b><span>Según la rotación, a este bateador no le toca batear en la ${inn}a entrada. Abre el turno ${rotP.start + 1}.</span>`;
   $('#paTabs').innerHTML = arr.length > 1 ? arr.map((_, j) => `<button type="button" class="btn sm" data-j="${j}"${j === idx ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>${j + 1}a aparición</button>`).join('') : '';
   $('#paMore').hidden = paCtx.isNew || idx !== arr.length - 1;
   $('#paDel').hidden = paCtx.isNew;
@@ -850,10 +891,12 @@ function openPA(si, inn, idx) {
 function paRender() {
   const pa = paCtx.pa, groups = {};
   Object.entries(RES).forEach(([k, r]) => (groups[r.g] ||= []).push(k));
+  if (isCh()) { const ok = ['H1', 'H2', 'H3', 'HR', 'E', 'BO', 'K', 'O']; Object.keys(groups).forEach(g => { groups[g] = groups[g].filter(k => ok.includes(k)); if (!groups[g].length) delete groups[g]; }); }
   $('#paRes').innerHTML = Object.entries(groups).map(([g, ks]) => `<div class="grp"><span>${g}</span><div class="seg">${ks.map(k => `<button type="button" data-res="${k}" aria-pressed="${pa.res === k}" title="${RES[k].lab}">${k}</button>`).join('')}</div></div>`).join('');
   $('#paDesc').textContent = pa.res ? RES[pa.res].lab : 'Elige el resultado del turno.';
   $('#paReach').innerHTML = [['0', '—'], ['1', '1a'], ['2', '2a'], ['3', '3a'], ['4', 'Anotó']].map(([v, l]) => `<button type="button" data-reach="${v}" aria-pressed="${num(pa.reach) === +v}">${l}</button>`).join('');
-  $('#paOut').innerHTML = [['0', 'No'], ['1', '1'], ['2', '2'], ['3', '3']].map(([v, l]) => `<button type="button" data-out="${v}" aria-pressed="${num(pa.out) === +v}">${l}</button>`).join('');
+  $('#paOutLab').textContent = isCh() ? 'Out' : 'Out número';
+  $('#paOut').innerHTML = (isCh() ? [['0', 'No'], ['1', 'Sí']] : [['0', 'No'], ['1', '1'], ['2', '2'], ['3', '3']]).map(([v, l]) => `<button type="button" data-out="${v}" aria-pressed="${num(pa.out) === +v}">${l}</button>`).join('');
 }
 $('#paRes').addEventListener('click', e => {
   const b = e.target.closest('button[data-res]'); if (!b) return;
@@ -975,6 +1018,18 @@ $('#fldTbl').addEventListener('input', e => {
 });
 
 /* ---------- Cuadre ---------- */
+function chuponCheck(d, cells, slots, who, add) {
+  const b = bpiOf(), cnt = [], rot = [];
+  d.inn.forEach((I, i) => {
+    if (!I.pa) return;
+    if (I.pa !== b) cnt.push(`${i + 1}a (${I.pa} turnos)`);
+    const exp = {}; rotation(slots, i + 1).order.forEach(si => exp[si] = (exp[si] || 0) + 1);
+    if (slots.some((s, si) => (cells[si + '_' + (i + 1)] || []).filter(pa => RES[pa.res]).length !== (exp[si] || 0))) rot.push(i + 1);
+  });
+  if (!d.inn.some(I => I.pa)) return;
+  cnt.length ? add('warn', `${who}: en Chupón cada entrada lleva ${b} turnos. Revisa: ${cnt.join(', ')}.`) : add('ok', `${who}: todas las entradas con sus ${b} turnos y ${d.runs} carreras.`);
+  if (rot.length) add('warn', `${who}: la rotación no coincide en la entrada ${rot.join(', ')}. Las celdas rayadas son de bateadores a los que no les tocaba.`);
+}
 function inningOutsCheck(d, batHome, myRuns, theirRuns, who, add) {
   const batted = d.inn.map((I, i) => ({ I, i })).filter(x => x.I.pa), lastI = batted.length ? batted[batted.length - 1].i : -1;
   const bad = batted.filter(({ I, i }) => I.outs !== 3 && !(i === lastI && batHome && myRuns > theirRuns)).map(x => x.i + 1);
@@ -991,12 +1046,13 @@ function renderChecks() {
   const unnamed = draft.slots.map((s, si) => !s.pid && Object.keys(draft.cells).some(k => k.startsWith(si + '_')) ? si + 1 : 0).filter(Boolean);
   if (unnamed.length) add('bad', `Hay turnos anotados sin jugador asignado (fila ${unnamed.join(', ')}). No contarán en las estadísticas individuales.`);
   const them = themArr(od), usRuns = der.runs, themRuns = od.anyCell ? od.runs : sumA(draft.them);
-  inningOutsCheck(der, draft.ha === 'L', usRuns, themRuns, esc(S.team), add);
-  if (od.anyCell) inningOutsCheck(od, draft.ha === 'V', themRuns, usRuns, esc(draft.opp || 'Rival'), add);
+  if (isCh()) { chuponCheck(der, draft.cells, draft.slots, esc(S.team), add); if (od.anyCell) chuponCheck(od, draft.ocells, draft.oslots, esc(draft.opp || 'Rival'), add); }
+  else { inningOutsCheck(der, draft.ha === 'L', usRuns, themRuns, esc(S.team), add);
+  if (od.anyCell) inningOutsCheck(od, draft.ha === 'V', themRuns, usRuns, esc(draft.opp || 'Rival'), add); }
   const rbi = Object.values(der.bat).reduce((a, b) => a + b.rbi, 0);
   if (rbi > usRuns) add('warn', `Hay más carreras impulsadas (${rbi}) que carreras anotadas (${usRuns}).`);
   const defInns = them.filter(v => String(v).trim() !== '').length, pt = pitTotals(od), ft = fldTotals();
-  if (od.anyCell && !draft.pit.some(p => p.pid)) add('warn', 'Agrega a tus lanzadores para que la hoja del rival les reparta H, C, BB, K e IP.');
+  if (!isCh() && od.anyCell && !draft.pit.some(p => p.pid)) add('warn', 'Agrega a tus lanzadores para que la hoja del rival les reparta H, C, BB, K e IP.');
   else if (od.noPit) add('warn', `${od.noPit} turnos del rival no tienen lanzador. Pon la entrada en que entró cada lanzador.`);
   if (!od.anyCell && draft.pit.some(p => isNaN(ipToOuts(p.ip)))) add('bad', 'Hay un IP mal escrito. Usa .1 o .2 para los outs (ej. 6.2).');
   if (draft.pit.length && defInns && !od.anyCell) {
@@ -1017,6 +1073,7 @@ function loadDraftFromGame(id) {
   const g = S.games[id]; if (!g) return;
   const d = blankDraft(); d.id = id;
   ['no', 'liga', 'date', 'opp', 'ha', 'notes'].forEach(k => d[k] = g[k] != null ? String(g[k]) : d[k]);
+  d.mode = g.mode || 'trad'; d.bpi = g.bpi || 10;
   d.inns = g.inns || 9; d.them = (g.them || []).slice(0, d.inns).map(String); while (d.them.length < d.inns) d.them.push('');
   d.themE = g.themE ? String(g.themE) : '';
   d.pit = (g.pit || []).map(p => { const q = blankPit(p.pid); q.ip = outsToIp(p.outs || 0); PITK.forEach(k => q[k] = p[k] ? String(p[k]) : ''); q.dec = p.dec || ''; q.from = p.from ? String(p.from) : ''; return q; });
@@ -1049,6 +1106,7 @@ $('#btnSave').addEventListener('click', () => {
     no: String(draft.no).trim(), liga: draft.liga.trim(), date: draft.date, opp: draft.opp.trim() || 'Rival', ha: draft.ha, inns: draft.inns, notes: draft.notes.trim(),
     us: usArr, them: themArr(od).map(String), themH: od.anyCell ? od.hits : pt.h, themE: num(draft.themE),
     sheet: { slots: draft.slots.map(s => ({ pid: s.pid, pos: s.pos, sub: s.sub ? { pid: s.sub.pid, pos: s.sub.pos, from: String(s.sub.from || '') } : null })), cells: draft.cells },
+    mode: draft.mode || 'trad', bpi: bpiOf(),
     osheet: od.anyCell ? { slots: draft.oslots, cells: draft.ocells } : null,
     olines: od.anyCell ? buildOppLines(od) : [],
     pit: effPit(od).filter(p => p.pid).map(p => { const o = { pid: p.pid, from: String(p.from || ''), outs: isNaN(p.outs) ? 0 : p.outs, dec: p.dec }; PITK.forEach(k => o[k] = num(p[k])); return o; }),
@@ -1159,6 +1217,7 @@ function derive(p) {
   p.iso = p.ab ? p.slg - p.avg : NaN;
   const bD = p.ab - p.so - p.hr + p.sf; p.babip = bD > 0 ? (p.h - p.hr) / bD : NaN;
   p.woba = obpD ? (.69 * p.bb + .72 * p.hbp + .89 * p.s1 + 1.27 * p.d + 1.62 * p.t + 2.10 * p.hr) / obpD : NaN;
+  p.onb = p.onb || 0; p.bases = p.bases || 0; p.onbp = p.pa ? p.onb / p.pa : NaN; p.bpt = p.pa ? p.bases / p.pa : NaN; p.contact = p.pa ? (p.pa - p.so) / p.pa : NaN;
   p.kp = p.pa ? p.so / p.pa : NaN; p.bbp = p.pa ? p.bb / p.pa : NaN; p.sbp = (p.sb + p.cs) ? p.sb / (p.sb + p.cs) : NaN;
   return p;
 }
@@ -1193,31 +1252,44 @@ function sortRows(rows, st) {
 }
 const BTIPS = {"g": "Juegos", "pa": "Apariciones al plato", "ab": "Turnos oficiales", "r": "Carreras anotadas", "h": "Hits", "d": "Dobles", "t": "Triples", "hr": "Home runs", "rbi": "Carreras impulsadas", "bb": "Bases por bolas", "so": "Ponches", "hbp": "Golpeado", "sf": "Fly de sacrificio", "sh": "Toque de sacrificio", "sb": "Bases robadas", "cs": "Atrapado robando", "tb": "Bases totales", "avg": "Promedio de bateo H/AB", "obp": "Porcentaje de embasado", "slg": "Slugging TB/AB", "ops": "OBP + SLG", "iso": "Poder aislado SLG-AVG", "babip": "Promedio en bolas en juego", "woba": "Embasado ponderado", "kp": "Porcentaje de ponches", "bbp": "Porcentaje de bases por bolas", "sbp": "Efectividad robando"};
 const PTIPS = {"g": "Juegos lanzados", "gs": "Juegos iniciados", "w": "Ganados", "l": "Perdidos", "sv": "Salvamentos", "outs": "Entradas lanzadas", "h": "Hits permitidos", "r": "Carreras permitidas", "er": "Carreras limpias", "hr": "Jonrones permitidos", "bb": "Bases por bolas", "so": "Ponches", "hbp": "Golpeados", "wp": "Lanzamientos salvajes", "era": "Efectividad", "whip": "Corredores por entrada (BB+H)/IP", "k9": "Ponches por juego", "bb9": "Bases por bolas por juego", "kbb": "Ponches por base por bolas"};
-const TIPS = { po: 'Outs realizados', a: 'Asistencias', e: 'Errores', dp: 'Dobles matanzas', tc: 'Oportunidades totales (PO+A+E)', fpct: 'Porcentaje de fildeo (PO+A)/TC', rf: 'Factor de alcance (PO+A) por juego' };
-const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${(cols === fCols ? TIPS : cols === bCols ? BTIPS : cols === pCols ? PTIPS : {})[c[0]] ? ` title="${(cols === fCols ? TIPS : cols === bCols ? BTIPS : PTIPS)[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
+Object.assign(BTIPS, { onb: 'Veces en base', bases: 'Bases recorridas', onbp: 'Porcentaje en base', bpt: 'Bases por turno', contact: 'Turnos sin ponche / VB' });
+const TIPS = { ec: 'Entradas en el campo', po: 'Outs realizados', a: 'Asistencias', e: 'Errores', dp: 'Dobles matanzas', tc: 'Oportunidades totales (PO+A+E)', fpct: 'Porcentaje de fildeo (PO+A)/TC', rf: 'Factor de alcance (PO+A) por juego' };
+const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${(cols === fCols ? TIPS : cols === pCols ? PTIPS : BTIPS)[c[0]] ? ` title="${(cols === fCols ? TIPS : cols === pCols ? PTIPS : BTIPS)[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
 const emptyStats = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Las estadísticas aparecen en cuanto guardes el primer juego.</td></tr></tbody>';
 function leaderCard(arr, k, lab, fmt) { const p = arr.filter(p => !isNaN(p[k])).sort((a, b) => fmt.asc ? a[k] - b[k] : b[k] - a[k])[0]; return `<div class="leader"><span class="k">${lab}</span><span class="v">${p ? fmt.f(p[k]) : '—'}</span><span class="who">${p ? (p.pid ? plink(p.pid, p.name) : esc(p.name)) : 'Sin datos'}</span></div>`; }
 const F3 = { f: v => fmtRate(v) }, F2a = { f: v => fmtRate(v, 2), asc: true }, FI = { f: v => v };
 function fmtCell(p, c) { const v = p[c[0]]; if (c[2] === 'r') return fmtRate(v); if (c[2] === 'r2') return isNaN(v) ? '—' : v.toFixed(2); if (c[2] === 'p') return isNaN(v) ? '—' : (100 * v).toFixed(1) + '%'; if (c[2] === 'ip') return outsToIp(v); return v ?? 0; }
-function rangeGames(sel) { const gs = sortedGames(); return sel === 'all' ? gs : gs.slice(-Number(sel)); }
+let statMode = null;
+const gameMode = g => g.mode || 'trad';
+function curStatMode() { if (statMode) return statMode; const gs = sortedGames(); return gs.length ? gameMode(gs[gs.length - 1]) : 'trad'; }
+const modeGames = () => { const m = curStatMode(); return sortedGames().filter(g => m === 'all' || gameMode(g) === m); };
+document.querySelectorAll('.modeSel').forEach(el => el.addEventListener('change', e => { statMode = e.target.value; renderBat(); renderPitStats(); renderFld(); }));
+function syncModeSel() { const m = curStatMode(); document.querySelectorAll('.modeSel').forEach(el => { if (el.value !== m) el.value = m; }); }
+function rangeGames(sel) { const gs = modeGames(); return sel === 'all' ? gs : gs.slice(-Number(sel)); }
 
 /* ---------- BATEO ---------- */
+const bColsCh = [['name', 'Jugador', 's'], ['g', 'G'], ['pa', 'VB'], ['ab', 'AB'], ['r', 'C'], ['h', 'H'], ['d', '2B'], ['t', '3B'], ['hr', 'HR'], ['rbi', 'CI'], ['so', 'K'], ['onb', 'EB'], ['bases', 'BT'], ['tb', 'TB'], ['avg', 'AVG', 'r'], ['slg', 'SLG', 'r'], ['onbp', 'EB%', 'p'], ['bpt', 'BT/VB', 'r2'], ['contact', 'Contacto', 'p']];
 const bCols = [['name', 'Jugador', 's'], ['g', 'G'], ['pa', 'PA'], ['ab', 'AB'], ['r', 'R'], ['h', 'H'], ['d', '2B'], ['t', '3B'], ['hr', 'HR'], ['rbi', 'RBI'], ['bb', 'BB'], ['so', 'SO'], ['hbp', 'HBP'], ['sf', 'SF'], ['sh', 'SH'], ['sb', 'SB'], ['cs', 'CS'], ['tb', 'TB'],
   ['avg', 'AVG', 'r'], ['obp', 'OBP', 'r'], ['slg', 'SLG', 'r'], ['ops', 'OPS', 'r'], ['iso', 'ISO', 'r'], ['babip', 'BABIP', 'r'], ['woba', 'wOBA', 'r'], ['kp', 'K%', 'p'], ['bbp', 'BB%', 'p'], ['sbp', 'SB%', 'p']];
 let bSort = { k: 'ops', dir: -1 }, fSort = { k: 'tc', dir: -1 }, pSort = { k: 'outs', dir: -1 };
 function renderBat() {
+  syncModeSel(); const chM = curStatMode() === 'chupon', cols = chM ? bColsCh : bCols;
   const gs = rangeGames($('#bRange').value), teamG = gs.length, minPA = Math.ceil(3.1 * teamG), m = aggBat(gs);
   const all = Object.values(m).map(p => ({ ...p, name: pName(p.pid), num: pNum(p.pid) }));
   const rows = $('#bQual').checked ? all.filter(p => p.pa >= minPA) : all.slice();
   $('#qualHint').textContent = teamG ? `Calificado = ${minPA} PA o más (3.1 por cada uno de los ${teamG} juegos del rango). Haz clic en un encabezado para ordenar.` : '';
   const qual = all.filter(p => p.pa >= minPA), pool = qual.length ? qual : all;
-  $('#bLeaders').innerHTML = gs.length ? leaderCard(pool, 'avg', 'Promedio', F3) + leaderCard(pool, 'obp', 'Embasado', F3) + leaderCard(pool, 'ops', 'OPS', F3) + leaderCard(all, 'hr', 'Jonrones', FI) + leaderCard(all, 'rbi', 'Impulsadas', FI) + leaderCard(all, 'sb', 'Robos', FI) : '';
+  const innB = gs.reduce((a, g) => a + (g.us || []).filter(v => String(v) !== '').length, 0), runsT = gs.reduce((a, g) => a + sumA(g.us), 0);
+  if (chM) { $('#bLeaders').innerHTML = gs.length ? `<div class="leader"><span class="k">Carreras por entrada</span><span class="v">${innB ? (runsT / innB).toFixed(2) : '—'}</span><span class="who">${runsT} carreras en ${innB} entradas</span></div>` + leaderCard(pool, 'contact', 'Contacto', { f: v => (100 * v).toFixed(0) + '%' }) + leaderCard(pool, 'onbp', 'En base', { f: v => (100 * v).toFixed(0) + '%' }) + leaderCard(pool, 'bpt', 'Bases por turno', { f: v => v.toFixed(2) }) + leaderCard(all, 'r', 'Carreras', FI) + leaderCard(all, 'hr', 'Jonrones', FI) : ''; }
+  else $('#bLeaders').innerHTML = gs.length ? leaderCard(pool, 'avg', 'Promedio', F3) + leaderCard(pool, 'obp', 'Embasado', F3) + leaderCard(pool, 'ops', 'OPS', F3) + leaderCard(all, 'hr', 'Jonrones', FI) + leaderCard(all, 'rbi', 'Impulsadas', FI) + leaderCard(all, 'sb', 'Robos', FI) : '';
   if (!gs.length) { $('#bTbl').innerHTML = emptyStats; return; }
   sortRows(rows, bSort);
-  let h = '<thead><tr><th class="l">#</th>' + thSort(bCols, bSort) + '</tr></thead><tbody>';
-  rows.forEach(p => h += `<tr><td class="num l">${esc(p.num)}</td>` + bCols.map(c => c[0] === 'name' ? `<td class="l name">${plink(p.pid, p.name)}</td>` : `<td>${fmtCell(p, c)}</td>`).join('') + '</tr>');
+  if (!cols.some(c => c[0] === bSort.k)) bSort = { k: chM ? 'contact' : 'ops', dir: -1 };
+  sortRows(rows, bSort);
+  let h = '<thead><tr><th class="l">#</th>' + thSort(cols, bSort) + '</tr></thead><tbody>';
+  rows.forEach(p => h += `<tr><td class="num l">${esc(p.num)}</td>` + cols.map(c => c[0] === 'name' ? `<td class="l name">${plink(p.pid, p.name)}</td>` : `<td>${fmtCell(p, c)}</td>`).join('') + '</tr>');
   const T = { g: teamG, ...zero(BATK) }; Object.values(m).forEach(p => BATK.forEach(k => T[k] += p[k])); derive(T);
-  h += '</tbody><tfoot><tr class="tot"><td></td>' + bCols.map(c => c[0] === 'name' ? '<td class="l">Equipo</td>' : `<td>${fmtCell(T, c)}</td>`).join('') + '</tr></tfoot>';
+  h += '</tbody><tfoot><tr class="tot"><td></td>' + cols.map(c => c[0] === 'name' ? '<td class="l">Equipo</td>' : `<td>${fmtCell(T, c)}</td>`).join('') + '</tr></tfoot>';
   $('#bTbl').innerHTML = h;
 }
 $('#bTbl').addEventListener('click', e => { const th = e.target.closest('th[data-k]'); if (!th) return; const k = th.dataset.k; bSort = bSort.k === k ? { k, dir: -bSort.dir } : { k, dir: k === 'name' ? 1 : -1 }; renderBat(); });
@@ -1226,7 +1298,7 @@ $('#bRange').addEventListener('change', renderBat); $('#bQual').addEventListener
 /* ---------- PITCHEO ---------- */
 const pCols = [['name', 'Lanzador', 's'], ['g', 'JL'], ['gs', 'JI'], ['w', 'G'], ['l', 'P'], ['sv', 'SV'], ['outs', 'IP', 'ip'], ['h', 'H'], ['r', 'C'], ['er', 'CL'], ['hr', 'HR'], ['bb', 'BB'], ['so', 'K'], ['hbp', 'BG'], ['wp', 'WP'], ['era', 'ERA', 'r2'], ['whip', 'WHIP', 'r2'], ['k9', 'K/9', 'r2'], ['bb9', 'BB/9', 'r2'], ['kbb', 'K/BB', 'r2']];
 function renderPitStats() {
-  const gs = sortedGames(), m = aggPit(gs), minOuts = gs.length * 3;
+  syncModeSel(); const gs = modeGames(), m = aggPit(gs), minOuts = gs.length * 3;
   const all = Object.values(m).map(p => ({ ...p, name: pName(p.pid), num: pNum(p.pid) }));
   const qual = all.filter(p => p.outs >= minOuts && p.outs > 0), pool = qual.length ? qual : all.filter(p => p.outs > 0);
   $('#pLeaders').innerHTML = all.length ? leaderCard(pool, 'era', 'ERA', F2a) + leaderCard(pool, 'whip', 'WHIP', F2a) + leaderCard(all, 'so', 'Ponches', FI) + leaderCard(all, 'w', 'Ganados', FI) + leaderCard(all, 'outs', 'Entradas', { f: outsToIp }) + leaderCard(all, 'sv', 'Salvamentos', FI) : '';
@@ -1243,9 +1315,9 @@ $('#pTbl').addEventListener('click', e => { const th = e.target.closest('th[data
 $('#pInnBase').addEventListener('change', renderPitStats);
 
 /* ---------- FILDEO ---------- */
-const fCols = [['name', 'Jugador', 's'], ['posl', 'Pos', 's'], ['g', 'G'], ['po', 'PO'], ['a', 'A'], ['e', 'E'], ['dp', 'DP'], ['tc', 'TC'], ['fpct', 'FPCT', 'r'], ['rf', 'RF/G', 'r2']];
+const fCols = [['name', 'Jugador', 's'], ['posl', 'Pos', 's'], ['g', 'G'], ['ec', 'EC'], ['po', 'PO'], ['a', 'A'], ['e', 'E'], ['dp', 'DP'], ['tc', 'TC'], ['fpct', 'FPCT', 'r'], ['rf', 'RF/G', 'r2']];
 function renderFld() {
-  const by = $('#fGroup').value, gs = sortedGames(), m = aggFld(gs, by);
+  syncModeSel(); const by = $('#fGroup').value, gs = modeGames(), m = aggFld(gs, by);
   const cols = by === 'pos' ? [['name', 'Posición', 's'], ['posl', 'Jugadores', 's'], ...fCols.slice(2)] : fCols;
   const rows = Object.values(m).map(p => ({ ...p, pid: by === 'pos' ? '' : p.key, name: by === 'pos' ? p.key : pName(p.key), num: by === 'pos' ? '' : pNum(p.key), posl: Object.keys(p.pos).map(x => by === 'pos' ? pName(x) : x).join(', ') }));
   const withTc = rows.filter(p => p.tc > 0);
@@ -1543,7 +1615,7 @@ function pdfDiamond(doc, x, y, w, h, pa, extra) {
   doc.text(pdfSafe(pa.res), cx, cy + 2.6, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   if (pa.play) { doc.setFontSize(5.2); doc.setTextColor(110); doc.text(pdfSafe(pa.play), cx, y + h - 2, { align: 'center' }); }
-  if (num(pa.out)) { doc.setDrawColor(122, 24, 32); doc.setLineWidth(.7); doc.circle(x + w - 5.5, y + 5.5, 3.8, 'S'); doc.setFontSize(5.5); doc.setTextColor(122, 24, 32); doc.text(String(num(pa.out)), x + w - 5.5, y + 7.4, { align: 'center' }); }
+  if (num(pa.out)) { doc.setDrawColor(122, 24, 32); doc.setLineWidth(.7); doc.circle(x + w - 5.5, y + 5.5, 3.8, 'S'); doc.setFontSize(5.5); doc.setTextColor(122, 24, 32); doc.text(isCh() ? 'x' : String(num(pa.out)), x + w - 5.5, y + 7.4, { align: 'center' }); }
   doc.setFillColor(...INK); for (let i = 0; i < Math.min(num(pa.rbi), 4); i++) doc.circle(x + 3.5 + i * 3.6, y + 3.8, 1.2, 'F');
   if (num(pa.sb) || pa.cs) { doc.setFontSize(5); doc.setTextColor(...(pa.cs ? [122, 24, 32] : [110, 110, 110])); doc.text(pa.cs ? 'AR' : 'BR' + (num(pa.sb) > 1 ? num(pa.sb) : ''), x + 1.8, y + h - 2.2); }
   if (extra) { doc.setFillColor(...RED); doc.rect(x + w - 10.5, y + h - 8.5, 9.5, 7, 'F'); doc.setFontSize(5.2); doc.setTextColor(255); doc.text('+' + extra, x + w - 5.75, y + h - 3.4, { align: 'center' }); }
@@ -1567,7 +1639,7 @@ function pdfScoreCard(doc, y, isUs, der, availH) {
   const tt = {}; TOTC.forEach(([k]) => tt[k] = der.slotTot.reduce((a, t) => a + (t[k] || 0), 0));
   const WARN = [251, 241, 220];
   const sumRow = (lab, key, tail) => [{ content: pdfSafe(lab), colSpan: 2, styles: { halign: 'right' } },
-    ...der.inn.map(I => ({ content: I.pa ? String(I[key]) : '', styles: key === 'outs' && I.pa && I.outs !== 3 ? { fillColor: WARN, textColor: [154, 100, 0] } : {} })), ...tail];
+    ...der.inn.map(I => ({ content: I.pa ? String(I[key]) : '', styles: key === 'outs' && !isCh() && I.pa && I.outs !== 3 ? { fillColor: WARN, textColor: [154, 100, 0] } : {} })), ...tail];
   const blank = [{ content: '', colSpan: TOTC.length }];
   const foot = [
     sumRow('C - carreras', 'c', TOTC.map(([k]) => String(tt[k]))),
@@ -1581,11 +1653,11 @@ function pdfScoreCard(doc, y, isUs, der, availH) {
   TOTC.forEach((_, i) => colStyles[2 + n + i] = { cellWidth: 21 });
   doc.autoTable({
     startY: y, theme: 'grid', margin: { left: 32, right: 32, bottom: 26 }, tableWidth: 'wrap', showFoot: 'lastPage', showHead: 'everyPage',
-    head: [['#', 'Nombre - Pos', ...Array.from({ length: n }, (_, i) => String(i + 1)), ...TOTC.map(([, l]) => l)]],
+    head: [['#', 'Nombre - Pos', ...Array.from({ length: n }, (_, i) => isCh() ? `${i + 1}\nAbre ${rotation(slots, i + 1).start + 1}` : String(i + 1)), ...TOTC.map(([, l]) => l)]],
     body, foot, columnStyles: colStyles, rowPageBreak: 'avoid',
     styles: { fontSize: fs, cellPadding: small ? 1 : 2.2, halign: 'center', valign: 'middle', lineColor: [207, 169, 172], lineWidth: .5, textColor: INK },
     headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold', fontSize: 6.3, cellPadding: 1.2, minCellHeight: footRowH },
-    didParseCell: d => { if (d.section === 'head' && d.column.index === 1) d.cell.styles.halign = 'left'; if (d.section === 'body' && d.column.index === 2 + n) d.cell.styles.fontStyle = 'bold'; },
+    didParseCell: d => { if (isCh() && d.section === 'body' && d.column.index >= 2 && d.column.index < 2 + n && !rotation(slots, d.column.index - 1).order.includes(d.row.index)) d.cell.styles.fillColor = [236, 233, 234]; if (d.section === 'head' && d.column.index === 1) d.cell.styles.halign = 'left'; if (d.section === 'body' && d.column.index === 2 + n) d.cell.styles.fontStyle = 'bold'; },
     didDrawCell: d => {
       if (d.section !== 'body' || d.column.index < 2 || d.column.index >= 2 + n) return;
       const arr = cells[d.row.index + '_' + (d.column.index - 1)] || [];
@@ -1605,7 +1677,7 @@ function pdfSheet() {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...INK);
   doc.text(pdfSafe(`${S.team} ${der.runs}, ${opp} ${themR}`), 32, 90);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110);
-  doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
+  doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'}${isCh() ? ' · Modalidad Chupón (' + bpiOf() + ' bateadores por entrada)' : ''} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
   const BOTTOM = 30; // espacio para el pie de página
   let y = pdfSection(doc, `${S.team} al bat`, 122);
   y = pdfScoreCard(doc, y, true, der, H - y - BOTTOM);
