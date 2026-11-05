@@ -1,11 +1,12 @@
 // API de datos de la plataforma Diablillos: roster, juegos y nombre del equipo en Postgres.
 // Variables de entorno (Vercel → Settings → Environment Variables):
-//   DATABASE_URL  (o POSTGRES_URL)  cadena de conexión de Postgres; la pone sola la integración de Neon
+//   DIABLILLOS_DB_URL  cadena de conexión de Postgres (Neon). Si no existe, se usa DATABASE_URL o POSTGRES_URL
 //   EDIT_KEY      clave para capturar y modificar datos (obligatoria para escribir)
 //   VIEW_KEY      opcional: si existe, también se pide una clave para ver los datos
 import pg from 'pg';
 
-const URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+// DIABLILLOS_DB_URL tiene prioridad: ninguna integración de Vercel la crea ni la reemplaza
+const URL = process.env.DIABLILLOS_DB_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 const TABLES = { roster: 'bs_roster', games: 'bs_games' };
 const MAX_DOC = 600 * 1024; // un jugador con foto o un juego completo caben de sobra
 

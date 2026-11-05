@@ -20,7 +20,7 @@ Los datos viven en tres tablas que la API crea sola la primera vez:
 
 | Variable | Para qué |
 |---|---|
-| `DATABASE_URL` | La pone sola la integración de Neon (Postgres) al conectar la base al proyecto. |
+| `DIABLILLOS_DB_URL` | Cadena de conexión de Neon (base DIABLILLOS, con pooling). Tiene prioridad sobre `DATABASE_URL`. |
 | `EDIT_KEY` | Clave para capturar y editar. Quien no la tenga solo puede ver. |
 | `VIEW_KEY` | Opcional. Si la defines, también se pide una clave para ver los datos. |
 
