@@ -259,8 +259,8 @@ export default async function handler(req, res) {
         const category = String(b.category || '').trim().slice(0, 60);
         const logo = typeof b.logo === 'string' && b.logo.startsWith('data:image/') && b.logo.length < 300 * 1024 ? b.logo : (b.logo === '' ? '' : undefined);
         const wordmark = typeof b.wordmark === 'string' && b.wordmark.startsWith('data:image/') && b.wordmark.length < 420 * 1024 ? b.wordmark : (b.wordmark === '' ? '' : undefined);
-        const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan'].includes(b.font) ? b.font : undefined;
-        const lettering = isObj(b.lettering) ? { tail: !!b.lettering.tail, fill: b.lettering.fill === 'team' ? 'team' : 'white', tilt: !!b.lettering.tilt } : undefined;
+        const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan','dafoe'].includes(b.font) ? b.font : undefined;
+        const lettering = isObj(b.lettering) ? { tail: b.lettering.tail === 'thick' ? 'thick' : !!b.lettering.tail, fill: ['team', 'solid'].includes(b.lettering.fill) ? b.lettering.fill : 'white', tilt: !!b.lettering.tilt } : undefined;
         const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
         const colors = b.colors === null ? null : (isObj(b.colors) && hex(b.colors.primary) ? { primary: hex(b.colors.primary), secondary: hex(b.colors.secondary) || '#8d9096' } : undefined);
         if (b.id) {
