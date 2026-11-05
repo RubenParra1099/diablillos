@@ -283,7 +283,7 @@ dialog.adm-dlg.narrowish{width:min(720px,calc(100vw - 32px))}
 @media (max-width:640px){.adm-levels{grid-template-columns:1fr}}
 .adm-lv{border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--paper);color:var(--ink);text-align:left;font:13px var(--f-body)}
 .adm-lv[aria-pressed="true"]{border-color:var(--accent);background:var(--hover)}
-.adm-lv b:first-child{font:700 18px var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.adm-lv>b{font:700 18px var(--f-display);text-transform:uppercase;letter-spacing:.04em}
 .adm-lv ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--muted)}
 .adm-done{display:flex;flex-direction:column;gap:12px}
 .adm-pwd{font:600 18px var(--f-mono);background:var(--chip);padding:7px 12px;border-radius:6px;letter-spacing:.06em;user-select:all}
@@ -2612,12 +2612,12 @@ function paintWz() {
   const s = wz.step, ed = !!wz.edit, user = wz.lv === 'user';
   $('#auTitle').textContent = wz.reset ? 'Contraseña restablecida' : s === 4 ? 'Usuario creado' : ed ? 'Editar usuario' : 'Nuevo usuario';
   $$('#admUserForm [data-u]').forEach(p => p.hidden = +p.dataset.u !== s);
-  $$('#auSteps button').forEach(b => { const n = +b.dataset.st; b.classList.toggle('on', n === s); b.disabled = n === 4 || (!ed && n > s) || (n === 3 && !user); });
+  $$('#auSteps button').forEach(b => { const n = +b.dataset.st; b.classList.toggle('on', n === s); b.disabled = n === 4 || (!ed && n > s); });
   $('#auSteps').hidden = s === 4;
   $('#auActiveWrap').hidden = !ed || (me && wz.edit.id === me.id);
   $$('.adm-lv').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.lv === wz.lv)));
-  $('#auTeams').innerHTML = adm.teams.length ? adm.teams.map(t => { const r = wz.teams[t.id] || ''; return `<div class="adm-arow"><span><b>${esc(t.name)}</b>${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><div class="adm-pill" data-team="${esc(t.id)}"><button type="button" data-r="" aria-pressed="${!r}">Sin acceso</button><button type="button" data-r="editor" aria-pressed="${r === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${r === 'viewer'}">Lectura</button></div></div>`; }).join('') : '<p class="hint">Primero crea un equipo en la sección Equipos.</p>';
-  const last = s === 3 || (s === 2 && !user);
+  $('#auTeams').innerHTML = !user ? `<div class="check ok"><b>TODOS</b><span>Como <strong>${wz.lv === 'admin' ? 'Administrador' : 'Supervisor'}</strong> entra a todos los equipos (${adm.teams.length}), incluidos los que se creen después, así que no hace falta asignarle equipos. Si quieres limitarlo a algunos equipos, regresa a <button type="button" class="adm-link" data-gost="2">Nivel</button> y elige <strong>Usuario</strong>.</span></div>` : adm.teams.length ? adm.teams.map(t => { const r = wz.teams[t.id] || ''; return `<div class="adm-arow"><span><b>${esc(t.name)}</b>${t.category ? ' <span class="sub">· ' + esc(t.category) + '</span>' : ''}</span><div class="adm-pill" data-team="${esc(t.id)}"><button type="button" data-r="" aria-pressed="${!r}">Sin acceso</button><button type="button" data-r="editor" aria-pressed="${r === 'editor'}">Captura</button><button type="button" data-r="viewer" aria-pressed="${r === 'viewer'}">Lectura</button></div></div>`; }).join('') : '<p class="hint">Primero crea un equipo en la sección Equipos.</p>';
+  const last = s === 3 || (s === 2 && !user && !ed);
   $('#auBack').style.visibility = s > 1 && s < 4 ? 'visible' : 'hidden';
   $('#auNext').textContent = s === 4 ? 'Terminar' : last ? (ed ? 'Guardar cambios' : 'Crear usuario') : 'Siguiente';
   $('#auSaveEdit').hidden = !ed || last || s === 4;
@@ -2643,6 +2643,7 @@ function validStep1() {
   if (dup) { auErr(`Ya existe un usuario con ese correo (${dup.name || dup.email}).`); return false; }
   auErr(''); return true;
 }
+$('#auTeams').addEventListener('click', e => { const g = e.target.closest('[data-gost]'); if (g) { wz.step = +g.dataset.gost; paintWz(); } });
 $('#auBack').addEventListener('click', () => { auErr(''); wz.step = wz.step === 3 ? 2 : 1; paintWz(); });
 async function saveUser() {
   const ed = wz.edit, teams = wz.lv === 'user' ? Object.entries(wz.teams).filter(([, r]) => r).map(([team, role]) => ({ team, role })) : [];
@@ -2658,7 +2659,7 @@ $('#admUserForm').addEventListener('submit', async e => {
   e.preventDefault();
   if (wz.step === 4) { $('#admUserDlg').close(); return; }
   if (wz.step === 1) { if (!validStep1()) return; wz.step = 2; paintWz(); return; }
-  if (wz.step === 2 && wz.lv === 'user') { wz.step = 3; paintWz(); return; }
+  if (wz.step === 2 && (wz.lv === 'user' || wz.edit)) { wz.step = 3; paintWz(); return; }
   const btn = $('#auNext'); btn.disabled = true;
   try { await saveUser(); } catch (er) { auErr(er.message); if (er.code === 'email_taken') { wz.step = 1; paintWz(); auErr(er.message); } }
   finally { btn.disabled = false; }
