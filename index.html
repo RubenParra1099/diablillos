@@ -734,7 +734,9 @@ function renderClubs() {
   $('#clubLocal').textContent = draft.ha === 'L' ? us : opp;
   $('#clubVis').textContent = draft.ha === 'L' ? opp : us;
 }
-function syncMode() { $('#gMode').value = draft.mode || 'trad'; $('#gBpi').value = draft.bpi || 10; $('#gBpiWrap').hidden = !isCh(); $('#pitWrap').hidden = isCh(); }
+const CH_INNS = 4, CH_MAX = 5;
+function fitInns(n) { draft.inns = n; draft.them = draft.them.slice(0, n); while (draft.them.length < n) draft.them.push(''); $('#gInns').value = n; }
+function syncMode() { $('#gInns').max = isCh() ? CH_MAX : 15; $('#gMode').value = draft.mode || 'trad'; $('#gBpi').value = draft.bpi || 10; $('#gBpiWrap').hidden = !isCh(); $('#pitWrap').hidden = isCh(); }
 function syncMetaInputs() {
   syncMode();
   $('#gNo').value = draft.no; $('#gLiga').value = draft.liga; $('#gDate').value = draft.date; $('#gOpp').value = draft.opp;
@@ -747,12 +749,14 @@ const META = { gNo: 'no', gLiga: 'liga', gDate: 'date', gOpp: 'opp', gHA: 'ha', 
 Object.keys(META).forEach(id => $('#' + id).addEventListener('input', e => { if (id === 'gNo') noTouched = true; draft[META[id]] = e.target.value; renderClubs(); if (id === 'gOpp' || id === 'gHA') { renderLine(); renderChecks(); renderSideTabs(); } }));
 $('#gMode').addEventListener('change', e => {
   draft.mode = e.target.value;
+  if (isCh() && draft.inns > CH_MAX || isCh() && draft.inns === 9) fitInns(CH_INNS);
+  if (!isCh() && draft.inns <= CH_MAX) fitInns(9);
   if (isCh()) { while (draft.slots.length < 12) draft.slots.push({ pid: '', pos: '', sub: null }); while (draft.oslots.length < 12) draft.oslots.push({ num: '', name: '', pos: '', sub: null }); }
   syncMode(); renderSheet();
 });
 $('#gBpi').addEventListener('change', e => { draft.bpi = Math.max(1, Math.min(15, num(e.target.value) || 10)); e.target.value = draft.bpi; renderSheet(); });
 $('#gInns').addEventListener('change', e => {
-  const n = Math.max(1, Math.min(15, num(e.target.value) || 9)); draft.inns = n; e.target.value = n;
+  const n = Math.max(1, Math.min(isCh() ? CH_MAX : 15, num(e.target.value) || (isCh() ? CH_INNS : 9))); draft.inns = n; e.target.value = n;
   draft.them = draft.them.slice(0, n); while (draft.them.length < n) draft.them.push('');
   renderSheet();
 });
