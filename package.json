@@ -1,0 +1,11 @@
+{
+  "name": "diablillos-boxscore",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Box score y estadísticas de los Diablillos, con datos en Postgres",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "pg": "8.13.1"
+  }
+}

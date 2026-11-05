@@ -1,22 +1,32 @@
 # Diablillos · Box Score
 
-Plataforma para capturar box scores de béisbol y llevar las estadísticas de bateo, pitcheo y fildeo del equipo, con fichas de jugador y reportes en PDF.
+Plataforma para capturar box scores de béisbol (tradicional y categoría Chupón) y llevar las estadísticas de bateo, pitcheo y fildeo del equipo, con fichas de jugador y reportes en PDF.
 
-Es un sitio estático: todo vive en `index.html`. No necesita instalar nada ni compilar.
+## Cómo está armado
 
-## Dónde se guardan los datos
+- `index.html` · toda la aplicación (pantallas, estadísticas, PDF).
+- `api/data.js` · función de Vercel que guarda y lee los datos en **Postgres**.
+- `package.json` · dependencia `pg` para conectarse a Postgres.
 
-En esta versión, los datos se guardan en el navegador de cada persona (localStorage). Eso significa:
+Los datos viven en tres tablas que la API crea sola la primera vez:
 
-- Cada computadora o celular tiene sus propios datos.
-- Si borras los datos del navegador, se pierden.
+| Tabla | Contenido |
+|---|---|
+| `bs_roster` | un renglón por jugador (`id`, `data` jsonb con nombre, número, posición y foto) |
+| `bs_games` | un renglón por juego (`id`, `data` jsonb con el box score completo) |
+| `bs_config` | nombre del equipo |
 
-Por eso, en la pestaña **Roster** hay **Descargar respaldo** y **Cargar respaldo**. Descarga un respaldo después de cada juego.
+## Variables de entorno en Vercel
 
-## Publicar en Vercel
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | La pone sola la integración de Neon (Postgres) al conectar la base al proyecto. |
+| `EDIT_KEY` | Clave para capturar y editar. Quien no la tenga solo puede ver. |
+| `VIEW_KEY` | Opcional. Si la defines, también se pide una clave para ver los datos. |
 
-1. Sube esta carpeta a un repositorio de GitHub.
-2. En vercel.com, entra con tu cuenta de GitHub y elige **Add New → Project**.
-3. Importa el repositorio, deja **Framework Preset: Other** y presiona **Deploy**.
+## Cargar los datos existentes
 
-Cada vez que cambies `index.html` en GitHub, Vercel publica la nueva versión sola.
+1. Abre el sitio, toca **Ingresar clave** y escribe tu `EDIT_KEY`.
+2. Ve a **Roster → Cargar respaldo** y elige el archivo `Diablillos_respaldo_*.json`.
+
+Los archivos de respaldo están en `.gitignore` y no se suben a GitHub.
