@@ -1548,10 +1548,15 @@ function pdfDiamond(doc, x, y, w, h, pa, extra) {
   if (num(pa.sb) || pa.cs) { doc.setFontSize(5); doc.setTextColor(...(pa.cs ? [122, 24, 32] : [110, 110, 110])); doc.text(pa.cs ? 'AR' : 'BR' + (num(pa.sb) > 1 ? num(pa.sb) : ''), x + 1.8, y + h - 2.2); }
   if (extra) { doc.setFillColor(...RED); doc.rect(x + w - 10.5, y + h - 8.5, 9.5, 7, 'F'); doc.setFontSize(5.2); doc.setTextColor(255); doc.text('+' + extra, x + w - 5.75, y + h - 3.4, { align: 'center' }); }
 }
-function pdfScoreCard(doc, y, isUs, der) {
+function pdfScoreCard(doc, y, isUs, der, availH) {
   const n = draft.inns, slots = isUs ? draft.slots : draft.oslots, cells = isUs ? draft.cells : draft.ocells;
   const avail = doc.internal.pageSize.getWidth() - 64 - 16 - 118 - TOTC.length * 21;
-  const innW = Math.min(46, avail / n), rowH = Math.min(innW, 38);
+  const innW = Math.min(46, avail / n);
+  // La hoja completa cabe en una sola página: la altura de cada fila se ajusta al número de bateadores
+  const headH = 14, footRowH = 10, hasSub = slots.some(s => s.sub);
+  const fitH = availH ? (availH - headH - 5 * footRowH - 4) / Math.max(1, slots.length) : 38;
+  const rowH = Math.max(hasSub ? 15 : 12, Math.min(innW, 38, fitH));
+  const small = rowH < 22, fs = small ? 6.2 : 7.5;
   const who = p => isUs ? [pNum(p.pid), pName(p.pid)].filter(x => x !== '').join(' ') : [p.num ? '#' + p.num : '', p.name].filter(Boolean).join(' ');
   const body = slots.map((s, si) => {
     let name = (who(s) || '-') + (s.pos ? '  ' + s.pos : '');
@@ -1571,15 +1576,15 @@ function pdfScoreCard(doc, y, isUs, der) {
     sumRow('DB - dejados en base', 'lob', blank),
     sumRow('Outs', 'outs', [{ content: '*VB = apariciones al plato', colSpan: TOTC.length, styles: { halign: 'left', fontStyle: 'normal' } }]),
   ];
-  const colStyles = { 0: { cellWidth: 16, textColor: [110, 110, 110] }, 1: { cellWidth: 118, halign: 'left', fontSize: 7.2 } };
+  const colStyles = { 0: { cellWidth: 16, textColor: [110, 110, 110] }, 1: { cellWidth: 118, halign: 'left', fontSize: small ? 6 : 7.2 } };
   for (let i = 0; i < n; i++) colStyles[2 + i] = { cellWidth: innW, minCellHeight: rowH };
   TOTC.forEach((_, i) => colStyles[2 + n + i] = { cellWidth: 21 });
   doc.autoTable({
-    startY: y, theme: 'grid', margin: { left: 32, right: 32 }, tableWidth: 'wrap',
+    startY: y, theme: 'grid', margin: { left: 32, right: 32, bottom: 26 }, tableWidth: 'wrap', showFoot: 'lastPage', showHead: 'everyPage',
     head: [['#', 'Nombre - Pos', ...Array.from({ length: n }, (_, i) => String(i + 1)), ...TOTC.map(([, l]) => l)]],
     body, foot, columnStyles: colStyles, rowPageBreak: 'avoid',
-    styles: { fontSize: 7.5, cellPadding: 2.2, halign: 'center', valign: 'middle', lineColor: [207, 169, 172], lineWidth: .5, textColor: INK },
-    headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold', fontSize: 7, cellPadding: 1.8 },
+    styles: { fontSize: fs, cellPadding: small ? 1 : 2.2, halign: 'center', valign: 'middle', lineColor: [207, 169, 172], lineWidth: .5, textColor: INK },
+    headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold', fontSize: 6.3, cellPadding: 1.2, minCellHeight: footRowH },
     didParseCell: d => { if (d.section === 'head' && d.column.index === 1) d.cell.styles.halign = 'left'; if (d.section === 'body' && d.column.index === 2 + n) d.cell.styles.fontStyle = 'bold'; },
     didDrawCell: d => {
       if (d.section !== 'body' || d.column.index < 2 || d.column.index >= 2 + n) return;
@@ -1601,9 +1606,14 @@ function pdfSheet() {
   doc.text(pdfSafe(`${S.team} ${der.runs}, ${opp} ${themR}`), 32, 90);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110);
   doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
+  const BOTTOM = 30; // espacio para el pie de página
   let y = pdfSection(doc, `${S.team} al bat`, 122);
-  y = pdfScoreCard(doc, y, true, der);
-  if (oppHas) { doc.addPage(); y = pdfSection(doc, `${opp} al bat`, 40); y = pdfScoreCard(doc, y, false, od); }
+  y = pdfScoreCard(doc, y, true, der, H - y - BOTTOM);
+  if (oppHas) { doc.addPage(); y = pdfSection(doc, `${opp} al bat`, 40); y = pdfScoreCard(doc, y, false, od, H - y - BOTTOM); }
+  // Las estadísticas del juego van en su propia hoja
+  doc.addPage(); y = 40;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...INK);
+  doc.text(pdfSafe(`Estadísticas del juego · ${S.team} ${der.runs}, ${opp} ${themR}`), 32, y); y += 22;
   // Pizarra
   const fldE = Object.entries(draft.fld).filter(([pid]) => draftPids().includes(pid)).reduce((a, [, f]) => a + num(f.e), 0);
   const order = draft.ha === 'L' ? ['them', 'us'] : ['us', 'them'];
