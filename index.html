@@ -42,9 +42,9 @@ img{max-width:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
 .wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header.board{background:linear-gradient(180deg,var(--board) 0%,var(--board-2) 100%);color:var(--board-ink);border-bottom:6px solid var(--stripe);box-shadow:inset 0 -2px 0 var(--trim)}
-.hero{position:relative;overflow:hidden;background:radial-gradient(ellipse 60% 90% at 50% 55%,#ffffff 0%,#ffd9db 14%,#e3232c 42%,#b0101a 75%,#7d0a11 100%)}
+.hero{position:relative;overflow:hidden;background:radial-gradient(ellipse 60% 90% at 50% 55%,#ffffff 0%,var(--hero-1,#ffd9db) 14%,var(--hero-2,#e3232c) 42%,var(--hero-3,#b0101a) 75%,var(--hero-4,#7d0a11) 100%)}
 .hero::before{content:"";position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.16) 0deg 3deg,rgba(255,255,255,0) 3deg 11deg);pointer-events:none}
-.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:30%;background:linear-gradient(180deg,transparent,rgba(110,8,14,.55));pointer-events:none}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:30%;background:linear-gradient(180deg,transparent,var(--hero-shade,rgba(110,8,14,.55)));pointer-events:none}
 .hero-in{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding-block:clamp(10px,2.4vw,22px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px) minmax(0,1fr);align-items:center;gap:clamp(8px,3vw,40px)}
 .hero .devil{justify-self:start;width:clamp(72px,13vw,150px);height:auto;filter:drop-shadow(0 6px 10px rgba(60,0,4,.55));transform:rotate(-8deg)}
 .hero .word{justify-self:center;width:100%;max-width:560px;height:auto;filter:drop-shadow(0 8px 14px rgba(70,0,6,.5));transform:rotate(-3deg)}
@@ -210,6 +210,12 @@ nav.tabs .user-btn{margin-left:6px}
 .au-team select{padding:4px 6px;font-size:13px}
 .ud-teams{display:flex;flex-direction:column;gap:6px}
 .ud-teams div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:6px 0;font-size:13.5px}
+.color-pick{display:flex;align-items:center;gap:6px;font-family:var(--f-body);font-size:12.5px;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer}
+.color-pick input{width:38px;height:32px;padding:2px;border-radius:6px;cursor:pointer}
+.team-preview{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;align-self:flex-end}
+.tp-bar{width:46px;height:28px;border-radius:4px;background:linear-gradient(180deg,var(--tp-1,#c8161e),var(--tp-2,#8a0d14));border-bottom:4px solid var(--tp-3,#8d9096)}
+.tp-btn{background:var(--tp-1,#c8161e);color:var(--tp-ink,#fff);font-weight:600;font-size:12px;padding:5px 10px;border-radius:4px}
+.tp-chip{background:var(--tp-soft,#f6e1e2);color:var(--tp-1,#c8161e);font-family:var(--f-mono);font-weight:700;font-size:12px;padding:4px 8px;border-radius:4px}
 .checks{display:flex;flex-direction:column;gap:6px}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:7px 10px;border-radius:4px}
 .check.ok{background:var(--ok-bg)} .check.warn{background:var(--warn-bg)} .check.bad{background:var(--bad-bg)}
@@ -537,6 +543,12 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <label class="f" style="flex:1;min-width:180px">Nombre del equipo<input id="atName" required maxlength="60" placeholder="Ej. Diablillos Chupón"></label>
         <label class="f" style="min-width:160px">Categoría<input id="atCat" maxlength="60" placeholder="Ej. Chupón 4-6 años"></label>
         <div class="f photo-field"><span>Logo</span><div class="row" style="gap:6px;align-items:center"><img id="atLogoPrev" class="team-logo" alt="Logo" hidden><label class="btn sm" for="atLogo" style="cursor:pointer">Elegir logo</label><input type="file" id="atLogo" accept="image/*" class="sr-only"><button type="button" class="icon-btn" id="atLogoClear" hidden aria-label="Quitar logo">✕</button></div></div>
+        <div class="f photo-field"><span>Colores</span><div class="row" style="gap:8px;align-items:center">
+          <label class="color-pick" title="Color principal (encabezado, botones, tablas)"><input type="color" id="atColor" value="#c8161e"><span>Principal</span></label>
+          <label class="color-pick" title="Color secundario (franja bajo el encabezado)"><input type="color" id="atColor2" value="#8d9096"><span>Franja</span></label>
+          <label class="inline-check" style="font-family:var(--f-body);text-transform:none;letter-spacing:0"><input type="checkbox" id="atColorDef" checked> Rojo de la plataforma</label>
+        </div></div>
+        <div class="team-preview" id="atPreview" aria-hidden="true"><span class="tp-bar"></span><span class="tp-btn">Botón</span><span class="tp-chip">.333</span></div>
         <button class="btn primary" type="submit" id="atSubmit">Crear equipo</button>
         <button class="btn" type="button" id="atCancel" hidden>Cancelar</button>
       </form>
@@ -1629,7 +1641,7 @@ function openPlayer(pid) {
 $('#playerDlg').addEventListener('click', e => { if (e.target === $('#playerDlg')) $('#playerDlg').close(); });
 
 /* ---------- Reportes PDF ---------- */
-const RED = [200, 22, 30], ROSE = [246, 225, 226], INK = [30, 31, 34];
+let RED = [200, 22, 30], ROSE = [246, 225, 226]; const INK = [30, 31, 34];
 const pdfSafe = s => String(s ?? '').replace(/[—–]/g, '-').replace(/[▾▴]/g, '').replace(/[^\x00-\xFF]/g, '').trim();
 function pdfDoc(orientation, title, subtitle) {
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return null; }
@@ -1951,6 +1963,39 @@ const ROLE_LAB = { admin: 'Administrador', supervisor: 'Supervisor', editor: 'Ca
 const levelOf = u => u.isAdmin ? 'admin' : u.isSupervisor ? 'supervisor' : 'user';
 const heroImgs = () => ({ devil: $('.hero .devil'), word: $('.hero .word') });
 const ORIG = (() => { const h = heroImgs(); return { devil: h.devil && h.devil.src, word: h.word && h.word.src }; })();
+/* Colores por equipo: se derivan del color principal y se aplican a los dos temas */
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgbHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mixC = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; const [r, g, b] = c.map(f); return .2126 * r + .7152 * g + .0722 * b; };
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+function readable(c, bg, toward) { let x = c; for (let i = 0; i < 20 && contrast(x, bg) < 4.5; i++) x = mixC(x, toward, .12); return x; }
+function teamPalette(primary, secondary) {
+  const p = hexRgb(primary), W = [255, 255, 255], K = [0, 0, 0], D = [32, 33, 37];
+  const ink = contrast(W, p) >= 3 ? '#ffffff' : '#1e1f22';
+  const lightAcc = readable(p, W, K), darkAcc = readable(p, [36, 25, 27], W);
+  return {
+    light: { '--board': rgbHex(p), '--board-2': rgbHex(mixC(p, K, .38)), '--board-ink': ink, '--bulb': ink, '--accent': rgbHex(lightAcc), '--accent-ink': contrast(W, lightAcc) >= 3 ? '#ffffff' : '#1e1f22',
+      '--accent-soft': rgbHex(mixC(p, W, .85)), '--chip': rgbHex(mixC(p, W, .88)), '--hover': rgbHex(mixC(p, W, .95)), '--bg': rgbHex(mixC(p, [245, 245, 246], .94)),
+      '--line': rgbHex(mixC(p, W, .82)), '--line-strong': rgbHex(mixC(p, W, .62)), '--diamond': rgbHex(mixC(p, W, .7)), '--stripe': secondary || '#8d9096' },
+    dark: { '--board': rgbHex(mixC(p, K, .3)), '--board-2': rgbHex(mixC(p, K, .62)), '--board-ink': '#ffffff', '--bulb': '#ffffff', '--accent': rgbHex(darkAcc), '--accent-ink': contrast(W, darkAcc) >= 3 ? '#ffffff' : '#141414',
+      '--accent-soft': rgbHex(mixC(p, D, .75)), '--chip': rgbHex(mixC(p, D, .82)), '--hover': rgbHex(mixC(p, D, .88)), '--bg': rgbHex(mixC(p, [20, 20, 22], .93)), '--paper': rgbHex(mixC(p, D, .92)),
+      '--line': rgbHex(mixC(p, D, .8)), '--line-strong': rgbHex(mixC(p, D, .68)), '--diamond': rgbHex(mixC(p, D, .68)), '--stripe': secondary || '#6e7177' },
+    hero: { '--hero-1': rgbHex(mixC(p, W, .82)), '--hero-2': rgbHex(mixC(p, W, .12)), '--hero-3': rgbHex(mixC(p, K, .2)), '--hero-4': rgbHex(mixC(p, K, .5)), '--hero-shade': `rgba(${mixC(p, K, .5).map(Math.round).join(',')},.55)` },
+    pdf: { red: lightAcc.map(Math.round), rose: mixC(p, W, .85).map(Math.round) },
+  };
+}
+function applyTeamColors(colors) {
+  let st = document.getElementById('teamTheme');
+  if (!colors || !colors.primary) { if (st) st.remove(); RED = [200, 22, 30]; ROSE = [246, 225, 226]; return; }
+  const pal = teamPalette(colors.primary, colors.secondary);
+  const decl = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(';');
+  if (!st) { st = document.createElement('style'); st.id = 'teamTheme'; document.head.appendChild(st); }
+  st.textContent = `:root{${decl(pal.light)};${decl(pal.hero)}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${decl(pal.dark)}}}
+:root[data-theme="dark"]{${decl(pal.dark)}}`;
+  RED = pal.pdf.red; ROSE = pal.pdf.rose;
+}
 function applyBrand(team) {
   const h = heroImgs(); if (!h.devil) return;
   let nameEl = $('.hero .team-name');
@@ -1962,6 +2007,7 @@ function applyBrand(team) {
   const useWord = !team || (isDiablillos && !team.logo);
   h.word.hidden = !useWord; nameEl.hidden = useWord; nameEl.textContent = name;
   $('#authLogo').src = (team && team.logo) || ORIG.devil;
+  applyTeamColors(team && team.colors);
 }
 function renderAuthUI() {
   if (!me) return;
@@ -2064,13 +2110,22 @@ document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('clic
 $('#admTeams').addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'); if (!b) return; const id = b.dataset.id, a = b.dataset.a;
   if (a === 'tview') { curTeam = id; try { localStorage.setItem(TEAMK, id); } catch {} draft = blankDraft(); syncMetaInputs(); await apiLoad().catch(er => toast(er.message)); showView('juegos'); return; }
-  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
+  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); setColorInputs(t.colors); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
   if (a === 'tdel') { admPending = 't:' + id; renderAdmin(); return; }
   if (a === 'no') { admPending = null; renderAdmin(); return; }
   if (a === 'tdel-yes') { admPending = null; try { await apiCall({ op: 'adminTeamDelete', id }); toast('Equipo eliminado'); await admLoad(); await apiLoad(); } catch (er) { toast(er.message); renderAdmin(); } }
 });
 function showLogo(src) { const el = $('#atLogoPrev'); if (src) { el.src = src; el.hidden = false; $('#atLogoClear').hidden = false; } else { el.hidden = true; el.removeAttribute('src'); $('#atLogoClear').hidden = true; } }
-function resetTeamForm() { admEditTeam = null; admLogo = undefined; $('#admTeamForm').reset(); showLogo(''); $('#atSubmit').textContent = 'Crear equipo'; $('#atCancel').hidden = true; }
+function setColorInputs(c) { $('#atColorDef').checked = !c; $('#atColor').value = (c && c.primary) || '#c8161e'; $('#atColor2').value = (c && c.secondary) || '#8d9096'; previewColors(); }
+function previewColors() {
+  const def = $('#atColorDef').checked, el = $('#atPreview');
+  const pal = teamPalette(def ? '#c8161e' : $('#atColor').value, def ? '#8d9096' : $('#atColor2').value).light;
+  el.style.setProperty('--tp-1', pal['--accent']); el.style.setProperty('--tp-2', pal['--board-2']); el.style.setProperty('--tp-3', pal['--stripe']);
+  el.style.setProperty('--tp-ink', pal['--accent-ink']); el.style.setProperty('--tp-soft', pal['--accent-soft']);
+}
+['atColor', 'atColor2'].forEach(id => $('#' + id).addEventListener('input', () => { $('#atColorDef').checked = false; previewColors(); }));
+$('#atColorDef').addEventListener('change', previewColors);
+function resetTeamForm() { admEditTeam = null; admLogo = undefined; $('#admTeamForm').reset(); showLogo(''); setColorInputs(null); $('#atSubmit').textContent = 'Crear equipo'; $('#atCancel').hidden = true; }
 $('#atCancel').addEventListener('click', resetTeamForm);
 $('#atLogoClear').addEventListener('click', () => { admLogo = ''; $('#atLogo').value = ''; showLogo(''); });
 $('#atLogo').addEventListener('change', e => {
@@ -2083,7 +2138,7 @@ $('#atLogo').addEventListener('change', e => {
 });
 $('#admTeamForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const body = { op: 'adminTeamSave', id: admEditTeam || undefined, name: $('#atName').value, category: $('#atCat').value };
+  const body = { op: 'adminTeamSave', id: admEditTeam || undefined, name: $('#atName').value, category: $('#atCat').value, colors: $('#atColorDef').checked ? null : { primary: $('#atColor').value, secondary: $('#atColor2').value } };
   if (admLogo !== undefined) body.logo = admLogo;
   try { const r = await apiCall(body); toast(admEditTeam ? 'Equipo guardado' : 'Equipo creado'); resetTeamForm(); await admLoad(); if (!curTeam) curTeam = r.id; await apiLoad(); }
   catch (er) { toast(er.message); }

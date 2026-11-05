@@ -119,7 +119,8 @@ async function loadUser(p, req) {
 const roleIn = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); return t ? t.role : null; };
 const canRead = (u, teamId) => !!roleIn(u, teamId);
 const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
-const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, logo: (t.data && t.data.logo) || '', role: t.role });
+const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
+const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, logo: (t.data && t.data.logo) || '', colors: teamColors(t.data), role: t.role });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
 async function body(req) { return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); }
@@ -247,7 +248,7 @@ export default async function handler(req, res) {
           p.query('select user_id, team_id, role from bs_members'),
         ]);
         return send(res, 200, {
-          teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, logo: (t.data && t.data.logo) || '', players: t.players, games: t.games, lastGame: t.last_game })),
+          teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, logo: (t.data && t.data.logo) || '', colors: teamColors(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
           users: users.rows.map(u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, active: u.active, mustChange: u.must_change, lastLogin: u.last_login,
             teams: members.rows.filter(m => m.user_id === u.id).map(m => ({ team: m.team_id, role: m.role })) })),
         });
@@ -256,14 +257,21 @@ export default async function handler(req, res) {
         const name = String(b.name || '').trim().slice(0, 60); if (!name) fail(400, 'bad_request', 'Escribe el nombre del equipo.');
         const category = String(b.category || '').trim().slice(0, 60);
         const logo = typeof b.logo === 'string' && b.logo.startsWith('data:image/') && b.logo.length < 300 * 1024 ? b.logo : (b.logo === '' ? '' : undefined);
+        const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
+        const colors = b.colors === null ? null : (isObj(b.colors) && hex(b.colors.primary) ? { primary: hex(b.colors.primary), secondary: hex(b.colors.secondary) || '#8d9096' } : undefined);
         if (b.id) {
           if (!validId(b.id)) fail(400, 'bad_request');
-          await p.query(`update bs_teams set name = $2, category = $3${logo !== undefined ? ", data = jsonb_set(data, '{logo}', to_jsonb($4::text))" : ''} where id = $1`,
-            logo !== undefined ? [b.id, name, category, logo] : [b.id, name, category]);
+          const cur = (await p.query('select data from bs_teams where id = $1', [b.id])).rows[0];
+          if (!cur) fail(404, 'not_found', 'Ese equipo ya no existe.');
+          const data = { ...(cur.data || {}) };
+          if (logo !== undefined) { if (logo) data.logo = logo; else delete data.logo; }
+          if (colors !== undefined) { if (colors) data.colors = colors; else delete data.colors; }
+          await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb where id = $1', [b.id, name, category, JSON.stringify(data)]);
           return send(res, 200, { ok: true, id: b.id });
         }
         const id = newId('t');
-        await p.query('insert into bs_teams (id, name, category, data) values ($1, $2, $3, $4::jsonb)', [id, name, category, JSON.stringify(logo ? { logo } : {})]);
+        const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors;
+        await p.query('insert into bs_teams (id, name, category, data) values ($1, $2, $3, $4::jsonb)', [id, name, category, JSON.stringify(data)]);
         return send(res, 200, { ok: true, id });
       }
       if (op === 'adminTeamDelete') {
