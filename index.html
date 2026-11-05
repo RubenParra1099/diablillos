@@ -240,6 +240,16 @@ nav.tabs .user-btn{margin-left:6px}
 .team-name .tn-tail path{fill:var(--nm-fill,#fff);stroke:var(--nm-stroke,var(--board-2));stroke-width:4;stroke-linejoin:round;vector-effect:non-scaling-stroke;paint-order:stroke fill}
 .hero .team-name.fill-team{color:var(--nm-fill);-webkit-text-stroke-color:var(--nm-stroke)}
 .hero .team-name.fill-team .tn-tail path{fill:var(--nm-fill);stroke:var(--nm-stroke)}
+.team-name.fill-varsity,.tp-name.fill-varsity{-webkit-text-stroke:0!important;text-shadow:none!important;color:inherit}
+.fill-varsity .vs{display:inline-grid}
+.hero .team-name.fill-varsity{font-size:clamp(44px,9.5vw,108px);letter-spacing:.04em}
+.fill-varsity .vl{grid-area:1/1;white-space:nowrap;position:relative}
+.fill-varsity .vl1{-webkit-text-stroke:.2em #fff;color:#fff;filter:drop-shadow(0 .06em .1em rgba(0,0,0,.45))}
+.fill-varsity .vl2{-webkit-text-stroke:.14em var(--nm-stroke,#f2b632);color:var(--nm-stroke,#f2b632)}
+.fill-varsity .vl3{-webkit-text-stroke:.07em #fff;color:#fff}
+.fill-varsity .vl4{background:linear-gradient(180deg,var(--nm-g1,#5fd38a) 0%,var(--nm-fill,#1e8a4a) 48%,var(--nm-g2,#0b4d27) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:0}
+.fill-varsity .tn-tail path{fill:var(--nm-fill);stroke:var(--nm-stroke)}
+.tp-name.fill-varsity{background:linear-gradient(180deg,#d9dde3,#9aa1ab);padding:8px 14px}
 .hero .team-name.tilt{transform:rotate(-8deg)!important}
 .tp-name.fill-team{color:var(--nm-fill);-webkit-text-stroke:2px var(--nm-stroke);paint-order:stroke fill}
 .tp-name.tilt{transform:rotate(-6deg)}
@@ -601,7 +611,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         </select></label>
         <div class="f photo-field"><span>Detalles del nombre</span><div class="row" style="gap:10px;align-items:center;font-family:var(--f-body);text-transform:none;letter-spacing:0">
           <label class="f" style="min-width:170px">Cola bajo el nombre<select id="atTail"><option value="">Sin cola</option><option value="thin">Cola delgada (sale de la última letra)</option><option value="thick">Cola gruesa (abarca todo el nombre)</option></select></label>
-          <label class="f" style="min-width:220px">Color de las letras<select id="atFill"><option value="white">Blancas con contorno</option><option value="team">Dos colores (principal y contorno secundario)</option><option value="solid">Un solo color, sin contorno</option></select></label>
+          <label class="f" style="min-width:220px">Color de las letras<select id="atFill"><option value="white">Blancas con contorno</option><option value="team">Dos colores (principal y contorno secundario)</option><option value="solid">Un solo color, sin contorno</option><option value="varsity">Varsity: degradado con triple contorno</option></select></label>
           <label class="inline-check"><input type="checkbox" id="atTilt"> Inclinado</label>
         </div></div>
         <div class="f photo-field"><span>Colores</span><div class="row" style="gap:8px;align-items:center">
@@ -1729,15 +1739,22 @@ function pdfNameImage() {
     const lt = curLettering || {}, cs = getComputedStyle(document.documentElement);
     const team = lt.fill === 'team', solid = lt.fill === 'solid', fill = team ? cs.getPropertyValue('--nm-fill').trim() || '#c8161e' : '#ffffff';
     const stroke = team ? cs.getPropertyValue('--nm-stroke').trim() || '#ffffff' : 'rgba(0,0,0,.4)';
-    const c = document.createElement('canvas'), x = c.getContext('2d'), fam = FONT_CSS[curFont], txt = S.team;
+    const c = document.createElement('canvas'), x = c.getContext('2d'), fam = FONT_CSS[curFont], txt = ['script', 'brush', 'gothic', 'lobster', 'damion', 'grandhotel', 'leckerli', 'sansita', 'dafoe'].includes(curFont) ? S.team : S.team.toUpperCase();
     const font = (fam.startsWith('700') ? '' : '400 ') + '120px ' + fam.replace(/^700 /, '') + ', serif';
     x.font = font; const tw = Math.ceil(x.measureText(txt).width);
     const pad = 40, H = lt.tail ? 230 : 180, ang = lt.tilt ? -.12 : 0;
     c.width = tw + pad * 2; c.height = H + Math.ceil(Math.abs(Math.sin(ang)) * (tw + pad));
     x.translate(pad, c.height / 2 + (lt.tilt ? 0 : -10)); x.rotate(ang); x.translate(0, -H / 2 + 20);
     x.font = font; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    if (lt.fill === 'varsity') {
+      const nf = cs.getPropertyValue('--nm-fill').trim() || '#1e8a4a', ns = cs.getPropertyValue('--nm-stroke').trim() || '#f2b632';
+      [[34, '#ffffff'], [22, ns], [10, '#ffffff']].forEach(([w, col]) => { x.lineWidth = w; x.strokeStyle = col; x.strokeText(txt, 0, 80); });
+      const g = x.createLinearGradient(0, 30, 0, 130); g.addColorStop(0, cs.getPropertyValue('--nm-g1').trim() || nf); g.addColorStop(.5, nf); g.addColorStop(1, cs.getPropertyValue('--nm-g2').trim() || nf);
+      x.fillStyle = g; x.fillText(txt, 0, 80);
+    } else {
     if (!solid) { x.lineWidth = team ? 16 : 14; x.strokeStyle = stroke; x.strokeText(txt, 0, 80); }
     x.fillStyle = fill; x.fillText(txt, 0, 78);
+    }
     if (lt.tail) {
       const thick = lt.tail === 'thick', p = new Path2D(tailPath(lt.tail)), sx = (tw * (thick ? 1.08 : 1.04)) / 100, sy = thick ? 2.4 : 1.6;
       x.save(); x.translate(-tw * .01, 118); x.scale(sx, sy);
@@ -2100,6 +2117,9 @@ const TAIL_THICK = 'M0 3 C20 16 60 22 100 0 C76 30 30 34 0 3 Z';
 const tailPath = t => t === 'thick' ? TAIL_THICK : TAIL_PATH;
 const tailSVG = t => `<svg class="tn-tail${t === 'thick' ? ' thick' : ''}" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="${tailPath(t)}"/></svg>`;
 function setNameEl(el, name, font, lt) {
+  const varsity = !!(lt && lt.fill === 'varsity');
+  el.classList.toggle('fill-varsity', varsity);
+  if (varsity) { const t = esc(name); el.innerHTML = `<span class="vs">${[1, 2, 3, 4].map(i => `<span class="vl vl${i}"${i < 4 ? ' aria-hidden="true"' : ''}>${t}</span>`).join('')}</span>` + (lt.tail ? tailSVG(lt.tail) : ''); el.classList.remove('fill-team', 'fill-solid'); el.classList.toggle('tilt', !!lt.tilt); return; }
   el.innerHTML = esc(name) + (lt && lt.tail ? tailSVG(lt.tail) : '');
   el.classList.toggle('fill-team', !!(lt && lt.fill === 'team')); el.classList.toggle('fill-solid', !!(lt && lt.fill === 'solid')); el.classList.toggle('tilt', !!(lt && lt.tilt));
 }
@@ -2119,6 +2139,7 @@ function applyBrand(team) {
   nameEl.className = 'team-name' + (font !== 'default' ? ' font-' + font : '');
   setNameEl(nameEl, name, font, curLettering);
   const tc = (team && team.colors) || { primary: '#c8161e', secondary: '#ffffff' };
+  { const pr = hexRgb(tc.primary); document.documentElement.style.setProperty('--nm-g1', rgbHex(mixC(pr, [255, 255, 255], .4))); document.documentElement.style.setProperty('--nm-g2', rgbHex(mixC(pr, [0, 0, 0], .45))); }
   document.documentElement.style.setProperty('--nm-fill', tc.primary); document.documentElement.style.setProperty('--nm-stroke', tc.secondary || '#ffffff');
   curFont = font;
   if (FONT_CSS[font] && document.fonts && document.fonts.load) document.fonts.load((FONT_CSS[font].startsWith('700') ? '' : '400 ') + '40px ' + FONT_CSS[font].replace(/^700 /, '')).catch(() => {});
@@ -2240,7 +2261,9 @@ function previewColors() {
   el.style.setProperty('--tp-ink', pal['--accent-ink']); el.style.setProperty('--tp-soft', pal['--accent-soft']);
   const np = $('#atNamePrev'); np.className = 'tp-name' + ($('#atFont').value !== 'default' ? ' font-' + $('#atFont').value : '');
   setNameEl(np, $('#atName').value || 'Equipo', $('#atFont').value, { tail: $('#atTail').value === 'thick' ? 'thick' : !!$('#atTail').value, fill: $('#atFill').value, tilt: $('#atTilt').checked });
-  np.style.setProperty('--nm-fill', def ? '#c8161e' : $('#atColor').value); np.style.setProperty('--nm-stroke', def ? '#ffffff' : $('#atColor2').value);
+  const pc = def ? '#c8161e' : $('#atColor').value, pr = hexRgb(pc);
+  np.style.setProperty('--nm-fill', pc); np.style.setProperty('--nm-stroke', def ? '#ffffff' : $('#atColor2').value);
+  np.style.setProperty('--nm-g1', rgbHex(mixC(pr, [255, 255, 255], .4))); np.style.setProperty('--nm-g2', rgbHex(mixC(pr, [0, 0, 0], .45)));
 }
 ['atColor', 'atColor2'].forEach(id => $('#' + id).addEventListener('input', () => { $('#atColorDef').checked = false; previewColors(); }));
 $('#atColorDef').addEventListener('change', previewColors);
