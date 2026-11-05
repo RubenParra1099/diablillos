@@ -17,6 +17,7 @@ img{max-width:100%}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Kaushan+Script&family=Graduate&family=Alfa+Slab+One&family=UnifrakturMaguntia&family=Rye&family=Teko:wght@600;700&display=swap">
 <style>
 /* Layout: marcador de estadio arriba (verde pizarra + numerales amarillos); debajo, hoja de anotación tipo tarjeta de papel con rombos por entrada */
 :root{
@@ -210,6 +211,20 @@ nav.tabs .user-btn{margin-left:6px}
 .au-team select{padding:4px 6px;font-size:13px}
 .ud-teams{display:flex;flex-direction:column;gap:6px}
 .ud-teams div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:6px 0;font-size:13.5px}
+.word-prev{height:38px;max-width:150px;object-fit:contain;background:var(--board);border-radius:6px;padding:3px 6px}
+.tp-name{font-size:26px;line-height:1;padding:4px 10px;border-radius:4px;background:linear-gradient(180deg,var(--tp-1,#c8161e),var(--tp-2,#8a0d14));color:#fff;max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hero .word.custom{max-width:640px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4));transform:rotate(-3deg)}
+.font-script,.font-brush,.font-gothic{text-transform:none!important}
+.font-script{font-family:"Yellowtail",cursive!important;font-weight:400!important;letter-spacing:0!important}
+.font-brush{font-family:"Kaushan Script",cursive!important;font-weight:400!important;letter-spacing:0!important}
+.font-college{font-family:"Graduate",serif!important;font-weight:400!important;letter-spacing:.02em!important}
+.font-slab{font-family:"Alfa Slab One",serif!important;font-weight:400!important;letter-spacing:.01em!important}
+.font-gothic{font-family:"UnifrakturMaguntia",serif!important;font-weight:400!important;letter-spacing:0!important}
+.font-western{font-family:"Rye",serif!important;font-weight:400!important;letter-spacing:.02em!important}
+.font-modern{font-family:"Teko",sans-serif!important;font-weight:700!important;letter-spacing:.03em!important}
+.hero .team-name{-webkit-text-stroke:5px var(--board-2);paint-order:stroke fill;text-shadow:0 6px 0 var(--board-2),0 10px 18px rgba(0,0,0,.35)}
+.hero .team-name.font-script,.hero .team-name.font-brush{font-size:clamp(46px,10vw,104px);transform:rotate(-4deg)}
+.hero .team-name.font-gothic{font-size:clamp(44px,9vw,96px)}
 .color-pick{display:flex;align-items:center;gap:6px;font-family:var(--f-body);font-size:12.5px;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer}
 .color-pick input{width:38px;height:32px;padding:2px;border-radius:6px;cursor:pointer}
 .team-preview{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;align-self:flex-end}
@@ -543,12 +558,23 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <label class="f" style="flex:1;min-width:180px">Nombre del equipo<input id="atName" required maxlength="60" placeholder="Ej. Diablillos Chupón"></label>
         <label class="f" style="min-width:160px">Categoría<input id="atCat" maxlength="60" placeholder="Ej. Chupón 4-6 años"></label>
         <div class="f photo-field"><span>Logo</span><div class="row" style="gap:6px;align-items:center"><img id="atLogoPrev" class="team-logo" alt="Logo" hidden><label class="btn sm" for="atLogo" style="cursor:pointer">Elegir logo</label><input type="file" id="atLogo" accept="image/*" class="sr-only"><button type="button" class="icon-btn" id="atLogoClear" hidden aria-label="Quitar logo">✕</button></div></div>
+        <div class="f photo-field"><span>Nombre con diseño</span><div class="row" style="gap:6px;align-items:center"><img id="atWordPrev" class="word-prev" alt="Nombre con diseño" hidden><label class="btn sm" for="atWord" style="cursor:pointer">Subir imagen</label><input type="file" id="atWord" accept="image/png,image/webp,image/svg+xml,image/*" class="sr-only"><button type="button" class="icon-btn" id="atWordClear" hidden aria-label="Quitar nombre con diseño">✕</button></div></div>
+        <label class="f" style="min-width:200px">Estilo de letra (si no hay diseño)<select id="atFont">
+          <option value="default">Deportiva (la de la plataforma)</option>
+          <option value="script">Script beisbolero</option>
+          <option value="brush">Script de pincel</option>
+          <option value="college">Bloque universitario</option>
+          <option value="slab">Bloque grueso</option>
+          <option value="gothic">Gótica</option>
+          <option value="western">Western</option>
+          <option value="modern">Moderna condensada</option>
+        </select></label>
         <div class="f photo-field"><span>Colores</span><div class="row" style="gap:8px;align-items:center">
           <label class="color-pick" title="Color principal (encabezado, botones, tablas)"><input type="color" id="atColor" value="#c8161e"><span>Principal</span></label>
           <label class="color-pick" title="Color secundario (franja bajo el encabezado)"><input type="color" id="atColor2" value="#8d9096"><span>Franja</span></label>
           <label class="inline-check" style="font-family:var(--f-body);text-transform:none;letter-spacing:0"><input type="checkbox" id="atColorDef" checked> Rojo de la plataforma</label>
         </div></div>
-        <div class="team-preview" id="atPreview" aria-hidden="true"><span class="tp-bar"></span><span class="tp-btn">Botón</span><span class="tp-chip">.333</span></div>
+        <div class="team-preview" id="atPreview" aria-hidden="true"><span class="tp-name" id="atNamePrev">Equipo</span><span class="tp-bar"></span><span class="tp-btn">Botón</span><span class="tp-chip">.333</span></div>
         <button class="btn primary" type="submit" id="atSubmit">Crear equipo</button>
         <button class="btn" type="button" id="atCancel" hidden>Cancelar</button>
       </form>
@@ -1641,20 +1667,38 @@ function openPlayer(pid) {
 $('#playerDlg').addEventListener('click', e => { if (e.target === $('#playerDlg')) $('#playerDlg').close(); });
 
 /* ---------- Reportes PDF ---------- */
-let RED = [200, 22, 30], ROSE = [246, 225, 226]; const INK = [30, 31, 34];
+let RED = [200, 22, 30], ROSE = [246, 225, 226], STRIPE = [141, 144, 150]; const INK = [30, 31, 34];
 const pdfSafe = s => String(s ?? '').replace(/[—–]/g, '-').replace(/[▾▴]/g, '').replace(/[^\x00-\xFF]/g, '').trim();
 function pdfDoc(orientation, title, subtitle) {
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return null; }
   const doc = new window.jspdf.jsPDF({ orientation, unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth();
   doc.setFillColor(...RED); doc.rect(0, 0, W, 64, 'F');
-  doc.setFillColor(141, 144, 150); doc.rect(0, 64, W, 4, 'F');
+  doc.setFillColor(...STRIPE); doc.rect(0, 64, W, 4, 'F');
   try { const dv = $('.hero .devil'); if (dv && !dv.hidden) doc.addImage(dv.src, /^data:image\/jpe?g/.test(dv.src) ? 'JPEG' : 'PNG', 20, 8, 52, 50); } catch {}
-  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pdfSafe(S.team).toUpperCase(), 84, 32);
+  doc.setTextColor(255, 255, 255);
+  const nameImg = pdfNameImage();
+  if (nameImg) { try { doc.addImage(nameImg.src, 'PNG', 84, 9, Math.min(W * .5, 30 * nameImg.ratio), Math.min(30, W * .5 / nameImg.ratio)); } catch {} }
+  else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pdfSafe(S.team).toUpperCase(), 84, 32); }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(pdfSafe(title), 84, 50);
   if (subtitle) { doc.setFontSize(9); doc.text(pdfSafe(subtitle), W - 20, 50, { align: 'right' }); }
   doc.setTextColor(...INK);
   return doc;
+}
+// Nombre del equipo como imagen para el PDF: su diseño subido o el nombre escrito con su estilo de letra
+function pdfNameImage() {
+  const w = $('.hero .word');
+  if (w && !w.hidden && w.classList.contains('custom') && w.naturalWidth) return { src: w.src, ratio: w.naturalWidth / w.naturalHeight };
+  if (curFont === 'default' || !FONT_CSS[curFont]) return null;
+  try {
+    const c = document.createElement('canvas'), x = c.getContext('2d'), fam = FONT_CSS[curFont], txt = S.team;
+    const font = (fam.startsWith('700') ? '' : '400 ') + '120px ' + fam + ', serif';
+    x.font = font; const tw = Math.ceil(x.measureText(txt).width) + 40;
+    c.width = tw; c.height = 170; x.font = font; x.textBaseline = 'middle';
+    x.lineJoin = 'round'; x.lineWidth = 14; x.strokeStyle = 'rgba(0,0,0,.35)'; x.strokeText(txt, 20, 88);
+    x.fillStyle = '#ffffff'; x.fillText(txt, 20, 85);
+    return { src: c.toDataURL('image/png'), ratio: c.width / c.height };
+  } catch { return null; }
 }
 function pdfSection(doc, text, y) {
   const H = doc.internal.pageSize.getHeight();
@@ -1987,15 +2031,17 @@ function teamPalette(primary, secondary) {
 }
 function applyTeamColors(colors) {
   let st = document.getElementById('teamTheme');
-  if (!colors || !colors.primary) { if (st) st.remove(); RED = [200, 22, 30]; ROSE = [246, 225, 226]; return; }
+  if (!colors || !colors.primary) { if (st) st.remove(); RED = [200, 22, 30]; ROSE = [246, 225, 226]; STRIPE = [141, 144, 150]; return; }
   const pal = teamPalette(colors.primary, colors.secondary);
   const decl = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(';');
   if (!st) { st = document.createElement('style'); st.id = 'teamTheme'; document.head.appendChild(st); }
   st.textContent = `:root{${decl(pal.light)};${decl(pal.hero)}}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${decl(pal.dark)}}}
 :root[data-theme="dark"]{${decl(pal.dark)}}`;
-  RED = pal.pdf.red; ROSE = pal.pdf.rose;
+  RED = pal.pdf.red; ROSE = pal.pdf.rose; STRIPE = hexRgb(colors.secondary || '#8d9096');
 }
+let curFont = 'default';
+const FONT_CSS = { script: '"Yellowtail"', brush: '"Kaushan Script"', college: '"Graduate"', slab: '"Alfa Slab One"', gothic: '"UnifrakturMaguntia"', western: '"Rye"', modern: '700 "Teko"' };
 function applyBrand(team) {
   const h = heroImgs(); if (!h.devil) return;
   let nameEl = $('.hero .team-name');
@@ -2004,8 +2050,13 @@ function applyBrand(team) {
   const isDiablillos = /diablillos/i.test(name);
   if (team && team.logo) { h.devil.src = team.logo; h.devil.hidden = false; }
   else { h.devil.src = ORIG.devil; h.devil.hidden = !!team && !isDiablillos; }
-  const useWord = !team || (isDiablillos && !team.logo);
+  const font = (team && team.font) || 'default';
+  const useWord = !!(team && team.wordmark) || !team || (isDiablillos && !team.logo && font === 'default');
+  h.word.src = (team && team.wordmark) || ORIG.word; h.word.classList.toggle('custom', !!(team && team.wordmark));
   h.word.hidden = !useWord; nameEl.hidden = useWord; nameEl.textContent = name;
+  nameEl.className = 'team-name' + (font !== 'default' ? ' font-' + font : '');
+  curFont = font;
+  if (FONT_CSS[font] && document.fonts && document.fonts.load) document.fonts.load((FONT_CSS[font].startsWith('700') ? '' : '400 ') + '40px ' + FONT_CSS[font].replace(/^700 /, '')).catch(() => {});
   $('#authLogo').src = (team && team.logo) || ORIG.devil;
   applyTeamColors(team && team.colors);
 }
@@ -2110,7 +2161,7 @@ document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('clic
 $('#admTeams').addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'); if (!b) return; const id = b.dataset.id, a = b.dataset.a;
   if (a === 'tview') { curTeam = id; try { localStorage.setItem(TEAMK, id); } catch {} draft = blankDraft(); syncMetaInputs(); await apiLoad().catch(er => toast(er.message)); showView('juegos'); return; }
-  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); setColorInputs(t.colors); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
+  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); setColorInputs(t.colors); admWord = undefined; showWord(t.wordmark); $('#atFont').value = t.font || 'default'; previewColors(); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
   if (a === 'tdel') { admPending = 't:' + id; renderAdmin(); return; }
   if (a === 'no') { admPending = null; renderAdmin(); return; }
   if (a === 'tdel-yes') { admPending = null; try { await apiCall({ op: 'adminTeamDelete', id }); toast('Equipo eliminado'); await admLoad(); await apiLoad(); } catch (er) { toast(er.message); renderAdmin(); } }
@@ -2122,12 +2173,31 @@ function previewColors() {
   const pal = teamPalette(def ? '#c8161e' : $('#atColor').value, def ? '#8d9096' : $('#atColor2').value).light;
   el.style.setProperty('--tp-1', pal['--accent']); el.style.setProperty('--tp-2', pal['--board-2']); el.style.setProperty('--tp-3', pal['--stripe']);
   el.style.setProperty('--tp-ink', pal['--accent-ink']); el.style.setProperty('--tp-soft', pal['--accent-soft']);
+  const np = $('#atNamePrev'); np.textContent = $('#atName').value || 'Equipo'; np.className = 'tp-name' + ($('#atFont').value !== 'default' ? ' font-' + $('#atFont').value : '');
 }
 ['atColor', 'atColor2'].forEach(id => $('#' + id).addEventListener('input', () => { $('#atColorDef').checked = false; previewColors(); }));
 $('#atColorDef').addEventListener('change', previewColors);
-function resetTeamForm() { admEditTeam = null; admLogo = undefined; $('#admTeamForm').reset(); showLogo(''); setColorInputs(null); $('#atSubmit').textContent = 'Crear equipo'; $('#atCancel').hidden = true; }
+function resetTeamForm() { admEditTeam = null; admLogo = undefined; admWord = undefined; $('#admTeamForm').reset(); showLogo(''); showWord(''); setColorInputs(null); $('#atSubmit').textContent = 'Crear equipo'; $('#atCancel').hidden = true; }
 $('#atCancel').addEventListener('click', resetTeamForm);
 $('#atLogoClear').addEventListener('click', () => { admLogo = ''; $('#atLogo').value = ''; showLogo(''); });
+let admWord;
+function showWord(src) { const el = $('#atWordPrev'); if (src) { el.src = src; el.hidden = false; $('#atWordClear').hidden = false; } else { el.hidden = true; el.removeAttribute('src'); $('#atWordClear').hidden = true; } }
+$('#atWordClear').addEventListener('click', () => { admWord = ''; $('#atWord').value = ''; showWord(''); });
+$('#atWord').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => {
+    let M = 1200, out = '';
+    for (let i = 0; i < 4; i++) {
+      const k = Math.min(1, M / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k)); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      out = c.toDataURL('image/png'); if (out.length < 400 * 1024) break; M = Math.round(M * .75);
+    }
+    if (out.length >= 400 * 1024) { toast('La imagen es muy pesada. Usa un PNG más sencillo.'); return; }
+    admWord = out; showWord(out);
+  }; img.onerror = () => toast('No se pudo leer la imagen.'); img.src = fr.result; }; fr.readAsDataURL(f);
+});
+$('#atFont').addEventListener('change', previewColors);
+$('#atName').addEventListener('input', previewColors);
 $('#atLogo').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
   const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => {
@@ -2140,6 +2210,8 @@ $('#admTeamForm').addEventListener('submit', async e => {
   e.preventDefault();
   const body = { op: 'adminTeamSave', id: admEditTeam || undefined, name: $('#atName').value, category: $('#atCat').value, colors: $('#atColorDef').checked ? null : { primary: $('#atColor').value, secondary: $('#atColor2').value } };
   if (admLogo !== undefined) body.logo = admLogo;
+  if (admWord !== undefined) body.wordmark = admWord;
+  body.font = $('#atFont').value;
   try { const r = await apiCall(body); toast(admEditTeam ? 'Equipo guardado' : 'Equipo creado'); resetTeamForm(); await admLoad(); if (!curTeam) curTeam = r.id; await apiLoad(); }
   catch (er) { toast(er.message); }
 });
