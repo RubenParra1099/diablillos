@@ -120,7 +120,7 @@ const roleIn = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); re
 const canRead = (u, teamId) => !!roleIn(u, teamId);
 const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
-const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default' });
+const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null });
 const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), role: t.role });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
@@ -259,7 +259,8 @@ export default async function handler(req, res) {
         const category = String(b.category || '').trim().slice(0, 60);
         const logo = typeof b.logo === 'string' && b.logo.startsWith('data:image/') && b.logo.length < 300 * 1024 ? b.logo : (b.logo === '' ? '' : undefined);
         const wordmark = typeof b.wordmark === 'string' && b.wordmark.startsWith('data:image/') && b.wordmark.length < 420 * 1024 ? b.wordmark : (b.wordmark === '' ? '' : undefined);
-        const font = ['default','script','brush','college','slab','gothic','western','modern'].includes(b.font) ? b.font : undefined;
+        const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan'].includes(b.font) ? b.font : undefined;
+        const lettering = isObj(b.lettering) ? { tail: !!b.lettering.tail, fill: b.lettering.fill === 'team' ? 'team' : 'white', tilt: !!b.lettering.tilt } : undefined;
         const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
         const colors = b.colors === null ? null : (isObj(b.colors) && hex(b.colors.primary) ? { primary: hex(b.colors.primary), secondary: hex(b.colors.secondary) || '#8d9096' } : undefined);
         if (b.id) {
@@ -271,11 +272,12 @@ export default async function handler(req, res) {
           if (colors !== undefined) { if (colors) data.colors = colors; else delete data.colors; }
           if (wordmark !== undefined) { if (wordmark) data.wordmark = wordmark; else delete data.wordmark; }
           if (font !== undefined) data.font = font;
+          if (lettering !== undefined) data.lettering = lettering;
           await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb where id = $1', [b.id, name, category, JSON.stringify(data)]);
           return send(res, 200, { ok: true, id: b.id });
         }
         const id = newId('t');
-        const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font;
+        const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font; if (lettering) data.lettering = lettering;
         await p.query('insert into bs_teams (id, name, category, data) values ($1, $2, $3, $4::jsonb)', [id, name, category, JSON.stringify(data)]);
         return send(res, 200, { ok: true, id });
       }

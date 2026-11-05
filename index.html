@@ -17,7 +17,7 @@ img{max-width:100%}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Kaushan+Script&family=Graduate&family=Alfa+Slab+One&family=UnifrakturMaguntia&family=Rye&family=Teko:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Lobster&family=Damion&family=Grand+Hotel&family=Leckerli+One&family=Sansita+Swashed:wght@700&family=Bevan&family=Kaushan+Script&family=Graduate&family=Alfa+Slab+One&family=UnifrakturMaguntia&family=Rye&family=Teko:wght@600;700&display=swap">
 <style>
 /* Layout: marcador de estadio arriba (verde pizarra + numerales amarillos); debajo, hoja de anotación tipo tarjeta de papel con rombos por entrada */
 :root{
@@ -212,7 +212,7 @@ nav.tabs .user-btn{margin-left:6px}
 .ud-teams{display:flex;flex-direction:column;gap:6px}
 .ud-teams div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:6px 0;font-size:13.5px}
 .word-prev{height:38px;max-width:150px;object-fit:contain;background:var(--board);border-radius:6px;padding:3px 6px}
-.tp-name{font-size:26px;line-height:1;padding:4px 10px;border-radius:4px;background:linear-gradient(180deg,var(--tp-1,#c8161e),var(--tp-2,#8a0d14));color:#fff;max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tp-name{font-size:26px;line-height:1;padding:6px 12px;border-radius:4px;background:linear-gradient(180deg,var(--tp-1,#c8161e),var(--tp-2,#8a0d14));color:#fff;max-width:240px;overflow:hidden;white-space:nowrap}
 .hero .word.custom{max-width:640px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4));transform:rotate(-3deg)}
 .font-script,.font-brush,.font-gothic{text-transform:none!important}
 .font-script{font-family:"Yellowtail",cursive!important;font-weight:400!important;letter-spacing:0!important}
@@ -221,6 +221,22 @@ nav.tabs .user-btn{margin-left:6px}
 .font-slab{font-family:"Alfa Slab One",serif!important;font-weight:400!important;letter-spacing:.01em!important}
 .font-gothic{font-family:"UnifrakturMaguntia",serif!important;font-weight:400!important;letter-spacing:0!important}
 .font-western{font-family:"Rye",serif!important;font-weight:400!important;letter-spacing:.02em!important}
+.font-lobster{font-family:"Lobster",cursive!important;font-weight:400!important;letter-spacing:0!important;text-transform:none!important}
+.font-damion{font-family:"Damion",cursive!important;font-weight:400!important;letter-spacing:0!important;text-transform:none!important}
+.font-grandhotel{font-family:"Grand Hotel",cursive!important;font-weight:400!important;letter-spacing:0!important;text-transform:none!important}
+.font-leckerli{font-family:"Leckerli One",cursive!important;font-weight:400!important;letter-spacing:0!important;text-transform:none!important}
+.font-sansita{font-family:"Sansita Swashed",cursive!important;font-weight:700!important;letter-spacing:0!important;text-transform:none!important}
+.font-bevan{font-family:"Bevan",serif!important;font-weight:400!important;letter-spacing:.01em!important}
+.hero .team-name.font-lobster,.hero .team-name.font-damion,.hero .team-name.font-grandhotel,.hero .team-name.font-leckerli,.hero .team-name.font-sansita{font-size:clamp(46px,10vw,104px)}
+.team-name{position:relative;display:inline-block}
+.team-name .tn-tail{display:block;width:104%;height:.3em;margin:-.16em 0 0 -1%;overflow:visible}
+.team-name .tn-tail path{fill:var(--nm-fill,#fff);stroke:var(--nm-stroke,var(--board-2));stroke-width:4;stroke-linejoin:round;vector-effect:non-scaling-stroke;paint-order:stroke fill}
+.hero .team-name.fill-team{color:var(--nm-fill);-webkit-text-stroke-color:var(--nm-stroke)}
+.hero .team-name.fill-team .tn-tail path{fill:var(--nm-fill);stroke:var(--nm-stroke)}
+.hero .team-name.tilt{transform:rotate(-8deg)!important}
+.tp-name.fill-team{color:var(--nm-fill);-webkit-text-stroke:2px var(--nm-stroke);paint-order:stroke fill}
+.tp-name.tilt{transform:rotate(-6deg)}
+.tp-name .tn-tail{height:.28em;margin-top:-.12em}
 .font-modern{font-family:"Teko",sans-serif!important;font-weight:700!important;letter-spacing:.03em!important}
 .hero .team-name{-webkit-text-stroke:5px var(--board-2);paint-order:stroke fill;text-shadow:0 6px 0 var(--board-2),0 10px 18px rgba(0,0,0,.35)}
 .hero .team-name.font-script,.hero .team-name.font-brush{font-size:clamp(46px,10vw,104px);transform:rotate(-4deg)}
@@ -568,7 +584,18 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
           <option value="gothic">Gótica</option>
           <option value="western">Western</option>
           <option value="modern">Moderna condensada</option>
+          <option value="lobster">Script atlético grueso</option>
+          <option value="damion">Script de jersey clásico</option>
+          <option value="grandhotel">Script vintage</option>
+          <option value="leckerli">Script redondo</option>
+          <option value="sansita">Script con adornos</option>
+          <option value="bevan">Bloque con remates</option>
         </select></label>
+        <div class="f photo-field"><span>Detalles del nombre</span><div class="row" style="gap:10px;align-items:center;font-family:var(--f-body);text-transform:none;letter-spacing:0">
+          <label class="inline-check"><input type="checkbox" id="atTail"> Cola bajo el nombre</label>
+          <label class="inline-check"><input type="checkbox" id="atFillTeam"> Dos colores (relleno principal, contorno secundario)</label>
+          <label class="inline-check"><input type="checkbox" id="atTilt"> Inclinado</label>
+        </div></div>
         <div class="f photo-field"><span>Colores</span><div class="row" style="gap:8px;align-items:center">
           <label class="color-pick" title="Color principal (encabezado, botones, tablas)"><input type="color" id="atColor" value="#c8161e"><span>Principal</span></label>
           <label class="color-pick" title="Color secundario (franja bajo el encabezado)"><input type="color" id="atColor2" value="#8d9096"><span>Franja</span></label>
@@ -1678,9 +1705,9 @@ function pdfDoc(orientation, title, subtitle) {
   try { const dv = $('.hero .devil'); if (dv && !dv.hidden) doc.addImage(dv.src, /^data:image\/jpe?g/.test(dv.src) ? 'JPEG' : 'PNG', 20, 8, 52, 50); } catch {}
   doc.setTextColor(255, 255, 255);
   const nameImg = pdfNameImage();
-  if (nameImg) { try { doc.addImage(nameImg.src, 'PNG', 84, 9, Math.min(W * .5, 30 * nameImg.ratio), Math.min(30, W * .5 / nameImg.ratio)); } catch {} }
+  if (nameImg) { try { const ih = Math.min(40, W * .5 / nameImg.ratio); doc.addImage(nameImg.src, 'PNG', 80, Math.max(3, 24 - ih / 2), ih * nameImg.ratio, ih); } catch {} }
   else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pdfSafe(S.team).toUpperCase(), 84, 32); }
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(pdfSafe(title), 84, 50);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(pdfSafe(title), 84, nameImg ? 57 : 50);
   if (subtitle) { doc.setFontSize(9); doc.text(pdfSafe(subtitle), W - 20, 50, { align: 'right' }); }
   doc.setTextColor(...INK);
   return doc;
@@ -1691,13 +1718,29 @@ function pdfNameImage() {
   if (w && !w.hidden && w.classList.contains('custom') && w.naturalWidth) return { src: w.src, ratio: w.naturalWidth / w.naturalHeight };
   if (curFont === 'default' || !FONT_CSS[curFont]) return null;
   try {
+    const lt = curLettering || {}, cs = getComputedStyle(document.documentElement);
+    const team = lt.fill === 'team', fill = team ? cs.getPropertyValue('--nm-fill').trim() || '#c8161e' : '#ffffff';
+    const stroke = team ? cs.getPropertyValue('--nm-stroke').trim() || '#ffffff' : 'rgba(0,0,0,.4)';
     const c = document.createElement('canvas'), x = c.getContext('2d'), fam = FONT_CSS[curFont], txt = S.team;
-    const font = (fam.startsWith('700') ? '' : '400 ') + '120px ' + fam + ', serif';
-    x.font = font; const tw = Math.ceil(x.measureText(txt).width) + 40;
-    c.width = tw; c.height = 170; x.font = font; x.textBaseline = 'middle';
-    x.lineJoin = 'round'; x.lineWidth = 14; x.strokeStyle = 'rgba(0,0,0,.35)'; x.strokeText(txt, 20, 88);
-    x.fillStyle = '#ffffff'; x.fillText(txt, 20, 85);
-    return { src: c.toDataURL('image/png'), ratio: c.width / c.height };
+    const font = (fam.startsWith('700') ? '' : '400 ') + '120px ' + fam.replace(/^700 /, '') + ', serif';
+    x.font = font; const tw = Math.ceil(x.measureText(txt).width);
+    const pad = 40, H = lt.tail ? 230 : 180, ang = lt.tilt ? -.12 : 0;
+    c.width = tw + pad * 2; c.height = H + Math.ceil(Math.abs(Math.sin(ang)) * (tw + pad));
+    x.translate(pad, c.height / 2 + (lt.tilt ? 0 : -10)); x.rotate(ang); x.translate(0, -H / 2 + 20);
+    x.font = font; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    x.lineWidth = team ? 16 : 14; x.strokeStyle = stroke; x.strokeText(txt, 0, 80);
+    x.fillStyle = fill; x.fillText(txt, 0, 78);
+    if (lt.tail) {
+      const p = new Path2D(TAIL_PATH), sx = (tw * 1.04) / 100, sy = 1.6;
+      x.save(); x.translate(-tw * .01, 118); x.scale(sx, sy);
+      x.lineWidth = (team ? 12 : 10) / Math.min(sx, sy); x.strokeStyle = stroke; x.stroke(p); x.fillStyle = fill; x.fill(p); x.restore();
+    }
+    // recortar el espacio vacío alrededor del nombre
+    const d = x.getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+    for (let yy = 0; yy < c.height; yy++) for (let xx = 0; xx < c.width; xx++) if (d[(yy * c.width + xx) * 4 + 3] > 8) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }
+    if (x1 <= x0 || y1 <= y0) return null;
+    const o = document.createElement('canvas'); o.width = x1 - x0 + 8; o.height = y1 - y0 + 8; o.getContext('2d').drawImage(c, x0 - 4, y0 - 4, o.width, o.height, 0, 0, o.width, o.height);
+    return { src: o.toDataURL('image/png'), ratio: o.width / o.height };
   } catch { return null; }
 }
 function pdfSection(doc, text, y) {
@@ -2041,7 +2084,15 @@ function applyTeamColors(colors) {
   RED = pal.pdf.red; ROSE = pal.pdf.rose; STRIPE = hexRgb(colors.secondary || '#8d9096');
 }
 let curFont = 'default';
-const FONT_CSS = { script: '"Yellowtail"', brush: '"Kaushan Script"', college: '"Graduate"', slab: '"Alfa Slab One"', gothic: '"UnifrakturMaguntia"', western: '"Rye"', modern: '700 "Teko"' };
+const FONT_CSS = { script: '"Yellowtail"', brush: '"Kaushan Script"', college: '"Graduate"', slab: '"Alfa Slab One"', gothic: '"UnifrakturMaguntia"', western: '"Rye"', modern: '700 "Teko"',
+  lobster: '"Lobster"', damion: '"Damion"', grandhotel: '"Grand Hotel"', leckerli: '"Leckerli One"', sansita: '700 "Sansita Swashed"', bevan: '"Bevan"' };
+let curLettering = { tail: false, fill: 'white', tilt: false };
+const TAIL_PATH = 'M100 6 C80 18 46 22 0 18 L2 24 C46 32 82 26 100 6 Z';
+const tailSVG = () => `<svg class="tn-tail" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="${TAIL_PATH}"/></svg>`;
+function setNameEl(el, name, font, lt) {
+  el.innerHTML = esc(name) + (lt && lt.tail ? tailSVG() : '');
+  el.classList.toggle('fill-team', !!(lt && lt.fill === 'team')); el.classList.toggle('tilt', !!(lt && lt.tilt));
+}
 function applyBrand(team) {
   const h = heroImgs(); if (!h.devil) return;
   let nameEl = $('.hero .team-name');
@@ -2053,8 +2104,12 @@ function applyBrand(team) {
   const font = (team && team.font) || 'default';
   const useWord = !!(team && team.wordmark) || !team || (isDiablillos && !team.logo && font === 'default');
   h.word.src = (team && team.wordmark) || ORIG.word; h.word.classList.toggle('custom', !!(team && team.wordmark));
-  h.word.hidden = !useWord; nameEl.hidden = useWord; nameEl.textContent = name;
+  h.word.hidden = !useWord; nameEl.hidden = useWord;
+  curLettering = (team && team.lettering) || { tail: false, fill: 'white', tilt: false };
   nameEl.className = 'team-name' + (font !== 'default' ? ' font-' + font : '');
+  setNameEl(nameEl, name, font, curLettering);
+  const tc = (team && team.colors) || { primary: '#c8161e', secondary: '#ffffff' };
+  document.documentElement.style.setProperty('--nm-fill', tc.primary); document.documentElement.style.setProperty('--nm-stroke', tc.secondary || '#ffffff');
   curFont = font;
   if (FONT_CSS[font] && document.fonts && document.fonts.load) document.fonts.load((FONT_CSS[font].startsWith('700') ? '' : '400 ') + '40px ' + FONT_CSS[font].replace(/^700 /, '')).catch(() => {});
   $('#authLogo').src = (team && team.logo) || ORIG.devil;
@@ -2161,7 +2216,7 @@ document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('clic
 $('#admTeams').addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'); if (!b) return; const id = b.dataset.id, a = b.dataset.a;
   if (a === 'tview') { curTeam = id; try { localStorage.setItem(TEAMK, id); } catch {} draft = blankDraft(); syncMetaInputs(); await apiLoad().catch(er => toast(er.message)); showView('juegos'); return; }
-  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); setColorInputs(t.colors); admWord = undefined; showWord(t.wordmark); $('#atFont').value = t.font || 'default'; previewColors(); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
+  if (a === 'tedit') { const t = adm.teams.find(t => t.id === id); admEditTeam = id; admLogo = undefined; $('#atName').value = t.name; $('#atCat').value = t.category || ''; showLogo(t.logo); setColorInputs(t.colors); admWord = undefined; showWord(t.wordmark); $('#atFont').value = t.font || 'default'; const lt = t.lettering || {}; $('#atTail').checked = !!lt.tail; $('#atFillTeam').checked = lt.fill === 'team'; $('#atTilt').checked = !!lt.tilt; previewColors(); $('#atSubmit').textContent = 'Guardar equipo'; $('#atCancel').hidden = false; $('#atName').focus(); return; }
   if (a === 'tdel') { admPending = 't:' + id; renderAdmin(); return; }
   if (a === 'no') { admPending = null; renderAdmin(); return; }
   if (a === 'tdel-yes') { admPending = null; try { await apiCall({ op: 'adminTeamDelete', id }); toast('Equipo eliminado'); await admLoad(); await apiLoad(); } catch (er) { toast(er.message); renderAdmin(); } }
@@ -2173,7 +2228,9 @@ function previewColors() {
   const pal = teamPalette(def ? '#c8161e' : $('#atColor').value, def ? '#8d9096' : $('#atColor2').value).light;
   el.style.setProperty('--tp-1', pal['--accent']); el.style.setProperty('--tp-2', pal['--board-2']); el.style.setProperty('--tp-3', pal['--stripe']);
   el.style.setProperty('--tp-ink', pal['--accent-ink']); el.style.setProperty('--tp-soft', pal['--accent-soft']);
-  const np = $('#atNamePrev'); np.textContent = $('#atName').value || 'Equipo'; np.className = 'tp-name' + ($('#atFont').value !== 'default' ? ' font-' + $('#atFont').value : '');
+  const np = $('#atNamePrev'); np.className = 'tp-name' + ($('#atFont').value !== 'default' ? ' font-' + $('#atFont').value : '');
+  setNameEl(np, $('#atName').value || 'Equipo', $('#atFont').value, { tail: $('#atTail').checked, fill: $('#atFillTeam').checked ? 'team' : 'white', tilt: $('#atTilt').checked });
+  np.style.setProperty('--nm-fill', def ? '#c8161e' : $('#atColor').value); np.style.setProperty('--nm-stroke', def ? '#ffffff' : $('#atColor2').value);
 }
 ['atColor', 'atColor2'].forEach(id => $('#' + id).addEventListener('input', () => { $('#atColorDef').checked = false; previewColors(); }));
 $('#atColorDef').addEventListener('change', previewColors);
@@ -2197,6 +2254,7 @@ $('#atWord').addEventListener('change', e => {
   }; img.onerror = () => toast('No se pudo leer la imagen.'); img.src = fr.result; }; fr.readAsDataURL(f);
 });
 $('#atFont').addEventListener('change', previewColors);
+['atTail', 'atFillTeam', 'atTilt'].forEach(id => $('#' + id).addEventListener('change', previewColors));
 $('#atName').addEventListener('input', previewColors);
 $('#atLogo').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -2212,6 +2270,7 @@ $('#admTeamForm').addEventListener('submit', async e => {
   if (admLogo !== undefined) body.logo = admLogo;
   if (admWord !== undefined) body.wordmark = admWord;
   body.font = $('#atFont').value;
+  body.lettering = { tail: $('#atTail').checked, fill: $('#atFillTeam').checked ? 'team' : 'white', tilt: $('#atTilt').checked };
   try { const r = await apiCall(body); toast(admEditTeam ? 'Equipo guardado' : 'Equipo creado'); resetTeamForm(); await admLoad(); if (!curTeam) curTeam = r.id; await apiLoad(); }
   catch (er) { toast(er.message); }
 });
