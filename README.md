@@ -19,6 +19,12 @@ Plataforma para capturar box scores de béisbol (tradicional y categoría Chupó
 
 Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno. Los permisos se revisan en el servidor en cada consulta.
 
+## Pestaña Admin
+
+- **Resumen**: totales, últimos juegos de toda la liga (con quién los capturó) y pendientes (contraseñas temporales, equipos sin nadie asignado, equipos sin juegos).
+- **Equipos**: tarjetas con el estilo de cada equipo. Cada equipo se identifica como **Nombre · Categoría**; no se permiten dos equipos con el mismo nombre y categoría. La ventana de equipo tiene pestañas Datos (incluye modalidad por defecto: Tradicional o Chupón), Identidad, Letras, Colores y Acceso.
+- **Usuarios**: buscador y filtros, menú ⋯ (editar, restablecer contraseña, activar/desactivar, eliminar) y asistente de alta en 3 pasos que genera la contraseña temporal y un mensaje listo para WhatsApp.
+
 ## Tablas (las crea la API sola)
 
 | Tabla | Contenido |

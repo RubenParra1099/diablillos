@@ -120,7 +120,7 @@ const roleIn = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); re
 const canRead = (u, teamId) => !!roleIn(u, teamId);
 const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
-const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null });
+const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad' });
 const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), role: t.role });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
@@ -212,7 +212,7 @@ export default async function handler(req, res) {
       if (op === 'put' || op === 'del') {
         const table = TABLES[b.col];
         if (!table || !validId(b.id)) fail(400, 'bad_request');
-        if (op === 'put') { if (!isObj(b.data)) fail(400, 'bad_request'); await upsertDoc(p, table, b.id, teamId, b.data); }
+        if (op === 'put') { if (!isObj(b.data)) fail(400, 'bad_request'); if (table === 'bs_games') b.data._by = me.name || me.email; await upsertDoc(p, table, b.id, teamId, b.data); }
         else await p.query(`delete from ${table} where id = $1 and team_id = $2`, [b.id, teamId]);
         return send(res, 200, { ok: true });
       }
@@ -239,7 +239,7 @@ export default async function handler(req, res) {
     if (op && op.startsWith('admin')) {
       if (!me.isAdmin) fail(403, 'forbidden', 'Solo un administrador puede hacer esto.');
       if (op === 'adminList') {
-        const [teams, users, members] = await Promise.all([
+        const [teams, users, members, recent, week] = await Promise.all([
           p.query(`select t.id, t.name, t.category, t.data, t.created_at,
                      (select count(*)::int from bs_roster r where r.team_id = t.id) as players,
                      (select count(*)::int from bs_games g where g.team_id = t.id) as games,
@@ -247,11 +247,16 @@ export default async function handler(req, res) {
                    from bs_teams t order by t.name`),
           p.query('select id, email, name, is_admin, is_supervisor, active, must_change, last_login, created_at from bs_users order by name, email'),
           p.query('select user_id, team_id, role from bs_members'),
+          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->>'ha' as ha, data->'us' as us, data->'them' as them, data->>'_by' as by
+                   from bs_games order by data->>'date' desc nulls last, updated_at desc limit 8`),
+          p.query(`select count(*)::int as n from bs_games where data->>'date' >= to_char(current_date - 7, 'YYYY-MM-DD')`),
         ]);
         return send(res, 200, {
           teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
           users: users.rows.map(u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, active: u.active, mustChange: u.must_change, lastLogin: u.last_login,
             teams: members.rows.filter(m => m.user_id === u.id).map(m => ({ team: m.team_id, role: m.role })) })),
+          recent: recent.rows.map(g => ({ team: g.team_id, date: g.date, opp: g.opp, ha: g.ha, us: Array.isArray(g.us) ? g.us : [], them: Array.isArray(g.them) ? g.them : [], by: g.by || '' })),
+          gamesWeek: week.rows[0].n,
         });
       }
       if (op === 'adminTeamSave') {
@@ -261,6 +266,9 @@ export default async function handler(req, res) {
         const wordmark = typeof b.wordmark === 'string' && b.wordmark.startsWith('data:image/') && b.wordmark.length < 420 * 1024 ? b.wordmark : (b.wordmark === '' ? '' : undefined);
         const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan','dafoe'].includes(b.font) ? b.font : undefined;
         const lettering = isObj(b.lettering) ? { tail: b.lettering.tail === 'thick' ? 'thick' : !!b.lettering.tail, fill: ['team', 'solid', 'varsity'].includes(b.lettering.fill) ? b.lettering.fill : 'white', tilt: !!b.lettering.tilt } : undefined;
+        const mode = ['trad', 'chupon'].includes(b.mode) ? b.mode : undefined;
+        const dup = (await p.query('select id from bs_teams where lower(trim(name)) = lower($1) and lower(trim(category)) = lower($2) and id <> $3', [name, category, String(b.id || '')])).rows[0];
+        if (dup) fail(409, 'team_exists', 'Ya existe un equipo con ese nombre y categoría.');
         const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
         const colors = b.colors === null ? null : (isObj(b.colors) && hex(b.colors.primary) ? { primary: hex(b.colors.primary), secondary: hex(b.colors.secondary) || '#8d9096' } : undefined);
         if (b.id) {
@@ -273,11 +281,12 @@ export default async function handler(req, res) {
           if (wordmark !== undefined) { if (wordmark) data.wordmark = wordmark; else delete data.wordmark; }
           if (font !== undefined) data.font = font;
           if (lettering !== undefined) data.lettering = lettering;
+          if (mode !== undefined) data.mode = mode;
           await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb where id = $1', [b.id, name, category, JSON.stringify(data)]);
           return send(res, 200, { ok: true, id: b.id });
         }
         const id = newId('t');
-        const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font; if (lettering) data.lettering = lettering;
+        const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font; if (lettering) data.lettering = lettering; if (mode) data.mode = mode;
         await p.query('insert into bs_teams (id, name, category, data) values ($1, $2, $3, $4::jsonb)', [id, name, category, JSON.stringify(data)]);
         return send(res, 200, { ok: true, id });
       }
@@ -317,6 +326,33 @@ export default async function handler(req, res) {
           if (e.code === '23505') fail(409, 'email_taken', 'Ya existe un usuario con ese correo.');
           throw e;
         } finally { client.release(); }
+      }
+      if (op === 'adminTeamAccess') {
+        if (!validId(b.team)) fail(400, 'bad_request');
+        if (!(await p.query('select 1 from bs_teams where id = $1', [b.team])).rows[0]) fail(404, 'not_found', 'Ese equipo ya no existe.');
+        const members = Array.isArray(b.members) ? b.members.filter(m => m && validId(m.user) && ['editor', 'viewer'].includes(m.role)) : [];
+        const client = await p.connect();
+        try {
+          await client.query('begin');
+          await client.query('delete from bs_members where team_id = $1', [b.team]);
+          for (const m of members) await client.query('insert into bs_members (user_id, team_id, role) select $1, $2, $3 where exists (select 1 from bs_users where id = $1) on conflict (user_id, team_id) do update set role = excluded.role', [m.user, b.team, m.role]);
+          await client.query('commit');
+        } catch (e) { await client.query('rollback').catch(() => {}); throw e; }
+        finally { client.release(); }
+        return send(res, 200, { ok: true });
+      }
+      if (op === 'adminUserReset') {
+        if (!validId(b.id)) fail(400, 'bad_request');
+        if (!goodPass(b.password)) fail(400, 'weak_password', 'La contraseña debe tener al menos 8 caracteres.');
+        if (b.id === me.id) fail(400, 'self', 'Para tu propia cuenta usa “Cambiar contraseña”.');
+        const r = await p.query('update bs_users set pass_hash = $2, must_change = true where id = $1', [b.id, hashPass(b.password)]);
+        if (!r.rowCount) fail(404, 'not_found', 'Ese usuario ya no existe.');
+        return send(res, 200, { ok: true });
+      }
+      if (op === 'adminUserActive') {
+        if (!validId(b.id) || b.id === me.id) fail(400, 'self', 'No puedes desactivar tu propia cuenta.');
+        await p.query('update bs_users set active = $2 where id = $1', [b.id, !!b.active]);
+        return send(res, 200, { ok: true });
       }
       if (op === 'adminUserDelete') {
         if (!validId(b.id) || b.id === me.id) fail(400, 'self', 'No puedes borrar tu propia cuenta.');
