@@ -596,7 +596,7 @@ const LSK = 'dugout-boxscore-v1';
 function lsLoad() { try { let j = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!j || (!Object.keys(j.roster || {}).length && !Object.keys(j.games || {}).length)) { try { j = JSON.parse(document.getElementById('seedData').textContent); localStorage.setItem(LSK, JSON.stringify(j)); } catch {} } if (j) { S.roster = j.roster || {}; S.games = j.games || {}; S.team = j.team || S.team; } } catch {} }
 function lsSave() { try { localStorage.setItem(LSK, JSON.stringify({ roster: S.roster, games: S.games, team: S.team })); } catch {} }
 /* API de Postgres (sitio en Vercel): /api/data */
-let api = false, apiCanEdit = false, apiTimer = null, needView = false;
+let api = false, apiCanEdit = false, apiTimer = null, needView = false, dbInfo = null;
 function startPoll() { clearInterval(apiTimer); apiTimer = setInterval(() => { if (document.visibilityState === 'visible') apiLoad().catch(() => {}); }, 45000); }
 document.addEventListener('visibilitychange', () => { if (api && document.visibilityState === 'visible') apiLoad().catch(() => {}); });
 const KEYK = 'dugout-key';
@@ -611,7 +611,7 @@ async function apiCall(body) {
 async function apiLoad() {
   const j = await apiCall();
   S.roster = j.roster || {}; S.games = j.games || {}; if (j.team) S.team = j.team;
-  apiCanEdit = !!j.canEdit; renderKeyUI(j.needsEditKey); renderAll();
+  apiCanEdit = !!j.canEdit; dbInfo = j.db || null; renderKeyUI(j.needsEditKey); renderAll();
 }
 async function put(col, id, data) {
   if (db) await db.collection(col).doc(id).set(data);
@@ -1862,7 +1862,8 @@ function renderKeyUI(needsEditKey, viewLocked) {
   const b = $('#keyBtn'); b.hidden = !api && !viewLocked;
   b.textContent = apiCanEdit ? 'Modo captura ✓' : 'Ingresar clave';
   b.classList.toggle('primary', !apiCanEdit);
-  if (api) setSync(true, needsEditKey ? 'Datos en Postgres · falta configurar EDIT_KEY en Vercel para poder capturar' : apiCanEdit ? 'Datos en Postgres · modo captura activo' : 'Datos en Postgres · solo lectura (ingresa la clave para capturar)');
+  const dbTxt = dbInfo ? ` · base ${dbInfo.name} (${dbInfo.endpoint})` : '';
+  if (api) setSync(true, (needsEditKey ? 'Datos en Postgres · falta configurar EDIT_KEY en Vercel para poder capturar' : apiCanEdit ? 'Datos en Postgres · modo captura activo' : 'Datos en Postgres · solo lectura (ingresa la clave para capturar)') + dbTxt);
 }
 function openKeyDlg() { $('#keyErr').hidden = true; $('#keyInput').value = ''; $('#keyOut').hidden = !getKey(); $('#keyDlg').showModal(); setTimeout(() => $('#keyInput').focus(), 30); }
 $('#keyBtn').addEventListener('click', openKeyDlg);

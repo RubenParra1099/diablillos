@@ -50,16 +50,19 @@ export default async function handler(req, res) {
     const p = await db();
     if (req.method === 'GET') {
       if (!canView) return send(res, 401, { error: 'view_key', message: 'Se necesita la clave para ver los datos.' });
-      const [r, g, c] = await Promise.all([
+      const [r, g, c, info] = await Promise.all([
         p.query('select id, data from bs_roster'),
         p.query('select id, data from bs_games'),
         p.query("select data from bs_config where id = 'team'"),
+        p.query('select current_database() as db'),
       ]);
+      let endpoint = ''; try { endpoint = new globalThis.URL(URL).hostname.split('.')[0].replace(/-pooler$/, ''); } catch {}
       return send(res, 200, {
         team: c.rows[0] ? c.rows[0].data.name : null,
         roster: Object.fromEntries(r.rows.map(x => [x.id, x.data])),
         games: Object.fromEntries(g.rows.map(x => [x.id, x.data])),
         canEdit, needsEditKey: !editKey,
+        db: { name: info.rows[0].db, endpoint },
       });
     }
     if (req.method !== 'POST') return send(res, 405, { error: 'method' });
