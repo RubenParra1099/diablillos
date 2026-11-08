@@ -414,6 +414,12 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ind-svg{display:block;width:100%;height:auto}
 .ind-svg text{font-family:var(--f-mono);fill:var(--muted)}
 .ind-svg .lab{fill:var(--ink)}
+.ind-svg .hit{fill:transparent;cursor:crosshair}
+.ind-svg .hit:hover,.ind-svg .hit.on{fill:var(--ink);fill-opacity:.07}
+.ind-bars > div{border-radius:4px;padding:2px 4px;margin:-2px -4px;cursor:crosshair}
+.ind-bars > div:hover,.ind-bars > div.on{background:var(--hover)}
+.ind-tip{position:fixed;z-index:1000;pointer-events:none;background:var(--ink);color:var(--paper);font-family:var(--f-mono);font-size:12px;line-height:1.45;padding:7px 10px;border-radius:5px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:260px}
+.ind-tip b{display:block;font-family:var(--f-body);font-size:12.5px}
 .ind-legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 .ind-legend span{display:inline-flex;align-items:center;gap:6px}
 .ind-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
@@ -1958,7 +1964,7 @@ function renderInd() {
       `<div class="ind-big"><div><strong style="color:var(--accent)">${pct0(pOn)}</strong><span>anotan cuando el 1º se embasa (${P.loOnSc} de ${P.loOn} entradas)</span></div><div><strong>${pct0(pOff)}</strong><span>anotan cuando el 1º hace out (${P.loOffSc} de ${P.loOff})</span></div></div>
        <p class="ind-read">${isFinite(pOn) && isFinite(pOff) && pOff > 0 ? `Embasar al primero de la entrada multiplica por ${(pOn / pOff).toFixed(1)} la probabilidad de anotar. A quien abra la entrada pídele ver lanzamientos y embasarse, no buscar el batazo largo.` : 'Faltan entradas para comparar.'}</p>`,
       `<div style="display:flex;gap:8px;align-items:center"><h3 style="margin:0">Se embasan según los outs</h3>${helpBtn('outs', 1)}</div>
-       <div class="ind-bars">${ob.map(([i, n, v]) => `<div title="${i} outs: ${isFinite(v) ? fmtRate(v) : '—'} en ${n} turnos"><em>${i === 2 && ch ? '2+ outs' : i + (i === 1 ? ' out' : ' outs')}</em><span class="ind-bar"><i style="width:${isFinite(v) ? v / maxOb * 100 : 0}%"></i></span><b>${isFinite(v) ? fmtRate(v) : '—'}</b></div>`).join('')}</div>
+       <div class="ind-bars">${ob.map(([i, n, v]) => `<div data-tip="${esc(`${i === 2 && ch ? '2 o más outs' : i + (i === 1 ? ' out' : ' outs')}|Se embasan ${isFinite(v) ? fmtRate(v) : '—'}|${P.outs[i][1]} de ${n} turnos`)}"><em>${i === 2 && ch ? '2+ outs' : i + (i === 1 ? ' out' : ' outs')}</em><span class="ind-bar"><i style="width:${isFinite(v) ? v / maxOb * 100 : 0}%"></i></span><b>${isFinite(v) ? fmtRate(v) : '—'}</b></div>`).join('')}</div>
        ${indTbl(['Outs', 'Turnos', 'En base', '%'], ob.map(([i, n, v]) => [i, n, P.outs[i][1], isFinite(v) ? fmtRate(v) : '—']))}`);
     h += indSec('scoring', 'Eficiencia para anotar', relTag('inn', P.inns, `${P.inns} entradas`),
       `<div class="ind-big"><div><strong>${pct0(P.reached ? P.scored / P.reached : NaN)}</strong><span>de los corredores anotó (${P.scored} de ${P.reached}); ${P.lob} se quedaron en base</span></div><div><strong>${pct0(P.innRuns / P.inns)}</strong><span>de las entradas con carrera (${P.innRuns} de ${P.inns}); ${P.big} racimo${P.big === 1 ? '' : 's'} de 3+</span></div></div>`,
@@ -1974,7 +1980,8 @@ function renderInd() {
     for (let t = 0; t <= top; t += step) svg += `<line x1="${pl}" x2="${Wd}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl - 6}" y="${y(t) + 3}" text-anchor="end" font-size="10">${t}</text>`;
     us.forEach((v, i) => { const gx = pl + i * gw + (gw - 2 * bw - 2) / 2;
       [[v, 'var(--accent)', S.team], [th[i], 'var(--ind-rival)', 'Rivales']].forEach(([val, c, who], j) => { const bx = gx + j * (bw + 2), yy = y(val);
-        if (val > 0) svg += `<path d="M${bx},${y(0)} V${yy + 4} q0,-4 4,-4 h${bw - 8} q4,0 4,4 V${y(0)} Z" fill="${c}"><title>${i + 1}ª entrada · ${esc(who)}: ${val} carreras</title></path>`;
+        if (val > 0) svg += `<path d="M${bx},${y(0)} V${yy + 4} q0,-4 4,-4 h${bw - 8} q4,0 4,4 V${y(0)} Z" fill="${c}"/>`;
+        svg += `<rect class="hit" x="${bx - 1}" y="${pt}" width="${bw + 2}" height="${Hd - pt - pb}" data-tip="${esc(`${i + 1}ª entrada|${who}: ${val} carrera${val === 1 ? '' : 's'}|${(val / I.n).toFixed(2)} por juego · ${I.n} juegos`)}"/>`;
         if ((j === 0 && i === iU) || (j === 1 && i === iT)) svg += `<text class="lab" x="${bx + bw / 2}" y="${yy - 5}" text-anchor="middle" font-size="11">${val}</text>`; });
       svg += `<text x="${gx + bw + 1}" y="${Hd - 8}" text-anchor="middle" font-size="11">${i + 1}ª</text>`; });
     svg += '</svg>';
@@ -1992,8 +1999,9 @@ function renderInd() {
     for (let t = Math.ceil(lo / st) * st; t <= hi; t += st) svg += `<line x1="${x(t)}" x2="${x(t)}" y1="0" y2="${Hd - 18}" stroke="var(--line)" stroke-width="${t === 0 ? 2 : 1}"/><text x="${x(t)}" y="${Hd - 4}" text-anchor="middle" font-size="10">${t > 0 ? '+' + t : t}</text>`;
     bats.forEach((p, i) => { const yy = i * rh + 4, v = p.wraa, x0 = x(Math.min(0, v)), w = Math.max(2, Math.abs(x(v) - x(0)));
       svg += `<text class="lab" x="${padL - 8}" y="${yy + 15}" text-anchor="end" font-size="11.5">${esc(p.name.length > 22 ? p.name.slice(0, 21) + '…' : p.name)}${p.pa < 30 ? ' *' : ''}</text>`;
-      svg += `<rect x="${x0}" y="${yy + 3}" width="${w}" height="${rh - 10}" rx="4" fill="${v >= 0 ? 'var(--accent)' : 'var(--muted)'}" opacity="${v >= 0 ? 1 : .55}"><title>${esc(p.name)}: ${sgn(v)} carreras · wOBA ${fmtRate(p.woba)} · ${p.pa} PA</title></rect>`;
-      svg += `<text class="lab" x="${v >= 0 ? x(v) + 6 : x(0) + 6}" y="${yy + 15}" font-size="11">${sgn(v)}</text>`; });
+      svg += `<rect x="${x0}" y="${yy + 3}" width="${w}" height="${rh - 10}" rx="4" fill="${v >= 0 ? 'var(--accent)' : 'var(--muted)'}" opacity="${v >= 0 ? 1 : .55}"/>`;
+      svg += `<text class="lab" x="${v >= 0 ? x(v) + 6 : x(0) + 6}" y="${yy + 15}" font-size="11">${sgn(v)}</text>`;
+      svg += `<rect class="hit" x="0" y="${yy}" width="${Wd}" height="${rh}" data-tip="${esc(`${p.name}|${sgn(v)} carreras sobre el promedio|wOBA ${fmtRate(p.woba)} · ${p.pa} PA · ${relOf('pa', p.pa) === 'low' ? 'muestra chica' : relOf('pa', p.pa) === 'mid' ? 'muestra moderada' : 'muestra estable'}`)}"/>`; });
     svg += '</svg>';
     const best = bats[0], minPA = Math.min(...bats.map(p => p.pa)), maxPA = Math.max(...bats.map(p => p.pa));
     h += indSec('woba', 'Valor ofensivo por jugador', relTag('pa', maxPA, `${minPA} a ${maxPA} PA`),
@@ -2034,6 +2042,21 @@ function renderInd() {
   if (!I.oppPA) h += '<p class="hint">En estos juegos no se capturó el bateo de los rivales, así que los promedios de comparación salen de tu propio equipo. Si capturas también la hoja del rival, los indicadores se comparan contra la categoría.</p>';
   body.innerHTML = h;
 }
+const indTip = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'ind-tip', hidden: true, role: 'tooltip' }));
+let indTipOn = null;
+function indShowTip(e) {
+  const t = e.target.closest && e.target.closest('#indBody [data-tip]');
+  if (indTipOn && indTipOn !== t) indTipOn.classList.remove('on');
+  if (!t) { indTip.hidden = true; indTipOn = null; return; }
+  if (t !== indTipOn) { const [a, ...rest] = t.dataset.tip.split('|'); indTip.innerHTML = '<b>' + esc(a) + '</b>' + rest.map(esc).join('<br>'); t.classList.add('on'); indTipOn = t; }
+  indTip.hidden = false;
+  const w = indTip.offsetWidth, h = indTip.offsetHeight, x = Math.min(innerWidth - w - 8, e.clientX + 14), y = e.clientY - h - 12 < 8 ? e.clientY + 18 : e.clientY - h - 12;
+  indTip.style.left = Math.max(8, x) + 'px'; indTip.style.top = y + 'px';
+}
+$('#indBody').addEventListener('pointermove', indShowTip);
+$('#indBody').addEventListener('pointerdown', indShowTip);
+$('#indBody').addEventListener('pointerleave', () => { indTip.hidden = true; if (indTipOn) indTipOn.classList.remove('on'); indTipOn = null; });
+addEventListener('scroll', () => { if (!indTip.hidden) { indTip.hidden = true; if (indTipOn) indTipOn.classList.remove('on'); indTipOn = null; } }, { passive: true });
 $('#iMode').addEventListener('change', e => { iMode = e.target.value; renderInd(); });
 $('#iRange').addEventListener('change', renderInd);
 $('#pInnBase').addEventListener('change', renderInd);
@@ -2837,7 +2860,7 @@ function pdfSvg(svg) {
   return new Promise(res => {
     const vb = svg.viewBox.baseVal, c = svg.cloneNode(true), rival = getComputedStyle($('#indBody')).getPropertyValue('--ind-rival').trim() === '#c26a00' ? '#c26a00' : '#2f6fb0';
     const map = { 'var(--accent)': `rgb(${RED.join(',')})`, 'var(--muted)': '#8a8082', 'var(--line)': '#e3d9da', 'var(--ind-rival)': rival };
-    c.querySelectorAll('title').forEach(t => t.remove());
+    c.querySelectorAll('title, .hit').forEach(t => t.remove());
     c.querySelectorAll('*').forEach(el => {
       ['fill', 'stroke'].forEach(a => { const v = el.getAttribute(a); if (v && map[v]) el.setAttribute(a, map[v]); });
       if (el.tagName === 'text') { el.setAttribute('fill', el.classList.contains('lab') ? '#1e1f22' : '#6b6466'); el.setAttribute('font-family', 'Helvetica, Arial, sans-serif'); }
