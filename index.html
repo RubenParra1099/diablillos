@@ -665,6 +665,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
           <label class="f">Jugador<select id="pjPlayer"></select></label>
           <label class="f">Modalidad<select id="pjMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
           <label class="f">Horizonte<select id="pjHor"><option value="game">Próximo juego</option><option value="season">Próxima temporada</option></select></label>
+          <button class="btn sm primary" id="btnPdfProj">Reporte PDF</button>
         </div>
       </div>
       <div id="pjBody" style="display:flex;flex-direction:column;gap:16px"></div>
@@ -1838,14 +1839,14 @@ function renderProj() {
       ${pjRel(B.rel, `${Math.round(B.wPA)} ${ch ? 'VB' : 'PA'} reales ponderadas + ${PJ_REG_PA} ficticias · base ${pjBase(B.used)}`)}</div>`;
     h += '<div class="leaders">' + (game
       ? pjCard('Al menos 1 hit', pjPct(B.prob.hit), `${B.paG.toFixed(1)} turnos esperados`) + pjCard('Embasarse', pjPct(B.prob.on), 'al menos una vez') + pjCard('Extrabase', pjPct(B.prob.xbh), '2B, 3B o HR') + pjCard('Ponche', pjPct(B.prob.so), 'al menos uno')
-      : pjCard(ch ? 'Contacto' : 'AVG', ch ? pjPct(x.contact) : fmtRate(x.avg), `en ${Math.round(x.pa)} ${ch ? 'VB' : 'PA'}`) + pjCard(ch ? 'En base' : 'OPS', ch ? pjPct(x.onbp) : fmtRate(x.ops), 'proyectado') + pjCard('Hits', Math.round(x.h), `${x.g} juegos`) + pjCard('HR', Math.round(x.hr), 'proyectados')) + '</div>';
+      : pjCard(ch ? 'Contacto' : 'AVG', ch ? pjPct(x.contact) : fmtRate(x.avg), `en ${Math.round(x.pa)} ${ch ? 'VB' : 'PA'}`) + pjCard(ch ? 'En base' : 'OPS', ch ? pjPct(x.onbp) : fmtRate(x.ops), 'proyectado') + pjCard('Hits', Math.round(x.h), `${x.g} juego${x.g === 1 ? '' : 's'}`) + pjCard('HR', Math.round(x.hr), 'proyectados')) + '</div>';
     h += `<div><h3 style="margin-bottom:6px">Línea esperada${game ? ' por juego' : ''}</h3><div class="scroll"><table><thead><tr>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${cols.map(c => `<td>${d1(x[c[0]])}</td>`).join('')}</tr></tbody></table></div></div>`;
     h += `<div><h3 style="margin-bottom:6px">Tasas</h3>${pjRateTbl(rows, B.last, B.lg, x)}</div>`;
   }
   if (P) {
     const x = P.proj;
     h += `<div><h3 style="margin-bottom:8px">Pitcheo · ${game ? 'próxima salida' : 'próxima temporada'}</h3>${pjRel(P.rel, `${outsToIp(Math.round(P.wO))} IP reales ponderadas + 20 ficticias · base ${pjBase(P.used)}`)}</div>`;
-    h += '<div class="leaders">' + pjCard('Entradas', outsToIp(Math.round(x.outs)), game ? 'por salida' : `${x.g} juegos`) + pjCard('Ponches', game ? x.so.toFixed(1) : Math.round(x.so), 'esperados') + pjCard('Hits + BB', game ? (x.h + x.bb).toFixed(1) : Math.round(x.h + x.bb), 'permitidos') + pjCard('Carreras limpias', game ? x.er.toFixed(1) : Math.round(x.er), 'esperadas') + '</div>';
+    h += '<div class="leaders">' + pjCard('Entradas', outsToIp(Math.round(x.outs)), game ? 'por salida' : `${x.g} juego${x.g === 1 ? '' : 's'}`) + pjCard('Ponches', game ? x.so.toFixed(1) : Math.round(x.so), 'esperados') + pjCard('Hits + BB', game ? (x.h + x.bb).toFixed(1) : Math.round(x.h + x.bb), 'permitidos') + pjCard('Carreras limpias', game ? x.er.toFixed(1) : Math.round(x.er), 'esperadas') + '</div>';
     h += `<div><h3 style="margin-bottom:6px">Tasas de pitcheo</h3>${pjRateTbl([['era', 'ERA', 'r2', true], ['whip', 'WHIP', 'r2', true], ['k9', 'K/' + innBase(), 'r2'], ['bb9', 'BB/' + innBase(), 'r2', true]], P.last, P.lg, x)}</div>`;
     if (!game) h += '<p class="hint">El ajuste por edad aplica solo al bateo; el pitcheo se proyecta con ponderación y regresión.</p>';
   }
@@ -2013,7 +2014,7 @@ $('#playerDlg').addEventListener('click', e => { if (e.target === $('#playerDlg'
 
 /* ---------- Reportes PDF ---------- */
 let RED = [200, 22, 30], ROSE = [246, 225, 226], STRIPE = [141, 144, 150]; const INK = [30, 31, 34];
-const pdfSafe = s => String(s ?? '').replace(/[—–]/g, '-').replace(/[▾▴]/g, '').replace(/[^\x00-\xFF]/g, '').trim();
+const pdfSafe = s => String(s ?? '').replace(/[—–−]/g, '-').replace(/[▾▴]/g, '').replace(/[^\x00-\xFF]/g, '').trim();
 function pdfDoc(orientation, title, subtitle) {
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return null; }
   const doc = new window.jspdf.jsPDF({ orientation, unit: 'pt', format: 'letter' });
@@ -2082,7 +2083,7 @@ function pdfTable(doc, el, y, opts = {}) {
     styles: { fontSize: opts.fs || 7.5, cellPadding: 2.6, halign: 'center', lineColor: [225, 205, 207], lineWidth: .5, textColor: INK },
     headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, footStyles: { fillColor: ROSE, textColor: INK, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [252, 246, 246] },
-    didParseCell: d => { d.cell.text = d.cell.text.map(pdfSafe); const raw = d.cell.raw; if (raw && raw.classList && (raw.classList.contains('l') || raw.classList.contains('name'))) d.cell.styles.halign = 'left'; },
+    didParseCell: d => { d.cell.text = d.cell.text.map(pdfSafe); const raw = d.cell.raw; if (raw && raw.classList && (raw.classList.contains('l') || raw.classList.contains('name'))) d.cell.styles.halign = 'left'; if (raw && raw.querySelector) { if (raw.querySelector('.pj-up')) d.cell.styles.textColor = [47, 111, 79]; else if (raw.querySelector('.pj-dn')) d.cell.styles.textColor = [122, 24, 32]; } },
     ...opts.extra,
   });
   return doc.lastAutoTable.finalY + 18;
@@ -2161,6 +2162,49 @@ function pdfPlayer(pid) {
   [['#pfBat', 'Bateo · temporada'], ['#pfPit', 'Pitcheo · temporada'], ['#pfFld', 'Fildeo por posición'], ['#pfLog', 'Juego por juego']].forEach(([sel, t]) => { const el = $('#playerBody ' + sel); if (el) { y = pdfSection(doc, t, y); y = pdfTable(doc, el, y, { fs: sel === '#pfLog' ? 7 : 7.5 }); } });
   pdfSave(doc, 'ficha_' + String(p.name).replace(/\(.*?\)/g, '').trim().replace(/\s+/g, '_'));
 }
+// Reporte de la pestaña Proyección: recorre lo que se ve en pantalla (tarjetas, tablas y notas) en el mismo orden
+function pdfProj() {
+  if (!pjPid || !S.roster[pjPid]) { toast('Elige un jugador para generar el reporte.'); return; }
+  renderProj();
+  const p = S.roster[pjPid], body = $('#pjBody'), opt = id => $(id).selectedOptions[0].textContent;
+  const doc = pdfDoc('portrait', 'Proyección sabermétrica del jugador', `${opt('#pjHor')} · ${opt('#pjMode')}`); if (!doc) return;
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
+  const room = (y, need) => { if (y + need > H - 40) { doc.addPage(); return 40; } return y; };
+  // encabezado del jugador
+  if (p.photo) { try { doc.addImage(p.photo, 'JPEG', 32, 84, 64, 64); } catch {} }
+  else { doc.setFillColor(...RED); doc.circle(64, 116, 32, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text(pdfSafe(p.num ?? initials(p.name)), 64, 124, { align: 'center' }); }
+  doc.setTextColor(...INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(pdfSafe((p.num != null && p.num !== '' ? '#' + p.num + '  ' : '') + p.name), 110, 108);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(90);
+  doc.text(pdfSafe([...body.firstElementChild.querySelectorAll('.chip')].map(c => c.textContent).join('   ·   ')), 110, 126);
+  doc.text(pdfSafe(`Posición: ${p.pos || '-'}   ·   Batea: ${p.bats || 'D'}   ·   Tira: ${p.throws || 'D'}`), 110, 142);
+  let y = 172;
+  const para = (txt, size = 8.5, color = 90) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), CW); y = room(y, ls.length * size * 1.3); doc.text(ls, 32, y); y += ls.length * size * 1.3 + 8; };
+  [...body.children].slice(1).forEach(el => {
+    if (el.classList.contains('empty')) { para(el.textContent, 10, 60); return; }
+    if (el.classList.contains('hint')) { para(el.textContent); return; }
+    if (el.classList.contains('leaders')) {
+      const cards = [...el.querySelectorAll('.leader')], tw = (CW - (cards.length - 1) * 8) / cards.length; y = room(y, 58);
+      cards.forEach((c, i) => { const x = 32 + i * (tw + 8);
+        doc.setFillColor(...ROSE); doc.rect(x, y, tw, 50, 'F');
+        doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(pdfSafe(c.querySelector('.k').textContent).toUpperCase(), x + tw / 2, y + 11, { align: 'center' });
+        doc.setTextColor(...RED); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(pdfSafe(c.querySelector('.v').textContent), x + tw / 2, y + 31, { align: 'center' });
+        doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(pdfSafe(c.querySelector('.who').textContent), x + tw / 2, y + 43, { align: 'center' }); });
+      y += 66; return;
+    }
+    const h3 = el.querySelector('h3'); if (h3) y = pdfSection(doc, h3.textContent, room(y, 60));
+    const rel = el.querySelector('.pj-rel');
+    if (rel) {
+      const pct = parseFloat(rel.querySelector('.pj-bar span').style.width) || 0;
+      doc.setFillColor(235, 230, 231); doc.rect(32, y, CW, 6, 'F'); doc.setFillColor(...RED); doc.rect(32, y, CW * pct / 100, 6, 'F'); y += 16;
+      para(rel.querySelector('.sub').textContent);
+    }
+    const tbl = el.querySelector('table'); if (tbl) y = pdfTable(doc, tbl, y, { fs: 8.5 });
+  });
+  y = pdfSection(doc, 'Cómo se calcula', room(y, 120)) + 6;
+  $$('#v-proy .glossary > div').forEach(d => { const b = d.querySelector('b').textContent; para(b + ': ' + d.textContent.slice(b.length).trim(), 8); });
+  pdfSave(doc, 'proyeccion_' + String(p.name).replace(/\(.*?\)/g, '').trim().replace(/\s+/g, '_'));
+}
+$('#btnPdfProj').addEventListener('click', pdfProj);
 $('#btnPdfB').addEventListener('click', () => pdfStats('b'));
 $('#btnPdfP').addEventListener('click', () => pdfStats('p'));
 $('#btnPdfF').addEventListener('click', () => pdfStats('f'));
