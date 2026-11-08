@@ -2832,9 +2832,27 @@ function pdfProj() {
 }
 $('#btnPdfProj').addEventListener('click', pdfProj);
 // Reporte de Indicadores: tarjetas, y por indicador su lectura, cómo se mide y sus tablas (las gráficas van como tabla)
-function pdfInd() {
+// Gráfica SVG de la pantalla → PNG para el PDF, con colores de impresión fijos (no cambian con el tema oscuro)
+function pdfSvg(svg) {
+  return new Promise(res => {
+    const vb = svg.viewBox.baseVal, c = svg.cloneNode(true), rival = getComputedStyle($('#indBody')).getPropertyValue('--ind-rival').trim() === '#c26a00' ? '#c26a00' : '#2f6fb0';
+    const map = { 'var(--accent)': `rgb(${RED.join(',')})`, 'var(--muted)': '#8a8082', 'var(--line)': '#e3d9da', 'var(--ind-rival)': rival };
+    c.querySelectorAll('title').forEach(t => t.remove());
+    c.querySelectorAll('*').forEach(el => {
+      ['fill', 'stroke'].forEach(a => { const v = el.getAttribute(a); if (v && map[v]) el.setAttribute(a, map[v]); });
+      if (el.tagName === 'text') { el.setAttribute('fill', el.classList.contains('lab') ? '#1e1f22' : '#6b6466'); el.setAttribute('font-family', 'Helvetica, Arial, sans-serif'); }
+    });
+    c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.setAttribute('width', vb.width * 2.5); c.setAttribute('height', vb.height * 2.5); c.removeAttribute('class');
+    const img = new Image();
+    img.onload = () => { const cv = document.createElement('canvas'); cv.width = vb.width * 2.5; cv.height = vb.height * 2.5; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height); res({ src: cv.toDataURL('image/jpeg', .9), w: vb.width, h: vb.height }); };
+    img.onerror = () => res(null);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c));
+  });
+}
+async function pdfInd() {
   renderInd();
   const body = $('#indBody'); if (!body.querySelector('.ind-sec')) { toast('Todavía no hay juegos para el reporte.'); return; }
+  const charts = new Map(); for (const sv of body.querySelectorAll('svg.ind-svg')) charts.set(sv, await pdfSvg(sv));
   const opt = id => $(id).selectedOptions[0].textContent;
   const doc = pdfDoc('portrait', 'Indicadores sabermétricos', `${opt('#iRange')} · ${opt('#iMode')}`); if (!doc) return;
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64; let y = 90;
@@ -2849,12 +2867,26 @@ function pdfInd() {
   y += 70;
   body.querySelectorAll('.ind-sec').forEach(sec => {
     const k = sec.dataset.k, rel = [...sec.querySelectorAll('.ind-hd .rel')].map(r => r.textContent).join(' ');
-    y = pdfSection(doc, sec.querySelector('.ind-hd h3').textContent + (rel ? '  ·  ' + rel : ''), (room(70), y)) + 4;
+    const sv0 = sec.querySelector('svg.ind-svg'), im0 = sv0 && charts.get(sv0);
+    y = pdfSection(doc, sec.querySelector('.ind-hd h3').textContent + (rel ? '  ·  ' + rel : ''), (room(im0 ? Math.min(CW, 470) * im0.h / im0.w + 130 : 70), y)) + 4;
     if (IND_HELP[k]) para('Cómo se mide: ' + IND_HELP[k].como, 7.5, 120);
     sec.querySelectorAll('.ind-big > div').forEach(d => para(d.querySelector('strong').textContent + '  ' + d.querySelector('span').textContent, 9.5, 40, true));
     sec.querySelectorAll('p.hint, p.ind-read').forEach(p => para(p.textContent, p.classList.contains('ind-read') ? 9 : 8, p.classList.contains('ind-read') ? 40 : 90));
     sec.querySelectorAll('.ind-alerts li').forEach(li => para('• ' + li.querySelector('.rel').textContent + ': ' + li.lastElementChild.textContent, 8.8, 40));
-    sec.querySelectorAll('table').forEach(t => { y = pdfTable(doc, t, y, { fs: 8 }); });
+    // gráficas: barras de outs dibujadas directo; las SVG como imagen, con su leyenda
+    const bars = [...sec.querySelectorAll('.ind-bars > div')];
+    if (bars.length) { room(bars.length * 18 + 20); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(60); doc.text(pdfSafe(sec.querySelector('.ind-col:last-child h3').textContent), 32, y); y += 12;
+      bars.forEach(b => { const lab = b.querySelector('em').textContent, val = b.querySelector('b').textContent, pctW = parseFloat(b.querySelector('i').style.width) || 0, bw = CW - 130;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90); doc.text(pdfSafe(lab), 32, y + 7);
+        doc.setFillColor(...ROSE); doc.roundedRect(90, y, bw, 8, 3, 3, 'F'); if (pctW > 0) { doc.setFillColor(...RED); doc.roundedRect(90, y, bw * pctW / 100, 8, 3, 3, 'F'); }
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(30); doc.text(pdfSafe(val), W - 32, y + 7, { align: 'right' }); y += 18; });
+      y += 6; }
+    sec.querySelectorAll('svg.ind-svg').forEach(sv => { const im = charts.get(sv); if (!im) return; const w = Math.min(CW, 470), h = w * im.h / im.w;
+      const leg = [...sec.querySelectorAll('.ind-legend span')]; room(h + (leg.length ? 18 : 0) + 8);
+      if (leg.length) { let lx = 32; leg.forEach((l, i) => { const col = i === 0 ? RED : (charts.get(sv) && getComputedStyle(body).getPropertyValue('--ind-rival').trim() === '#c26a00' ? [194, 106, 0] : [47, 111, 176]); doc.setFillColor(...col); doc.roundedRect(lx, y, 9, 9, 2, 2, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(80); const t = pdfSafe(l.textContent); doc.text(t, lx + 13, y + 8); lx += doc.getTextWidth(t) + 32; }); y += 16; }
+      doc.addImage(im.src, 'JPEG', 32, y, w, h, undefined, 'FAST'); y += h + 10; });
+    // la tabla de datos de outs y de entradas repite la gráfica; las demás aportan columnas extra
+    sec.querySelectorAll('table').forEach(t => { if (t.closest('details') && (sec.dataset.k === 'inning' || t.closest('.ind-col').querySelector('.ind-bars'))) return; y = pdfTable(doc, t, y, { fs: 8 }); });
     y += 4;
   });
   body.querySelectorAll(':scope > p.hint').forEach(p => para(p.textContent, 8));
