@@ -4,8 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Box score y estadísticas de los Diablillos, con datos en Postgres",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "pg": "8.13.1"
+  },
+  "scripts": {
+    "test": "node --test tests/calc.test.mjs tests/api.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.2.17"
   }
 }

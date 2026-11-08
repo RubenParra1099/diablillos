@@ -43,6 +43,10 @@ async function db() {
       create table if not exists bs_members (user_id text not null references bs_users(id) on delete cascade, team_id text not null references bs_teams(id) on delete cascade,
         role text not null check (role in ('editor','viewer')), primary key (user_id, team_id));
       alter table bs_users add column if not exists is_supervisor boolean not null default false;
+      create table if not exists bs_login_fail (k text primary key, n int not null default 0, first_at timestamptz not null default now(), locked_until timestamptz);
+      create table if not exists bs_shares (token text primary key, team_id text not null references bs_teams(id) on delete cascade, pid text not null,
+        created_by text, created_at timestamptz not null default now(), revoked boolean not null default false);
+      create index if not exists bs_shares_team on bs_shares(team_id, pid);
     `).catch(e => { ready = null; throw e; });
   }
   await ready;
@@ -94,15 +98,35 @@ function sessionCookie(req, value, maxAge) {
   const secure = (req.headers['x-forwarded-proto'] || '').includes('https') ? '; Secure' : '';
   return `${COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
-async function upsertDoc(c, table, id, teamId, data) {
+const VER = "(extract(epoch from updated_at) * 1000000)::bigint::text";
+// base: versión que tenía abierta quien guarda (null = registro nuevo). Si no coincide, alguien más guardó antes.
+async function upsertDoc(c, table, id, teamId, data, base) {
   const json = JSON.stringify(data);
   if (json.length > MAX_DOC) fail(413, 'too_big', 'El registro es demasiado grande.');
   // El id es único en toda la tabla: no permitir pisar un registro de otro equipo
-  const prev = await c.query(`select team_id from ${table} where id = $1`, [id]);
-  if (prev.rows[0] && prev.rows[0].team_id && prev.rows[0].team_id !== teamId) fail(403, 'forbidden', 'Ese registro pertenece a otro equipo.');
-  await c.query(`insert into ${table} (id, team_id, data, updated_at) values ($1, $2, $3::jsonb, now())
-                 on conflict (id) do update set data = excluded.data, team_id = excluded.team_id, updated_at = now()`, [id, teamId, json]);
+  const prev = (await c.query(`select team_id, data, ${VER} as v from ${table} where id = $1`, [id])).rows[0];
+  if (prev && prev.team_id && prev.team_id !== teamId) fail(403, 'forbidden', 'Ese registro pertenece a otro equipo.');
+  if (base !== undefined && prev && String(base || '') !== prev.v) {
+    const e = new Error('Otra persona guardó este registro mientras lo editabas.'); e.status = 409; e.code = 'conflict';
+    e.extra = { current: prev.data, version: prev.v, by: (prev.data && prev.data._by) || '' }; throw e;
+  }
+  const row = (await c.query(`insert into ${table} (id, team_id, data, updated_at) values ($1, $2, $3::jsonb, now())
+                 on conflict (id) do update set data = excluded.data, team_id = excluded.team_id, updated_at = now() returning ${VER} as v`, [id, teamId, json])).rows[0];
+  return row.v;
 }
+// Vista para papás: solo el jugador compartido; de los demás no viajan nombres ni líneas
+function shareGame(g, pid) {
+  const keep = ['date', 'no', 'liga', 'opp', 'ha', 'inns', 'us', 'them', 'themH', 'themE', 'mode', 'bpi'];
+  const o = Object.fromEntries(keep.filter(k => g[k] !== undefined).map(k => [k, g[k]]));
+  o.lines = (g.lines || []).filter(l => l.pid === pid);
+  o.pit = (g.pit || []).filter(p => p.pid === pid);
+  if (g.sheet && Array.isArray(g.sheet.slots)) {
+    const mask = v => v === pid ? pid : (v ? 'x' : '');
+    o.sheet = { slots: g.sheet.slots.map(s => ({ pid: mask(s.pid), pos: s.pid === pid ? s.pos : '', sub: s.sub ? { pid: mask(s.sub.pid), pos: s.sub.pid === pid ? s.sub.pos : '', from: s.sub.from } : null })), cells: g.sheet.cells || {} };
+  }
+  return o;
+}
+const clientIp = req => String(req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '').split(',')[0].trim().slice(0, 60) || 'desconocida';
 
 /* ---------- sesión y permisos ---------- */
 async function loadUser(p, req) {
@@ -168,14 +192,39 @@ export default async function handler(req, res) {
     }
 
     if (op === 'login') {
-      const email = normEmail(b.email);
+      const email = normEmail(b.email), keys = ['e:' + email, 'ip:' + clientIp(req)];
+      // 5 intentos fallidos por correo (20 por dirección IP) en 15 minutos bloquean 15 minutos
+      const locked = (await p.query('select 1 from bs_login_fail where k = any($1) and locked_until > now()', [keys])).rows[0];
+      if (locked) fail(429, 'locked', 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.');
       const u = (await p.query('select id, pass_hash, active from bs_users where email = $1', [email])).rows[0];
-      if (!u || !u.active || !checkPass(b.password, u.pass_hash)) { await new Promise(r => setTimeout(r, 600)); fail(401, 'bad_login', 'Correo o contraseña incorrectos.'); }
+      if (!u || !u.active || !checkPass(b.password, u.pass_hash)) {
+        for (const k of keys) await p.query(`insert into bs_login_fail (k, n, first_at) values ($1, 1, now())
+          on conflict (k) do update set n = case when bs_login_fail.first_at < now() - interval '15 minutes' then 1 else bs_login_fail.n + 1 end,
+            first_at = case when bs_login_fail.first_at < now() - interval '15 minutes' then now() else bs_login_fail.first_at end,
+            locked_until = case when (case when bs_login_fail.first_at < now() - interval '15 minutes' then 1 else bs_login_fail.n + 1 end) >= $2 then now() + interval '15 minutes' else null end`,
+          [k, k.startsWith('e:') ? 5 : 20]);
+        await new Promise(r => setTimeout(r, 600)); fail(401, 'bad_login', 'Correo o contraseña incorrectos.');
+      }
+      await p.query('delete from bs_login_fail where k = $1', ['e:' + email]);
       await p.query('update bs_users set last_login = now() where id = $1', [u.id]);
       const token = sign({ uid: u.id, ph: u.pass_hash.slice(-12), exp: Date.now() + SESSION_DAYS * 864e5 });
       return send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, token, SESSION_DAYS * 86400) });
     }
     if (op === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, '', 0) });
+    if (op === 'load') {
+      const q0 = req.query || Object.fromEntries(new URLSearchParams(String(req.url || '').split('?')[1] || ''));
+      if (q0.share) {
+        const sh = (await p.query('select s.team_id, s.pid, t.name, t.category, t.data from bs_shares s join bs_teams t on t.id = s.team_id where s.token = $1 and not s.revoked', [String(q0.share).slice(0, 80)])).rows[0];
+        if (!sh) fail(404, 'share_gone', 'Este enlace ya no está disponible. Pide uno nuevo al coach.');
+        const [pr, gr] = await Promise.all([
+          p.query('select data from bs_roster where id = $1 and team_id = $2', [sh.pid, sh.team_id]),
+          p.query('select id, data from bs_games where team_id = $1', [sh.team_id]),
+        ]);
+        if (!pr.rows[0]) fail(404, 'share_gone', 'Este jugador ya no está en el roster.');
+        return send(res, 200, { share: true, pid: sh.pid, team: { id: sh.team_id, name: sh.name, category: sh.category, ...teamLook(sh.data) },
+          roster: { [sh.pid]: pr.rows[0].data }, games: Object.fromEntries(gr.rows.map(x => [x.id, shareGame(x.data, sh.pid)])) });
+      }
+    }
 
     const me = await loadUser(p, req);
     if (!me) fail(401, 'auth', 'Inicia sesión para continuar.');
@@ -193,29 +242,55 @@ export default async function handler(req, res) {
       const q = req.query || Object.fromEntries(new URLSearchParams(String(req.url || '').split('?')[1] || ''));
       let teamId = String(q.team || '');
       if (!canRead(me, teamId)) teamId = me.teams[0] ? me.teams[0].id : '';
-      const out = { me: publicMe(me), team: null, roster: {}, games: {}, canEdit: false };
+      const since = /^\d{1,20}$/.test(String(q.since || '')) && q.team === teamId ? String(q.since) : '';
+      const out = { me: publicMe(me), team: null, roster: {}, games: {}, ver: { roster: {}, games: {} }, canEdit: false, partial: !!since,
+        now: (await p.query('select (extract(epoch from now()) * 1000000)::bigint::text as v')).rows[0].v };
       if (teamId) {
+        const cond = since ? 'team_id = $1 and updated_at > to_timestamp($2::numeric / 1000000)' : 'team_id = $1', args = since ? [teamId, since] : [teamId];
         const [r, g] = await Promise.all([
-          p.query('select id, data from bs_roster where team_id = $1', [teamId]),
-          p.query('select id, data from bs_games where team_id = $1', [teamId]),
+          p.query(`select id, data, ${VER} as v from bs_roster where ${cond}`, args),
+          p.query(`select id, data, ${VER} as v from bs_games where ${cond}`, args),
         ]);
         out.team = publicTeam(me.teams.find(t => t.id === teamId));
-        out.roster = Object.fromEntries(r.rows.map(x => [x.id, x.data]));
-        out.games = Object.fromEntries(g.rows.map(x => [x.id, x.data]));
+        out.roster = Object.fromEntries(r.rows.map(x => [x.id, x.data])); r.rows.forEach(x => out.ver.roster[x.id] = x.v);
+        out.games = Object.fromEntries(g.rows.map(x => [x.id, x.data])); g.rows.forEach(x => out.ver.games[x.id] = x.v);
+        if (since) {
+          // ids vigentes, para saber qué se borró
+          const [ri, gi] = await Promise.all([p.query('select id from bs_roster where team_id = $1', [teamId]), p.query('select id from bs_games where team_id = $1', [teamId])]);
+          out.ids = { roster: ri.rows.map(x => x.id), games: gi.rows.map(x => x.id) };
+        }
         out.canEdit = canWrite(me, teamId);
+        if (out.canEdit) out.shares = Object.fromEntries((await p.query('select pid, token from bs_shares where team_id = $1 and not revoked', [teamId])).rows.map(x => [x.pid, x.token]));
       }
       return send(res, 200, out);
     }
 
     // ---- escritura de datos de un equipo
-    if (['put', 'del', 'import', 'teamName'].includes(op)) {
+    if (['put', 'del', 'import', 'teamName', 'shareCreate', 'shareRevoke'].includes(op)) {
       const teamId = String(b.team || '');
       if (!canWrite(me, teamId)) fail(403, 'forbidden', 'Tu usuario no puede modificar los datos de este equipo.');
       if (op === 'put' || op === 'del') {
         const table = TABLES[b.col];
         if (!table || !validId(b.id)) fail(400, 'bad_request');
-        if (op === 'put') { if (!isObj(b.data)) fail(400, 'bad_request'); if (table === 'bs_games') b.data._by = me.name || me.email; await upsertDoc(p, table, b.id, teamId, b.data); }
-        else await p.query(`delete from ${table} where id = $1 and team_id = $2`, [b.id, teamId]);
+        if (op === 'put') {
+          if (!isObj(b.data)) fail(400, 'bad_request'); if (table === 'bs_games') b.data._by = me.name || me.email;
+          const v = await upsertDoc(p, table, b.id, teamId, b.data, b.force ? undefined : ('base' in b ? b.base : undefined));
+          return send(res, 200, { ok: true, version: v });
+        }
+        await p.query(`delete from ${table} where id = $1 and team_id = $2`, [b.id, teamId]);
+        return send(res, 200, { ok: true });
+      }
+      if (op === 'shareCreate') {
+        if (!validId(b.pid) || !(await p.query('select 1 from bs_roster where id = $1 and team_id = $2', [b.pid, teamId])).rows[0]) fail(404, 'not_found', 'Ese jugador no está en el roster.');
+        const cur = (await p.query('select token from bs_shares where team_id = $1 and pid = $2 and not revoked', [teamId, b.pid])).rows[0];
+        if (cur) return send(res, 200, { ok: true, token: cur.token });
+        const token = crypto.randomBytes(18).toString('base64url');
+        await p.query('insert into bs_shares (token, team_id, pid, created_by) values ($1, $2, $3, $4)', [token, teamId, b.pid, me.id]);
+        return send(res, 200, { ok: true, token });
+      }
+      if (op === 'shareRevoke') {
+        if (!validId(b.pid)) fail(400, 'bad_request');
+        await p.query('update bs_shares set revoked = true where team_id = $1 and pid = $2', [teamId, b.pid]);
         return send(res, 200, { ok: true });
       }
       if (op === 'teamName') {
@@ -365,6 +440,6 @@ export default async function handler(req, res) {
     return send(res, 400, { error: 'bad_op' });
   } catch (e) {
     if (!e.status) console.error(e);
-    return send(res, e.status || 500, { error: e.status ? e.code : 'server', message: e.status ? e.message : 'Error en el servidor.' });
+    return send(res, e.status || 500, { error: e.status ? e.code : 'server', message: e.status ? e.message : 'Error en el servidor.', ...(e.extra || {}) });
   }
 }
