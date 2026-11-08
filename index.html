@@ -170,19 +170,20 @@ tr.sum td.badouts{background:var(--warn-bg);color:var(--warn);font-weight:700}
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 .photo-field{display:flex;flex-direction:column;gap:4px;font-size:11px;font-family:var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.avatar{display:inline-grid;place-items:center;border-radius:50%;object-fit:cover;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:700;flex:none;vertical-align:middle;border:2px solid var(--paper);box-shadow:0 0 0 1px var(--line-strong)}
+.avatar{display:inline-grid;place-items:center;border-radius:50%;object-fit:cover;object-position:center 20%;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:700;flex:none;vertical-align:middle;border:2px solid var(--paper);box-shadow:0 0 0 1px var(--line-strong)}
 .plink{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
 .plink:hover{color:var(--accent);text-decoration-color:var(--accent)}
 .rname{display:flex;align-items:center;gap:10px}
 .pf-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;background:linear-gradient(135deg,var(--board) 0%,var(--board-2) 100%);color:var(--board-ink);margin:-18px -18px 0;padding:18px;border-bottom:5px solid var(--stripe)}
 .pf-photo .avatar{border:4px solid var(--trim);box-shadow:0 6px 16px rgba(60,0,4,.4);border-radius:12px;background:var(--board-2);font-size:52px!important}
+.pf-photo img.avatar{width:auto!important;height:auto!important;max-width:160px;max-height:180px;object-fit:contain}
 .pf-num{font-family:var(--f-display);font-size:44px;font-weight:700;line-height:1;opacity:.95}
 .pf-name{color:var(--board-ink)!important;font-size:28px!important;margin:2px 0 6px!important}
 .pf-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;align-items:center}
 .pf-meta .chip{background:var(--trim);color:var(--accent)}
 .pf-head .sub{color:var(--board-ink);opacity:.85;margin-top:6px}
 .pf-acts{display:flex;flex-direction:column;gap:6px;align-self:start}
-@media (max-width:600px){.pf-head{grid-template-columns:auto minmax(0,1fr)}.pf-acts{grid-column:1/-1;flex-direction:row}.pf-photo .avatar{width:88px!important;height:88px!important}}
+@media (max-width:600px){.pf-head{grid-template-columns:auto minmax(0,1fr)}.pf-acts{grid-column:1/-1;flex-direction:row}.pf-photo .avatar{width:88px!important;height:88px!important}.pf-photo img.avatar{width:auto!important;height:auto!important;max-width:110px;max-height:130px}}
 .ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
 .ptile{background:var(--chip);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
 .ptile .k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted)}
@@ -1923,9 +1924,9 @@ function resizePhoto(file) {
     const fr = new FileReader();
     fr.onerror = () => rej(new Error('read'));
     fr.onload = () => { const img = new Image(); img.onerror = () => rej(new Error('img')); img.onload = () => {
-      const S2 = 320, c = document.createElement('canvas'); c.width = c.height = S2;
-      const m = Math.min(img.width, img.height), sx = (img.width - m) / 2, sy = Math.max(0, (img.height - m) * .25);
-      const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, S2, S2); ctx.drawImage(img, sx, sy, m, m, 0, 0, S2, S2);
+      // sin recortar: conserva la foto completa y su proporción, con el lado mayor de hasta 480 px
+      const k = Math.min(1, 480 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
       res(c.toDataURL('image/jpeg', .82));
     }; img.src = fr.result; };
     fr.readAsDataURL(file);
@@ -2137,13 +2138,17 @@ function pdfBox(id) {
   const notes = $('#boxDlgBody .notes'); if (notes) { y = pdfSection(doc, 'Notas', y); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...INK); const lines = doc.splitTextToSize(pdfSafe([...notes.children].map(n => n.textContent).join('\n')), doc.internal.pageSize.getWidth() - 64); doc.text(lines, 32, y + 6); }
   pdfSave(doc, 'boxscore_' + (g.no || g.date));
 }
+// Foto completa dentro de una caja de w×h, centrada y sin deformar; devuelve el rectángulo que ocupó
+function pdfPhoto(doc, src, x, y, w, h) {
+  try { const ip = doc.getImageProperties(src), k = Math.min(w / ip.width, h / ip.height), iw = ip.width * k, ih = ip.height * k, r = [x + (w - iw) / 2, y + (h - ih) / 2, iw, ih]; doc.addImage(src, /^data:image\/png/.test(src) ? 'PNG' : 'JPEG', ...r); return r; } catch { return null; }
+}
 function pdfPlayer(pid) {
   const p = S.roster[pid]; if (!p) return;
   const doc = pdfDoc('portrait', 'Ficha técnica del jugador', `Temporada ${today().slice(0, 4)}`); if (!doc) return;
   const W = doc.internal.pageSize.getWidth();
-  if (p.photo) { try { doc.addImage(p.photo, 'JPEG', 32, 88, 110, 110); } catch {} }
-  else { doc.setFillColor(...RED); doc.circle(87, 143, 55, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(40); doc.text(pdfSafe(p.num ?? initials(p.name)), 87, 157, { align: 'center' }); }
-  doc.setDrawColor(...RED); doc.setLineWidth(2); doc.rect(32, 88, 110, 110);
+  const ph = p.photo ? pdfPhoto(doc, p.photo, 32, 88, 110, 110) : null;
+  if (!ph) { doc.setFillColor(...RED); doc.circle(87, 143, 55, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(40); doc.text(pdfSafe(p.num ?? initials(p.name)), 87, 157, { align: 'center' }); }
+  doc.setDrawColor(...RED); doc.setLineWidth(2); doc.rect(...(ph || [32, 88, 110, 110]));
   doc.setTextColor(...RED); doc.setFont('helvetica', 'bold'); doc.setFontSize(38); doc.text(pdfSafe(p.num ?? ''), 160, 124);
   doc.setTextColor(...INK); doc.setFontSize(20); doc.text(pdfSafe(p.name), 160, 152);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
@@ -2171,7 +2176,7 @@ function pdfProj() {
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
   const room = (y, need) => { if (y + need > H - 40) { doc.addPage(); return 40; } return y; };
   // encabezado del jugador
-  if (p.photo) { try { doc.addImage(p.photo, 'JPEG', 32, 84, 64, 64); } catch {} }
+  if (p.photo) pdfPhoto(doc, p.photo, 32, 84, 64, 64);
   else { doc.setFillColor(...RED); doc.circle(64, 116, 32, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text(pdfSafe(p.num ?? initials(p.name)), 64, 124, { align: 'center' }); }
   doc.setTextColor(...INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(pdfSafe((p.num != null && p.num !== '' ? '#' + p.num + '  ' : '') + p.name), 110, 108);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(90);
