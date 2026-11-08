@@ -368,6 +368,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .leader .k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
 .leader .v{font-family:var(--f-display);font-size:30px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
 .leader .who{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leader .who.tie{white-space:normal;line-height:1.35}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:6px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .games{display:flex;flex-direction:column}
 .game{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
@@ -1628,7 +1629,12 @@ Object.assign(BTIPS, { onb: 'Veces en base', bases: 'Bases recorridas', onbp: 'P
 const TIPS = { ec: 'Entradas en el campo', po: 'Outs realizados', a: 'Asistencias', e: 'Errores', dp: 'Dobles matanzas', tc: 'Oportunidades totales (PO+A+E)', fpct: 'Porcentaje de fildeo (PO+A)/TC', rf: 'Factor de alcance (PO+A) por juego' };
 const thSort = (cols, st) => cols.map(c => `<th class="sortable${c[2] === 's' ? ' l' : ''}${st.k === c[0] ? ' sorted' : ''}" data-k="${c[0]}"${(cols === fCols ? TIPS : cols === pCols ? PTIPS : BTIPS)[c[0]] ? ` title="${(cols === fCols ? TIPS : cols === pCols ? PTIPS : BTIPS)[c[0]]}"` : ''}>${c[1]}${st.k === c[0] ? (st.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`).join('');
 const emptyStats = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Las estadísticas aparecen en cuanto guardes el primer juego.</td></tr></tbody>';
-function leaderCard(arr, k, lab, fmt) { const p = arr.filter(p => !isNaN(p[k])).sort((a, b) => fmt.asc ? a[k] - b[k] : b[k] - a[k])[0]; return `<div class="leader"><span class="k">${lab}</span><span class="v">${p ? fmt.f(p[k]) : '—'}</span><span class="who">${p ? (p.pid ? plink(p.pid, p.name) : esc(p.name)) : 'Sin datos'}</span></div>`; }
+function leaderCard(arr, k, lab, fmt) {
+  const ps = arr.filter(p => !isNaN(p[k])).sort((a, b) => fmt.asc ? a[k] - b[k] : b[k] - a[k]);
+  const top = ps.length ? ps.filter(p => Math.abs(p[k] - ps[0][k]) < 1e-9) : [], MAX = 3;
+  const who = top.length ? top.slice(0, MAX).map(p => p.pid ? plink(p.pid, p.name) : esc(p.name)).join(', ') + (top.length > MAX ? ` y ${top.length - MAX} más` : '') : 'Sin datos';
+  return `<div class="leader"><span class="k">${lab}</span><span class="v">${top.length ? fmt.f(top[0][k]) : '—'}</span><span class="who${top.length > 1 ? ' tie' : ''}"${top.length > MAX ? ` title="${esc(top.map(p => p.name).join(', '))}"` : ''}>${who}</span></div>`;
+}
 const F3 = { f: v => fmtRate(v) }, F2a = { f: v => fmtRate(v, 2), asc: true }, FI = { f: v => v };
 function fmtCell(p, c) { const v = p[c[0]]; if (c[2] === 'r') return fmtRate(v); if (c[2] === 'r2') return isNaN(v) ? '—' : v.toFixed(2); if (c[2] === 'p') return isNaN(v) ? '—' : (100 * v).toFixed(1) + '%'; if (c[2] === 'ip') return outsToIp(v); return v ?? 0; }
 let statMode = null;
