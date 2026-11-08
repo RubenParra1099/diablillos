@@ -369,6 +369,10 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .leader .v{font-family:var(--f-display);font-size:30px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
 .leader .who{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .leader .who.tie{white-space:normal;line-height:1.35}
+.pj-rel{display:flex;flex-direction:column;gap:6px}
+.pj-bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
+.pj-bar span{display:block;height:100%;background:var(--accent)}
+.pj-up{color:var(--win);font-weight:600} .pj-dn{color:var(--loss);font-weight:600}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:6px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .games{display:flex;flex-direction:column}
 .game{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
@@ -435,6 +439,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <button role="tab" data-v="bateo">Bateo</button>
       <button role="tab" data-v="pitcheo">Pitcheo</button>
       <button role="tab" data-v="fildeo">Fildeo</button>
+      <button role="tab" data-v="proy">Proyección</button>
       <button role="tab" data-v="roster">Roster</button>
       <button role="tab" data-v="admin" id="tabAdmin" hidden>Admin</button>
       <button type="button" class="theme-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro"></button>
@@ -652,6 +657,29 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
     </div>
   </section>
 
+  <section id="v-proy" class="view" hidden>
+    <div class="panel">
+      <div class="row spread">
+        <h2>Proyección del jugador</h2>
+        <div class="row">
+          <label class="f">Jugador<select id="pjPlayer"></select></label>
+          <label class="f">Modalidad<select id="pjMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Horizonte<select id="pjHor"><option value="game">Próximo juego</option><option value="season">Próxima temporada</option></select></label>
+        </div>
+      </div>
+      <div id="pjBody" style="display:flex;flex-direction:column;gap:16px"></div>
+      <div><h3 style="margin-bottom:8px">Cómo se calcula</h3>
+        <div class="glossary">
+          <div><b>Ponderación</b> Si hay dos temporadas seguidas, la más reciente pesa 5 y la anterior 3. Con una sola temporada, esa es la base.</div>
+          <div><b>Regresión</b> Se suman 60 apariciones al plato ficticias (20 entradas para pitcheo) con el promedio de la categoría, para que un .600 en 10 turnos no se proyecte como .600.</div>
+          <div><b>Categoría</b> La media sale de tu equipo y de los rivales capturados en el box score, en la misma modalidad y temporadas.</div>
+          <div><b>Edad</b> Solo en "Próxima temporada": hasta 10 años +7.5% en contacto, AVG y OBP; de 11 a 14, +10% en extrabases (y robos si se poncha menos que la media); de 15 a 17 sin ajuste extra.</div>
+          <div><b>Tiempo de juego</b> Próximo juego: sus PA (o entradas) por juego de la última temporada. Próxima temporada: el mismo volumen que su última temporada.</div>
+          <div><b>Probabilidades</b> Se calculan con su tasa por turno proyectada y los turnos que suele tener por juego. Es una estimación, no una garantía.</div>
+        </div></div>
+    </div>
+  </section>
+
   <section id="v-roster" class="view" hidden>
     <div class="panel">
       <h2>Roster</h2>
@@ -661,6 +689,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <label class="f">Posición<select id="rPos"></select></label>
         <label class="f">Batea<select id="rBats"><option>D</option><option>Z</option><option>A</option></select></label>
         <label class="f">Tira<select id="rThrows"><option>D</option><option>Z</option></select></label>
+        <label class="f">Nacimiento<input id="rBirth" type="date"></label>
         <div class="f photo-field"><span>Foto</span><div class="row" style="gap:6px;align-items:center"><img id="rPhotoPrev" class="avatar" alt="Vista previa" hidden style="width:38px;height:38px"><label class="btn sm" for="rPhoto" style="cursor:pointer">Elegir foto</label><input type="file" id="rPhoto" accept="image/*" class="sr-only"><button type="button" class="icon-btn" id="rPhotoClear" hidden aria-label="Quitar foto">✕</button></div></div>
         <button class="btn primary" type="submit" id="rSubmit">Agregar jugador</button>
         <button class="btn" type="button" id="rCancel" hidden>Cancelar</button>
@@ -1713,6 +1742,120 @@ $('#fGroup').addEventListener('change', renderFld);
 
 /* ---------- CSV ---------- */
 /* ---------- Descargas (claude.ai o navegador normal) ---------- */
+/* ---------- PROYECCIÓN (Marcel simplificado) ---------- */
+const PJ_K = ['ab', 'h', 'd', 't', 'hr', 'bb', 'so', 'hbp', 'sf', 'sh', 'r', 'rbi', 'sb', 'cs', 'onb', 'bases'];
+const PJ_REG_PA = 60, PJ_REG_OUTS = 60, PJ_W = [1, .6]; // pesos 5 y 3, normalizados al año más reciente
+const yearOf = g => String(g.date || '').slice(0, 4);
+function ageOn(birth, at) {
+  const b = String(birth || '').match(/^(\d{4})-(\d{2})-(\d{2})/), a = String(at || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!b || !a) return null;
+  const y = a[1] - b[1] - (a[2] + a[3] < b[2] + b[3] ? 1 : 0); return y >= 0 && y < 80 ? y : null;
+}
+function ageGroup(age) {
+  if (age == null) return { lab: 'Sin edad', note: 'Agrega su fecha de nacimiento en el Roster para aplicar el ajuste por edad.', apply: () => {} };
+  if (age <= 10) return { lab: 'Hasta 10 años · coordinación', note: '+7.5% en contacto, AVG y OBP por desarrollo de coordinación.',
+    apply: r => { r.h *= 1.075; r.bb *= 1.075; r.onb *= 1.075; r.so /= 1.075; } };
+  if (age <= 14) return { lab: '11 a 14 años · fuerza', note: '+10% en extrabases por el estirón; +10% en robos si se poncha menos que la media.',
+    apply: (r, lg) => { const x = (r.d + r.t + r.hr) * .1; r.d *= 1.1; r.t *= 1.1; r.hr *= 1.1; r.h += x; r.bases *= 1.05; if (r.so <= lg.so) r.sb *= 1.1; } };
+  return { lab: age <= 17 ? '15 a 17 años · estabilización' : 'Adulto', note: 'Sin ajuste extra: el margen de mejora es menor y se proyecta con la regresión.', apply: () => {} };
+}
+// Temporadas del jugador: la más reciente y, si existe, la inmediata anterior
+function pjSeasons(gs, has) {
+  const years = [...new Set(gs.map(yearOf))].filter(Boolean).sort().reverse(), out = [];
+  for (const y of years) { const ygs = gs.filter(g => yearOf(g) === y), p = has(ygs); if (!p) continue; if (out.length && +y !== +out[0].y - 1) break; out.push({ y, p, gs: ygs }); if (out.length === 2) break; }
+  return out;
+}
+function pjBat(pid, mode, hor, age) {
+  const gs = sortedGames().filter(g => mode === 'all' || gameMode(g) === mode);
+  const used = pjSeasons(gs, ygs => { const p = aggBat(ygs)[pid]; return p && p.pa ? p : null; }); if (!used.length) return null;
+  const lg = zero(PJ_K); let lgPA = 0;
+  used.forEach(s => s.gs.forEach(g => [...(g.lines || []), ...(g.olines || [])].forEach(l => { PJ_K.forEach(k => lg[k] += num(l[k])); lgPA += num(l.ab) + num(l.bb) + num(l.hbp) + num(l.sf) + num(l.sh); })));
+  const lgR = Object.fromEntries(PJ_K.map(k => [k, lgPA ? lg[k] / lgPA : 0]));
+  const wPA = used.reduce((a, s, i) => a + PJ_W[i] * s.p.pa, 0), rate = {};
+  PJ_K.forEach(k => rate[k] = (used.reduce((a, s, i) => a + PJ_W[i] * s.p[k], 0) + PJ_REG_PA * lgR[k]) / (wPA + PJ_REG_PA));
+  const ag = ageGroup(age); if (hor === 'season') ag.apply(rate, lgR);
+  rate.h = Math.min(rate.h, rate.ab); rate.onb = Math.min(rate.onb, 1);
+  const last = used[0].p, paG = last.pa / last.g, PA = hor === 'season' ? last.pa : paG;
+  const proj = { g: hor === 'season' ? last.g : 1 }; PJ_K.forEach(k => proj[k] = rate[k] * PA); derive(proj);
+  const atLeast = p => 1 - Math.pow(1 - Math.min(Math.max(p, 0), .999), paG);
+  const onP = mode === 'chupon' ? rate.onb : rate.h + rate.bb + rate.hbp;
+  return { used, lg: derive({ ...lg }), proj, last, wPA, rel: wPA / (wPA + PJ_REG_PA), paG, ag,
+    prob: { hit: atLeast(rate.h), on: atLeast(onP), xbh: atLeast(rate.d + rate.t + rate.hr), so: atLeast(rate.so) } };
+}
+function pjPit(pid, mode, hor) {
+  const gs = sortedGames().filter(g => mode === 'all' || gameMode(g) === mode);
+  const used = pjSeasons(gs, ygs => { const p = aggPit(ygs)[pid]; return p && p.outs ? p : null; }); if (!used.length) return null;
+  // Media de la categoría: tu staff + lo que tus bateadores le hicieron a los pitchers rivales
+  const us = { outs: 0, ...zero(PITK) }, op = { outs: 0, h: 0, r: 0, bb: 0, so: 0, hbp: 0, hr: 0 };
+  used.forEach(s => {
+    Object.values(aggPit(s.gs)).forEach(p => { us.outs += p.outs; PITK.forEach(k => us[k] += p[k]); });
+    s.gs.forEach(g => { (g.lines || []).forEach(l => { op.outs += Math.max(0, num(l.ab) - num(l.h)) + num(l.sf) + num(l.sh) + num(l.cs); ['h', 'bb', 'so', 'hbp', 'hr'].forEach(k => op[k] += num(l[k])); }); op.r += sumA(g.us); });
+  });
+  const lgOuts = us.outs + op.outs, erShare = us.r ? us.er / us.r : .7;
+  const lgR = Object.fromEntries(PITK.map(k => [k, !lgOuts ? 0 : k === 'er' ? (us.r + op.r) * erShare / lgOuts : k === 'wp' ? (us.outs ? us.wp / us.outs : 0) : (us[k] + op[k]) / lgOuts]));
+  const wO = used.reduce((a, s, i) => a + PJ_W[i] * s.p.outs, 0), rate = {};
+  PITK.forEach(k => rate[k] = (used.reduce((a, s, i) => a + PJ_W[i] * s.p[k], 0) + PJ_REG_OUTS * lgR[k]) / (wO + PJ_REG_OUTS));
+  const last = used[0].p, outsG = last.outs / last.g, OUTS = hor === 'season' ? last.outs : outsG;
+  const proj = { g: hor === 'season' ? last.g : 1, outs: OUTS }; PITK.forEach(k => proj[k] = rate[k] * OUTS); pitDerive(proj);
+  const lgD = { outs: 300 }; PITK.forEach(k => lgD[k] = lgR[k] * 300); pitDerive(lgD);
+  return { used, lg: lgD, proj, last, wO, rel: wO / (wO + PJ_REG_OUTS), outsG };
+}
+let pjPid = '', pjMode = null;
+const pjPct = v => isFinite(v) ? Math.round(100 * v) + '%' : '—';
+const pjFmt = (v, f) => !isFinite(v) ? '—' : f === 'p' ? pjPct(v) : f === 'r2' ? v.toFixed(2) : fmtRate(v);
+function pjDelta(a, b, f, low) {
+  if (!isFinite(a) || !isFinite(b)) return '—';
+  const d = b - a, s = f === 'p' ? Math.round(100 * Math.abs(d)) + ' pts' : f === 'r2' ? Math.abs(d).toFixed(2) : fmtRate(Math.abs(d));
+  if (Math.abs(d) < (f === 'r2' ? .005 : .0005)) return '<span class="sub">igual</span>';
+  return `<span class="${(d > 0) !== !!low ? 'pj-up' : 'pj-dn'}">${d > 0 ? '+' : '−'}${s}</span>`;
+}
+function pjRateTbl(rows, last, lg, proj) {
+  return `<div class="scroll"><table><thead><tr><th class="l">Estadística</th><th>Última temporada</th><th>Media categoría</th><th>Proyección</th><th>Cambio</th></tr></thead><tbody>${rows.map(([k, lab, f, low]) =>
+    `<tr><td class="l">${lab}</td><td>${pjFmt(last[k], f)}</td><td>${pjFmt(lg[k], f)}</td><td><b>${pjFmt(proj[k], f)}</b></td><td>${pjDelta(last[k], proj[k], f, low)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+const pjCard = (k, v, who) => `<div class="leader"><span class="k">${k}</span><span class="v">${v}</span><span class="who">${who}</span></div>`;
+const pjRel = (rel, txt) => `<div class="pj-rel"><div class="pj-bar"><span style="width:${(100 * rel).toFixed(0)}%"></span></div><span class="sub">${Math.round(100 * rel)}% sus números · ${100 - Math.round(100 * rel)}% media de la categoría (${txt})</span></div>`;
+const pjBase = used => used.map((s, i) => `${s.y} (peso ${i ? 3 : 5})`).join(' + ');
+function renderProj() {
+  const sel = $('#pjPlayer'); if (!sel) return;
+  if (pjPid && !S.roster[pjPid]) pjPid = '';
+  sel.innerHTML = playerOpts(pjPid, '— elige un jugador —');
+  const mode = pjMode || curStatMode(), hor = $('#pjHor').value, game = hor === 'game'; $('#pjMode').value = mode;
+  const body = $('#pjBody');
+  if (!pjPid) { body.innerHTML = `<div class="empty">${players().length ? 'Elige un jugador para ver su rendimiento más probable.' : 'Agrega jugadores en el Roster para usar las proyecciones.'}</div>`; return; }
+  const p = S.roster[pjPid], age = ageOn(p.birth, today()), B = pjBat(pjPid, mode, hor, age), P = pjPit(pjPid, mode, hor), ag = ageGroup(age);
+  const cat = curTeamObj && curTeamObj.category;
+  let h = `<div class="row" style="align-items:center;gap:12px">${avatarHTML(pjPid, 48)}<div><b style="font-size:18px">${esc(p.name)}</b>
+    <div class="row" style="gap:6px;margin-top:4px"><span class="chip">${age != null ? age + ' años' : 'Edad sin capturar'}</span><span class="chip">${esc(ag.lab)}</span>${cat ? `<span class="chip">${esc(cat)}</span>` : ''}</div></div></div>`;
+  if (!B && !P) { body.innerHTML = h + `<div class="empty">No tiene juegos registrados en esta modalidad.</div>`; return; }
+  if (!game) h += `<p class="hint"><b>Edad:</b> ${esc(ag.note)}</p>`;
+  if (B) {
+    const ch = mode === 'chupon', x = B.proj, d1 = v => game ? v.toFixed(1) : Math.round(v);
+    const rows = ch ? [['contact', 'Contacto', 'p'], ['onbp', 'En base (EB%)', 'p'], ['bpt', 'Bases por turno', 'r2'], ['avg', 'AVG', 'r'], ['slg', 'SLG', 'r']]
+      : [['avg', 'AVG', 'r'], ['obp', 'OBP', 'r'], ['slg', 'SLG', 'r'], ['ops', 'OPS', 'r'], ['iso', 'ISO', 'r'], ['kp', 'K%', 'p', true], ['bbp', 'BB%', 'p']];
+    const cols = ch ? [['pa', 'VB'], ['ab', 'AB'], ['h', 'H'], ['d', '2B'], ['t', '3B'], ['hr', 'HR'], ['so', 'K'], ['onb', 'EB'], ['bases', 'BT'], ['r', 'C'], ['rbi', 'CI']]
+      : [['pa', 'PA'], ['ab', 'AB'], ['h', 'H'], ['d', '2B'], ['t', '3B'], ['hr', 'HR'], ['bb', 'BB'], ['so', 'SO'], ['r', 'R'], ['rbi', 'RBI'], ['sb', 'SB']];
+    h += `<div><h3 style="margin-bottom:8px">Bateo · ${game ? 'próximo juego' : 'próxima temporada'}</h3>
+      ${pjRel(B.rel, `${Math.round(B.wPA)} ${ch ? 'VB' : 'PA'} reales ponderadas + ${PJ_REG_PA} ficticias · base ${pjBase(B.used)}`)}</div>`;
+    h += '<div class="leaders">' + (game
+      ? pjCard('Al menos 1 hit', pjPct(B.prob.hit), `${B.paG.toFixed(1)} turnos esperados`) + pjCard('Embasarse', pjPct(B.prob.on), 'al menos una vez') + pjCard('Extrabase', pjPct(B.prob.xbh), '2B, 3B o HR') + pjCard('Ponche', pjPct(B.prob.so), 'al menos uno')
+      : pjCard(ch ? 'Contacto' : 'AVG', ch ? pjPct(x.contact) : fmtRate(x.avg), `en ${Math.round(x.pa)} ${ch ? 'VB' : 'PA'}`) + pjCard(ch ? 'En base' : 'OPS', ch ? pjPct(x.onbp) : fmtRate(x.ops), 'proyectado') + pjCard('Hits', Math.round(x.h), `${x.g} juegos`) + pjCard('HR', Math.round(x.hr), 'proyectados')) + '</div>';
+    h += `<div><h3 style="margin-bottom:6px">Línea esperada${game ? ' por juego' : ''}</h3><div class="scroll"><table><thead><tr>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${cols.map(c => `<td>${d1(x[c[0]])}</td>`).join('')}</tr></tbody></table></div></div>`;
+    h += `<div><h3 style="margin-bottom:6px">Tasas</h3>${pjRateTbl(rows, B.last, B.lg, x)}</div>`;
+  }
+  if (P) {
+    const x = P.proj;
+    h += `<div><h3 style="margin-bottom:8px">Pitcheo · ${game ? 'próxima salida' : 'próxima temporada'}</h3>${pjRel(P.rel, `${outsToIp(Math.round(P.wO))} IP reales ponderadas + 20 ficticias · base ${pjBase(P.used)}`)}</div>`;
+    h += '<div class="leaders">' + pjCard('Entradas', outsToIp(Math.round(x.outs)), game ? 'por salida' : `${x.g} juegos`) + pjCard('Ponches', game ? x.so.toFixed(1) : Math.round(x.so), 'esperados') + pjCard('Hits + BB', game ? (x.h + x.bb).toFixed(1) : Math.round(x.h + x.bb), 'permitidos') + pjCard('Carreras limpias', game ? x.er.toFixed(1) : Math.round(x.er), 'esperadas') + '</div>';
+    h += `<div><h3 style="margin-bottom:6px">Tasas de pitcheo</h3>${pjRateTbl([['era', 'ERA', 'r2', true], ['whip', 'WHIP', 'r2', true], ['k9', 'K/' + innBase(), 'r2'], ['bb9', 'BB/' + innBase(), 'r2', true]], P.last, P.lg, x)}</div>`;
+    if (!game) h += '<p class="hint">El ajuste por edad aplica solo al bateo; el pitcheo se proyecta con ponderación y regresión.</p>';
+  }
+  if (game) h += '<p class="hint">El próximo juego refleja su nivel actual estimado; el crecimiento por edad se nota a lo largo de la temporada (elige "Próxima temporada").</p>';
+  body.innerHTML = h;
+}
+$('#pjPlayer').addEventListener('change', e => { pjPid = e.target.value; renderProj(); });
+$('#pjMode').addEventListener('change', e => { pjMode = e.target.value; renderProj(); });
+$('#pjHor').addEventListener('change', renderProj);
+
 const IN_CLAUDE = !!(window.claude && window.claude.use);
 async function saveFile(filename, data, mime) {
   if (IN_CLAUDE) {
@@ -1740,13 +1883,13 @@ function renderRoster() {
   const ps = players(), cnt = {};
   sortedGames().forEach(g => (g.lines || []).forEach(l => cnt[l.pid] = (cnt[l.pid] || 0) + 1));
   if (!ps.length) { $('#rTbl').innerHTML = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Agrega a tus jugadores con el formulario de arriba. Después podrás elegirlos en cada box score.</td></tr></tbody>'; return; }
-  $('#rTbl').innerHTML = '<thead><tr><th class="l">#</th><th class="l">Nombre</th><th class="l">Pos</th><th class="l">B/T</th><th>Juegos</th><th></th></tr></thead><tbody>' +
-    ps.map(p => `<tr><td class="num l">${esc(p.num ?? '')}</td><td class="l name"><span class="rname">${avatarHTML(p.id, 34)}${plink(p.id, p.name)}</span></td><td class="l">${esc(p.pos)}</td><td class="l">${esc(p.bats || 'D')}/${esc(p.throws || 'D')}</td><td>${cnt[p.id] || 0}</td>
+  $('#rTbl').innerHTML = '<thead><tr><th class="l">#</th><th class="l">Nombre</th><th class="l">Pos</th><th class="l">B/T</th><th>Edad</th><th>Juegos</th><th></th></tr></thead><tbody>' +
+    ps.map(p => `<tr><td class="num l">${esc(p.num ?? '')}</td><td class="l name"><span class="rname">${avatarHTML(p.id, 34)}${plink(p.id, p.name)}</span></td><td class="l">${esc(p.pos)}</td><td class="l">${esc(p.bats || 'D')}/${esc(p.throws || 'D')}</td><td>${ageOn(p.birth, today()) ?? '—'}</td><td>${cnt[p.id] || 0}</td>
     <td class="l">${pendingDelete === 'r:' + p.id ? `<span class="confirm" style="display:inline-flex">${cnt[p.id] ? 'Sus juegos quedarán como "Jugador eliminado".' : '¿Eliminar?'} <button class="btn sm danger" data-act="rdel-yes" data-id="${p.id}">Eliminar</button><button class="btn sm" data-act="rdel-no">Cancelar</button></span>` : `<span class="edit-only"><button class="btn sm" data-act="redit" data-id="${p.id}">Editar</button> <button class="btn sm danger" data-act="rdel" data-id="${p.id}">Eliminar</button></span>`}</td></tr>`).join('') + '</tbody>';
 }
 $('#rTbl').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.dataset.id;
-  if (b.dataset.act === 'redit') { const p = S.roster[id]; editingRoster = id; $('#rNum').value = p.num ?? ''; $('#rName').value = p.name; $('#rPos').value = p.pos; $('#rBats').value = p.bats || 'D'; $('#rThrows').value = p.throws || 'D'; pendingPhoto = undefined; $('#rPhoto').value = ''; showPhotoPrev(p.photo || ''); $('#rSubmit').textContent = 'Guardar cambios'; $('#rCancel').hidden = false; $('#rName').focus(); }
+  if (b.dataset.act === 'redit') { const p = S.roster[id]; editingRoster = id; $('#rNum').value = p.num ?? ''; $('#rName').value = p.name; $('#rPos').value = p.pos; $('#rBats').value = p.bats || 'D'; $('#rThrows').value = p.throws || 'D'; $('#rBirth').value = p.birth || ''; pendingPhoto = undefined; $('#rPhoto').value = ''; showPhotoPrev(p.photo || ''); $('#rSubmit').textContent = 'Guardar cambios'; $('#rCancel').hidden = false; $('#rName').focus(); }
   if (b.dataset.act === 'rdel') { pendingDelete = 'r:' + id; renderRoster(); }
   if (b.dataset.act === 'rdel-no') { pendingDelete = null; renderRoster(); }
   if (b.dataset.act === 'rdel-yes') { pendingDelete = null; guarded(() => del('roster', id), 'Jugador eliminado'); }
@@ -1757,6 +1900,7 @@ $('#rosterForm').addEventListener('submit', e => {
   e.preventDefault();
   const name = $('#rName').value.trim(); if (!name) return;
   const data = { name, num: $('#rNum').value === '' ? null : num($('#rNum').value), pos: $('#rPos').value, bats: $('#rBats').value, throws: $('#rThrows').value };
+  if ($('#rBirth').value) data.birth = $('#rBirth').value;
   const prevPhoto = editingRoster && S.roster[editingRoster] ? S.roster[editingRoster].photo || '' : '';
   const ph = pendingPhoto === undefined ? prevPhoto : pendingPhoto; if (ph) data.photo = ph;
   const id = editingRoster || uid('p');
@@ -1852,7 +1996,7 @@ function openPlayer(pid) {
         <div class="pf-meta"><span class="chip">${esc(p.pos || '-')}</span><span>Batea: ${esc(p.bats || 'D')}</span><span>Tira: ${esc(p.throws || 'D')}</span><span>${d.log.length} juego${d.log.length === 1 ? '' : 's'}</span></div>
         ${rk}
       </div>
-      <div class="pf-acts"><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
+      <div class="pf-acts"><button class="btn sm" id="pfProj">Proyección</button><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
     </div>
     ${tiles ? `<div class="ptiles">${tiles}</div>` : '<div class="empty">Todavía no tiene juegos registrados.</div>'}
     ${sparkAvg(d.log) ? `<div><h3 style="margin-bottom:6px">Promedio acumulado</h3>${sparkAvg(d.log)}</div>` : ''}
@@ -1862,6 +2006,7 @@ function openPlayer(pid) {
     ${logT ? `<div><h3 style="margin-bottom:6px">Juego por juego</h3><div class="scroll">${logT}</div></div>` : ''}`;
   $('#pfClose').onclick = () => $('#playerDlg').close();
   $('#pfPdf').onclick = () => pdfPlayer(pid);
+  $('#pfProj').onclick = () => { pjPid = pid; $('#playerDlg').close(); showView('proy'); renderProj(); };
   if (!$('#playerDlg').open) $('#playerDlg').showModal();
 }
 $('#playerDlg').addEventListener('click', e => { if (e.target === $('#playerDlg')) $('#playerDlg').close(); });
@@ -2691,7 +2836,7 @@ document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('clic
 
 /* ---------- Render global ---------- */
 function renderAll() {
-  renderHeader(); renderGames(); renderDemoBar(); renderBat(); renderPitStats(); renderFld(); renderRoster();
+  renderHeader(); renderGames(); renderDemoBar(); renderBat(); renderPitStats(); renderFld(); renderProj(); renderRoster();
   if (!draft.id && !noTouched) { draft.no = String(Object.keys(S.games).length + 1); $('#gNo').value = draft.no; }
   const a = document.activeElement;
   if (!$('#paDlg').open && !(a && a.closest && a.closest('#v-captura'))) renderSheet(); else renderClubs();
