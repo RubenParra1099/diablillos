@@ -26,10 +26,11 @@ El selector **Temporada** del encabezado filtra todos los módulos por año (o "
 
 ## Módulos
 
-- **Box score**: hoja de anotación por turno, lanzadores (incluye **LZ**, lanzamientos), defensiva y validaciones. El juego en curso se guarda en el teléfono en cada cambio; si se cierra la página, al volver se ofrece continuarlo. Avisa si un pitcher pasa el máximo de lanzamientos de su edad o no ha cumplido su descanso.
+- **Box score**: hoja de anotación por turno (en cada turno se puede **tocar el campo donde cayó la bola**; la app sugiere la jugada), lanzadores (incluye **LZ**, lanzamientos), defensiva y validaciones. El juego en curso se guarda en el teléfono en cada cambio; si se cierra la página, al volver se ofrece continuarlo. Avisa si un pitcher pasa el máximo de lanzamientos de su edad o no ha cumplido su descanso.
 - **Juegos**: lista con MVP, resumen del juego, **Compartir resumen** (texto listo para WhatsApp), tarjeta MVP y reporte por rival.
 - **Indicadores**: récord esperado, valor del primer turno de la entrada, OBP por outs, eficiencia para anotar, carreras por entrada, wOBA/wRAA, alertas de BABIP, ERA contra FIP, DER, **hacia dónde batean**, **producción por lugar en el orden**, lineup sugerido y alertas para el coach. Cada indicador tiene su botón **?** con qué mide, cómo se mide y cómo leerlo.
-- **Ficha del jugador**: números, **evolución** (últimos 3 juegos), **metas**, **por situación**, **hacia dónde batea**, juego por juego, tarjetas y **enlace para papás**.
+- **Proyección**: al elegir un jugador, su rendimiento más probable y su **mapa de batazos** (un punto por batazo, color y forma por resultado) con la **distribución por jardín** sobre el campo y en barras. También va en el PDF de proyección.
+- **Ficha del jugador**: números, **evolución** (últimos 3 juegos), **metas**, **por situación**, **mapa de batazos**, juego por juego, tarjetas y **enlace para papás**.
 - **Tarjetas**: cumpleaños (jugador, papás, redes) y MVP (portada, marcador, medalla), en imagen o PDF.
 
 ## Reglas de lanzamientos (Little League / Pitch Smart)

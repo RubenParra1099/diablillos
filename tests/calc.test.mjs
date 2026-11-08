@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate };', ctx);
+vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat };', ctx);
 const C = ctx.C;
 const fx = JSON.parse(fs.readFileSync(new URL('./fixture.json', import.meta.url), 'utf8'));
 const games = Object.entries(fx.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => a.date.localeCompare(b.date));
@@ -80,4 +80,25 @@ test('edad, cumpleaños, rivales y entradas', () => {
   assert.equal(C.bdayInfo('2016-11-06', '2026-11-08').days, -2);
   assert.equal(C.rivalKey('  Tóros  '), C.rivalKey('toros'));
   assert.equal(C.ipToOuts('5.2'), 17); assert.equal(C.outsToIp(17), '5.2'); assert.ok(Number.isNaN(C.ipToOuts('5.3')));
+});
+
+test('mapa de batazos: punto exacto, aproximado y sector', () => {
+  assert.equal(C.sprayPoint({ res: 'K', play: '' }, 'k'), null);
+  assert.equal(C.sprayPoint({ res: 'BB', loc: { a: 0, d: .5 } }, 'k'), null);
+  const ex = C.sprayPoint({ res: 'H2', loc: { a: 27, d: .9 } }, 'k');
+  assert.equal(ex.approx, false); assert.equal(ex.sec, 'R'); assert.equal(ex.cat, 'H2');
+  assert.equal(C.sprayPoint({ res: 'H1', loc: { a: -20, d: .6 } }, 'k').sec, 'L');
+  assert.equal(C.sprayPoint({ res: 'H1', loc: { a: 10, d: .6 } }, 'k').sec, 'C');
+  const ap = C.sprayPoint({ res: 'O', play: 'F8' }, 'k'); assert.equal(ap.approx, true); assert.equal(ap.sec, 'C'); assert.ok(ap.d > .7);
+  assert.deepEqual({ ...C.sprayPoint({ res: 'O', play: '6-3' }, 'a') }, { ...C.sprayPoint({ res: 'O', play: '6-3' }, 'a') }, 'el mismo turno siempre cae en el mismo lugar');
+  assert.ok(C.sprayPoint({ res: 'HR', play: 'F7' }, 'k').d > 1);
+  // reparto de p03 con lo anotado: 6 izquierdo, 3 central, 8 derecho
+  const pts = C.paList(games).filter(x => x.pid === 'p03').map(x => C.sprayPoint(x, x.key)).filter(Boolean), c = { L: 0, C: 0, R: 0 }; pts.forEach(p => c[p.sec]++);
+  assert.equal(JSON.stringify(c), JSON.stringify({ L: 6, C: 3, R: 8 }));
+});
+
+test('jugada sugerida desde el punto tocado', () => {
+  assert.equal(C.playFromPoint(28, .9, 'O'), 'F9'); assert.equal(C.playFromPoint(-30, .9, 'H2'), 'F7'); assert.equal(C.playFromPoint(0, .6, 'H1'), 'L8');
+  assert.equal(C.playFromPoint(-18, .4, 'O'), '6-3'); assert.equal(C.playFromPoint(18, .4, 'DP'), '4-6-3'); assert.equal(C.playFromPoint(38, .35, 'O'), '3U');
+  assert.equal(C.playFromPoint(-38, .35, 'E'), 'E5'); assert.equal(C.playFromPoint(0, .2, 'O'), '1-3'); assert.equal(C.sprayCat('BO'), 'O');
 });

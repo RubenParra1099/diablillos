@@ -178,7 +178,7 @@ function paList(gs) {
       pas.sort((a, b) => a.idx - b.idx || ((a.si - start + L) % L) - ((b.si - start + L) % L));
       let outs = 0;
       pas.forEach((x, j) => {
-        out.push({ gid: g.id, date: g.date, inn, slot: x.si, pid: pidAt(slots[x.si], inn), outs: Math.min(outs, 2), lead: j === 0, on: num(x.pa.reach) > 0, scored: num(x.pa.reach) === 4, res: x.pa.res, play: x.pa.play || '' });
+        out.push({ gid: g.id, date: g.date, inn, slot: x.si, pid: pidAt(slots[x.si], inn), outs: Math.min(outs, 2), lead: j === 0, on: num(x.pa.reach) > 0, scored: num(x.pa.reach) === 4, res: x.pa.res, play: x.pa.play || '', loc: x.pa.loc || null, key: g.id + '_' + inn + '_' + x.si + '_' + x.idx });
         if (num(x.pa.out)) outs++;
       });
       start = (pas[pas.length - 1].si + 1) % L;
@@ -194,4 +194,41 @@ function rollingBat(lines, w = 3) {
     const t = zero(BATK); lines.slice(Math.max(0, i - w + 1), i + 1).forEach(l => BATK.forEach(k => t[k] += num(l[k])));
     derive(t); return { woba: t.woba, kp: t.kp, bbp: t.bbp, pa: t.pa, avg: t.avg };
   });
+}
+
+/* ---------- Mapa de batazos con punto (spray chart) ---------- */
+// Punto en el campo: a = grados desde la línea central (−45 línea de 3ª, 45 línea de 1ª); d = distancia (1 = la barda)
+const NO_BIP = ['K', 'KC', 'BB', 'BBI', 'BG'];
+const sprayCat = res => ['H1', 'H2', 'H3', 'HR'].includes(res) ? res : 'O';
+const ZONE_A = { 1: 0, 2: 0, 3: 37, 4: 24, 5: -37, 6: -24, 7: -30, 8: 0, 9: 30 };
+const secOfA = a => a < -15 ? 'L' : a > 15 ? 'R' : 'C';
+const secOfZone = z => [5, 6, 7].includes(z) ? 'L' : [3, 4, 9].includes(z) ? 'R' : 'C';
+// Desvío fijo por turno (siempre el mismo) para que los puntos aproximados no se encimen
+const jitOf = (key, k) => { let h = 2166136261; const s = String(key) + ':' + k; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10000) / 10000 - .5; };
+// Punto exacto si se tocó el campo (pa.loc); si no, aproximado desde la jugada anotada. Sin batazo (K, BB, BG) no hay punto.
+function sprayPoint(pa, key) {
+  if (!pa || NO_BIP.includes(pa.res)) return null;
+  const cat = sprayCat(pa.res);
+  if (pa.loc && isFinite(pa.loc.a) && isFinite(pa.loc.d)) return { a: +pa.loc.a, d: +pa.loc.d, sec: secOfA(+pa.loc.a), cat, approx: false };
+  const r = parsePlay(pa.play); if (!r) return null;
+  const z = r.zone, j = k => jitOf(key, k);
+  let a = ZONE_A[z] + j(1) * 9, d;
+  if (cat === 'HR') d = 1.07 + j(2) * .05; else if (cat === 'H3') d = .91 + j(2) * .05; else if (cat === 'H2') d = .8 + j(2) * .09; else if (cat === 'H1') d = .61 + j(2) * .09;
+  else if (r.type === 'fly' && z >= 7) d = .78 + j(3) * .11; else if (r.type === 'line') d = z >= 7 ? .63 : .44; else if (r.type === 'pop') d = .4 + j(4) * .08;
+  else d = z === 1 ? .24 : (z === 3 || z === 5) ? .35 : .43 + j(5) * .05;
+  if (cat !== 'O' && cat !== 'HR' && z <= 6) a = (a >= 0 ? 24 : -24) + j(6) * 6; // hit por el cuadro: sale entre jardineros
+  return { a, d, sec: secOfZone(z), cat, approx: true };
+}
+// Jugada sugerida a partir del punto tocado (se puede corregir a mano)
+function playFromPoint(a, d, res) {
+  let z;
+  if (d >= .5) z = a < -15 ? 7 : a > 15 ? 9 : 8;
+  else if (d < .12) z = 2;
+  else if (d < .3 && Math.abs(a) < 10) z = 1;
+  else z = a < -28 ? 5 : a < 0 ? 6 : a <= 28 ? 4 : 3;
+  if (['H1', 'H2', 'H3', 'HR'].includes(res)) return d >= .5 ? (d > .85 ? 'F' : 'L') + z : String(z);
+  if (res === 'E') return 'E' + z;
+  if (d >= .5 || res === 'FS') return 'F' + z;
+  if (res === 'DP') return ({ 4: '4-6-3', 5: '5-4-3', 6: '6-4-3' })[z] || z + '-3';
+  return z === 3 ? '3U' : z + '-3';
 }
