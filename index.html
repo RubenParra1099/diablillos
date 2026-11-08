@@ -24,7 +24,7 @@ img{max-width:100%}
   --bg:#f5eded; --paper:#ffffff; --ink:#1e1f22; --muted:#6a5e60; --line:#ead6d7; --line-strong:#cfa9ac;
   --board:#c8161e; --board-2:#8a0d14; --board-ink:#ffffff; --bulb:#ffffff; --stripe:#8d9096; --trim:#ffffff; --accent:#c8161e; --accent-ink:#ffffff; --accent-soft:#f6dcdd;
   --win:#2f6f4f; --loss:#7a1820; --warn:#9a6400; --warn-bg:#fbf1dc; --ok-bg:#e6f1ea; --bad-bg:#f8e1e2;
-  --chip:#f6e1e2; --hover:#fbf0f0; --diamond:#d3b6b8;
+  --chip:#f6e1e2; --hover:#fbf0f0; --diamond:#d3b6b8; --rival:#2f6fb0;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
@@ -33,12 +33,12 @@ img{max-width:100%}
   --bg:#1a1314; --paper:#24191b; --ink:#f1e9ea; --muted:#b8a3a5; --line:#3e2a2d; --line-strong:#5a3a3e;
   --board:#9a1720; --board-2:#5e0d13; --board-ink:#ffffff; --bulb:#ffffff; --stripe:#6e7177; --trim:#ffffff; --accent:#e5474f; --accent-ink:#ffffff; --accent-soft:#3d1d20;
   --win:#5cbf8a; --loss:#ff8a90; --warn:#f0b54a; --warn-bg:#2e2513; --ok-bg:#17291f; --bad-bg:#3a1a1d;
-  --chip:#3a2124; --hover:#2e1e20; --diamond:#5a3a3e; color-scheme:dark}}
+  --chip:#3a2124; --hover:#2e1e20; --diamond:#5a3a3e; --rival:#4f8fd6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1a1314; --paper:#24191b; --ink:#f1e9ea; --muted:#b8a3a5; --line:#3e2a2d; --line-strong:#5a3a3e;
   --board:#9a1720; --board-2:#5e0d13; --board-ink:#ffffff; --bulb:#ffffff; --stripe:#6e7177; --trim:#ffffff; --accent:#e5474f; --accent-ink:#ffffff; --accent-soft:#3d1d20;
   --win:#5cbf8a; --loss:#ff8a90; --warn:#f0b54a; --warn-bg:#2e2513; --ok-bg:#17291f; --bad-bg:#3a1a1d;
-  --chip:#3a2124; --hover:#2e1e20; --diamond:#5a3a3e; color-scheme:dark}
+  --chip:#3a2124; --hover:#2e1e20; --diamond:#5a3a3e; --rival:#4f8fd6; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
 .wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -388,6 +388,42 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .mvp-main{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .mvp-main>div{flex:1}
 .chip.mvp{background:#e3a72f;color:#2a1b00}
+.ind-sec{border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:12px 22px;background:var(--paper)}
+@media (max-width:820px){.ind-sec{grid-template-columns:minmax(0,1fr)}}
+.ind-hd{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ind-hd h3{color:var(--ink);font-size:19px}
+.ind-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.help-btn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);background:transparent;font:700 13px/1 var(--f-body);cursor:pointer;display:inline-grid;place-items:center;flex:none;padding:0}
+.help-btn:hover,.help-btn:focus-visible{background:var(--accent);color:var(--accent-ink);outline:none}
+.help-btn.sm{width:19px;height:19px;font-size:11px}
+.leader .k{display:flex;justify-content:space-between;align-items:center;gap:6px}
+#indBody .leader .who{white-space:normal}
+.rel{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid currentColor;font-weight:600;white-space:nowrap}
+.rel.ok{color:var(--win)} .rel.mid{color:var(--warn)} .rel.low{color:var(--loss)}
+.ind-read{border-left:3px solid var(--accent);padding:2px 0 2px 12px;font-size:14px;margin:0}
+.ind-big{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ind-big div{border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.ind-big strong{font-family:var(--f-display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+.ind-big span{font-size:12.5px;color:var(--muted)}
+.ind-bars{display:flex;flex-direction:column;gap:8px}
+.ind-bars div{display:grid;grid-template-columns:64px 1fr 48px;gap:10px;align-items:center;font-size:13px}
+.ind-bars em{font-style:normal;font-family:var(--f-mono);color:var(--muted)}
+.ind-bars b{text-align:right;font-variant-numeric:tabular-nums}
+.ind-bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
+.ind-bar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.ind-svg{display:block;width:100%;height:auto}
+.ind-svg text{font-family:var(--f-mono);fill:var(--muted)}
+.ind-svg .lab{fill:var(--ink)}
+.ind-legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.ind-legend span{display:inline-flex;align-items:center;gap:6px}
+.ind-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+details.ind-tbl summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+details.ind-tbl[open] summary{margin-bottom:6px}
+.ind-alerts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.ind-alerts li{display:flex;gap:10px;align-items:baseline;font-size:14px}
+.help-def{display:flex;flex-direction:column;gap:4px}
+.help-def b{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.help-def code{font-family:var(--f-mono);font-size:12.5px;background:var(--chip);border-radius:4px;padding:8px 10px;display:block;white-space:normal}
 .game .mvpl{display:block;font-weight:400;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:6px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .games{display:flex;flex-direction:column}
@@ -455,6 +491,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
       <button role="tab" data-v="bateo">Bateo</button>
       <button role="tab" data-v="pitcheo">Pitcheo</button>
       <button role="tab" data-v="fildeo">Fildeo</button>
+      <button role="tab" data-v="ind">Indicadores</button>
       <button role="tab" data-v="proy">Proyección</button>
       <button role="tab" data-v="roster">Roster</button>
       <button role="tab" data-v="admin" id="tabAdmin" hidden>Admin</button>
@@ -673,6 +710,21 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
     </div>
   </section>
 
+  <section id="v-ind" class="view" hidden>
+    <div class="panel">
+      <div class="row spread">
+        <h2>Indicadores sabermétricos</h2>
+        <div class="row">
+          <label class="f">Juegos<select id="iRange"><option value="all">Temporada completa</option><option value="5">Últimos 5</option><option value="10">Últimos 10</option></select></label>
+          <label class="f">Modalidad<select id="iMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <button class="btn sm primary" id="btnPdfInd">Reporte PDF</button>
+        </div>
+      </div>
+      <p class="hint">Todo se calcula solo con los juegos capturados que entran en el filtro. Toca el botón <b>?</b> de cada indicador para ver qué mide y cómo se calcula.</p>
+      <div id="indBody" style="display:flex;flex-direction:column;gap:16px"></div>
+    </div>
+  </section>
+
   <section id="v-proy" class="view" hidden>
     <div class="panel">
       <div class="row spread">
@@ -784,6 +836,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
   <div class="row spread"><button type="button" class="btn" id="udPw">Cambiar contraseña</button><div class="row"><button type="button" class="btn" id="udClose">Cerrar</button><button type="button" class="btn primary" id="udLogout">Cerrar sesión</button></div></div>
 </div></dialog>
 <dialog id="playerDlg"><div class="dlg" id="playerBody"></div></dialog>
+<dialog id="helpDlg" class="narrow"><div class="dlg" id="helpBody"></div></dialog>
 <dialog id="bdayDlg"><div class="dlg" id="bdayBody"></div></dialog>
 <dialog id="boxDlg"><div class="dlg" id="boxDlgBody"></div></dialog>
 <dialog id="admTeamDlg" class="adm-dlg"><form class="adm-modal" id="admTeamForm" novalidate>
@@ -1763,6 +1816,228 @@ $('#fGroup').addEventListener('change', renderFld);
 
 /* ---------- CSV ---------- */
 /* ---------- Descargas (claude.ai o navegador normal) ---------- */
+/* ---------- INDICADORES (sabermetría) ---------- */
+const IND_HELP = {
+  rec: { t: 'Récord real', que: 'Juegos ganados, perdidos y empatados entre los juegos capturados que entran en el filtro.', como: 'G = juegos donde tus carreras superan a las del rival; P = menos; E = iguales.', leer: 'Es el resultado. Compáralo con el récord esperado para saber si es sostenible.' },
+  pyth: { t: 'Récord esperado (pitagórico)', que: 'Cuántos juegos "debiste" ganar según las carreras que anotas y permites. Separa el rendimiento real de la suerte en juegos cerrados.', como: 'W% esperado = CA^1.83 / (CA^1.83 + CP^1.83). Victorias esperadas = W% × juegos. CA = carreras anotadas, CP = carreras permitidas.', leer: 'Si ganas bastante más de lo esperado, hubo suerte en juegos cerrados y el récord tenderá a bajar. Si ganas menos, tenderá a subir.' },
+  diff: { t: 'Diferencial por juego', que: 'Carreras a favor menos carreras en contra, en promedio por juego.', como: 'Diferencial = (CA − CP) / juegos.', leer: 'Es el mejor predictor simple de victorias. Positivo: el equipo domina. Cerca de cero: juegos parejos.' },
+  leadoff: { t: 'Valor del primer turno de la entrada', que: 'Qué tan seguido anota el equipo según lo que hace el primer bateador de cada entrada.', como: 'Con la hoja de anotación se identifica el primer turno de cada entrada (sigue el orden al bat desde donde terminó la entrada anterior). P(anotar | 1º se embasa) = entradas con carrera cuando el 1º se embasó / entradas en que el 1º se embasó. Lo mismo para cuando hizo out.', leer: 'Si la diferencia es grande, el primer turno es el más valioso: a quien abre la entrada pídele ver lanzamientos y embasarse.' },
+  outs: { t: 'Se embasan según los outs', que: 'Porcentaje de turnos en que el bateador llega a base, separado por los outs que había al batear.', como: 'Turnos con llegada a base (hit, base por bolas, golpe, error u ocupada) / turnos, con 0, 1 y 2 outs. Los outs se cuentan en el orden de la hoja de anotación.', leer: 'Si cae mucho con 2 outs, el equipo baja la concentración o los mejores bateadores no están llegando al plato en esos momentos.' },
+  scoring: { t: 'Eficiencia para anotar', que: 'Qué parte de los corredores que se embasan termina anotando, y qué tan seguido el equipo anota en una entrada.', como: 'Corredores que anotaron / corredores que llegaron a base. Entradas con carrera / entradas jugadas. Racimo = entrada de 3 o más carreras. Dejados en base = se embasaron y no anotaron ni fueron out.', leer: 'Muchos dejados en base con buen porcentaje de embasarse señalan que falta el batazo oportuno o correr las bases con más agresividad.' },
+  inning: { t: 'Carreras por entrada', que: 'Carreras anotadas y permitidas en cada entrada, sumando todos los juegos del filtro.', como: 'Suma de la pizarra entrada por entrada; las entradas no jugadas no cuentan.', leer: 'Picos en contra en entradas tardías sugieren cansancio del pitcheo: ten el relevo listo antes. Entradas flojas a favor pueden señalar la parte baja del lineup.' },
+  woba: { t: 'Valor ofensivo (wOBA y wRAA)', que: 'wOBA pondera cada forma de llegar a base según lo que vale en carreras (un HR no vale 4 sencillos). wRAA lo convierte en carreras aportadas por encima del promedio.', como: 'wOBA = (0.69·BB + 0.72·BG + 0.89·1B + 1.27·2B + 1.62·3B + 2.10·HR) / (AB + BB + BG + SF). wRAA = (wOBA − wOBA promedio) / 1.2 × PA. El promedio sale de tu equipo y de los bateadores rivales capturados.', leer: 'wRAA positivo: aporta más carreras que el promedio. Diferencias de 1 o 2 carreras con pocos turnos son ruido: revisa la etiqueta de confiabilidad.' },
+  babip: { t: 'Alertas de regresión (BABIP)', que: 'Promedio en las bolas que el bateador pone en juego. Con pocas apariciones depende mucho de la suerte.', como: 'BABIP = (H − HR) / (AB − K − HR + SF). Se marca a quien tiene al menos 15 PA y se aleja .100 o más del BABIP promedio.', leer: '"Bajará": su promedio está inflado por suerte. "Subirá": batea mejor de lo que dice su AVG, sobre todo si se poncha poco o saca bases por bolas. No decidas el lineup solo por el AVG.' },
+  fip: { t: 'Pitcheo: ERA contra FIP', que: 'FIP estima la efectividad solo con lo que controla el lanzador: ponches, bases por bolas, golpes y jonrones. Quita el efecto de la defensa y de la suerte.', como: 'FIP = (13·HR + 3·(BB + BG) − 2·K) / IP × (entradas por juego / 9) + constante. La constante hace que el FIP del staff sea igual a su ERA. K−BB% = (K − BB) / bateadores enfrentados.', leer: 'ERA mucho más baja que el FIP: la defensa lo está ayudando. Mucho más alta: ha sido desafortunado. Un K−BB% alto indica dominio del bateador.' },
+  der: { t: 'Eficiencia defensiva (DER)', que: 'Qué parte de las bolas en juego del rival convierte la defensa en out.', como: 'DER = 1 − (H − HR) / bolas en juego. Bolas en juego = bateadores enfrentados − K − BB − BG − HR, según las líneas de tus lanzadores. Errores por juego = errores / juegos.', leer: 'Más alto es mejor. Junto con los errores por juego indica si conviene dedicar práctica a la defensa.' },
+  lineup: { t: 'Lineup sugerido', que: 'Un orden al bat basado en datos, con las reglas de The Book (Tango, Lichtman y Dolphin).', como: 'Se ordena por wOBA ajustado por muestra: (wOBA·PA + wOBA promedio·30) / (PA + 30). Los 3 mejores van en 1º, 2º y 4º: el 4º es el de más poder (ISO) y el 1º el que más se embasa. Los 2 siguientes van en 3º y 5º (el de más poder en 5º). El resto, de 6º a 9º. Solo entran jugadores con 2 PA o más por juego.', leer: 'Optimizar el orden vale poco: alrededor de 1 carrera cada 10 a 15 juegos. Úsalo como guía, no como regla.' },
+  alerts: { t: 'Alertas para el coach', que: 'Frases automáticas cuando un indicador cruza un umbral importante.', como: 'Reglas sobre los indicadores de esta página: victorias contra lo esperado (±1), valor del primer turno (diferencia de 20 puntos o más), carreras permitidas al final del juego, BABIP extremo, ERA contra FIP (diferencia de 1 o más), K−BB% bajo y errores por juego.', leer: 'Son puntos para revisar, no órdenes. Mira siempre la etiqueta de confiabilidad del indicador.' },
+  rel: { t: 'Confiabilidad', que: 'Qué tan en serio tomar un número según el tamaño de la muestra.', como: 'Jugadores: menos de 30 PA (o 10 IP) muestra chica; de 30 a 100 PA (10 a 30 IP) moderada; más, estable. Equipo: menos de 5 juegos chica; de 5 a 15 moderada; más, estable. Entradas: menos de 30, de 30 a 60, más de 60.', leer: 'Muestra chica: anécdota. Moderada: tendencia. Estable: ya sirve para decidir.' },
+};
+const helpBtn = (k, sm) => `<button type="button" class="help-btn${sm ? ' sm' : ''}" data-help="${k}" aria-label="Qué mide: ${esc(IND_HELP[k].t)}">?</button>`;
+function openHelp(k) {
+  const h = IND_HELP[k]; if (!h) return;
+  $('#helpBody').innerHTML = `<div class="row spread"><h2 style="margin:0">${esc(h.t)}</h2><button class="btn sm" id="helpClose">Cerrar</button></div>
+    <div class="help-def"><b>Qué mide</b><p style="margin:0">${esc(h.que)}</p></div>
+    <div class="help-def"><b>Cómo se mide</b><code>${esc(h.como)}</code></div>
+    <div class="help-def"><b>Cómo leerlo</b><p style="margin:0">${esc(h.leer)}</p></div>`;
+  $('#helpClose').onclick = () => $('#helpDlg').close();
+  if (!$('#helpDlg').open) $('#helpDlg').showModal();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-help]'); if (b) { e.preventDefault(); openHelp(b.dataset.help); } });
+$('#helpDlg').addEventListener('click', e => { if (e.target === $('#helpDlg')) $('#helpDlg').close(); });
+const REL_T = { pa: [30, 100, 'PA'], outs: [30, 90, 'outs'], g: [5, 15, 'juegos'], inn: [30, 60, 'entradas'] };
+function relTag(kind, n, label) {
+  const [a, b] = REL_T[kind], c = n < a ? ['low', 'Muestra chica'] : n <= b ? ['mid', 'Muestra moderada'] : ['ok', 'Muestra estable'];
+  return `<span class="rel ${c[0]}" title="Confiabilidad según el tamaño de la muestra">${c[1]}${label ? ' · ' + label : ''}</span>`;
+}
+const relOf = (kind, n) => n < REL_T[kind][0] ? 'low' : n <= REL_T[kind][1] ? 'mid' : 'ok';
+const sgn = (v, d = 1) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+const pct0 = v => isFinite(v) ? Math.round(100 * v) + '%' : '—';
+
+// Turno por turno a partir de la hoja de anotación (solo juegos que la tienen)
+function indPA(gs) {
+  const r = { games: 0, inns: 0, loOn: 0, loOnSc: 0, loOff: 0, loOffSc: 0, outs: [[0, 0], [0, 0], [0, 0]], reached: 0, scored: 0, lob: 0, innRuns: 0, big: 0 };
+  gs.forEach(g => {
+    const sh = g.sheet; if (!sh || !sh.cells || !Object.keys(sh.cells).length) return; r.games++;
+    const L = lineupLen(sh.slots || []) || 9; let start = 0;
+    for (let inn = 1; inn <= (g.inns || 9); inn++) {
+      const pas = [];
+      Object.entries(sh.cells).forEach(([k, arr]) => { const [si, i] = k.split('_').map(Number); if (i === inn) (arr || []).forEach((pa, idx) => { if (RES[pa.res]) pas.push({ si, idx, pa }); }); });
+      if (!pas.length) continue;
+      pas.sort((a, b) => a.idx - b.idx || ((a.si - start + L) % L) - ((b.si - start + L) % L));
+      r.inns++; let outs = 0, runs = 0;
+      pas.forEach(({ pa }) => {
+        const reach = num(pa.reach), b = r.outs[Math.min(outs, 2)]; b[0]++; if (reach > 0) { b[1]++; r.reached++; }
+        if (reach === 4) { r.scored++; runs++; } else if (reach > 0 && !num(pa.out)) r.lob++;
+        if (num(pa.out)) outs++;
+      });
+      if (runs > 0) r.innRuns++; if (runs >= 3) r.big++;
+      if (num(pas[0].pa.reach) > 0) { r.loOn++; if (runs > 0) r.loOnSc++; } else { r.loOff++; if (runs > 0) r.loOffSc++; }
+      start = (pas[pas.length - 1].si + 1) % L;
+    }
+  });
+  return r;
+}
+function indCompute(gs) {
+  const I = { gs, n: gs.length, W: 0, L: 0, T: 0, RS: 0, RA: 0, innUs: [], innThem: [] };
+  gs.forEach(g => {
+    const s = gameScore(g); I.RS += s.us; I.RA += s.them; if (s.res === 'G') I.W++; else if (s.res === 'P') I.L++; else I.T++;
+    ['us', 'them'].forEach(side => (g[side] || []).forEach((v, i) => { const a = side === 'us' ? I.innUs : I.innThem; if (String(v) === '') return; a[i] = (a[i] || 0) + num(v); }));
+  });
+  I.pyth = I.RS + I.RA ? Math.pow(I.RS, 1.83) / (Math.pow(I.RS, 1.83) + Math.pow(I.RA, 1.83)) : NaN; I.expW = I.pyth * I.n;
+  I.pa = indPA(gs);
+  // bateo: el promedio de comparación incluye a los rivales capturados
+  const m = aggBat(gs), T = zero(BATK), LG = zero(BATK); let oppPA = 0;
+  Object.values(m).forEach(p => BATK.forEach(k => { T[k] += p[k]; LG[k] += p[k]; }));
+  gs.forEach(g => (g.olines || []).forEach(l => { BATK.forEach(k => LG[k] += num(l[k])); oppPA += num(l.ab) + num(l.bb) + num(l.hbp) + num(l.sf) + num(l.sh); }));
+  derive(T); derive(LG); I.team = T; I.lg = LG; I.oppPA = oppPA;
+  I.bat = {}; Object.values(m).forEach(p => {
+    if (!p.pa) return; const tb = p.tb;
+    I.bat[p.pid] = { ...p, name: pName(p.pid), wraa: (p.woba - LG.woba) / 1.2 * p.pa, rc: (p.ab + p.bb) ? (p.h + p.bb) * tb / (p.ab + p.bb) : 0, wadj: (p.woba * p.pa + LG.woba * 30) / (p.pa + 30) };
+  });
+  // pitcheo
+  const pm = aggPit(gs), S0 = { outs: 0, ...zero(PITK) }; Object.values(pm).forEach(p => { S0.outs += p.outs; PITK.forEach(k => S0[k] += p[k]); }); pitDerive(S0);
+  const base = innBase(), raw = p => p.outs ? (13 * p.hr + 3 * (p.bb + p.hbp) - 2 * p.so) / (p.outs / 3) * base / 9 : NaN, cF = S0.outs ? S0.era - raw(S0) : 0;
+  const bf = p => p.outs + p.h + p.bb + p.hbp;
+  I.staff = { ...S0, fip: raw(S0) + cF, bf: bf(S0) };
+  I.pit = {}; Object.values(pm).forEach(p => { if (!p.outs) return; I.pit[p.pid] = { ...p, name: pName(p.pid), fip: raw(p) + cF, kbb: bf(p) ? (p.so - p.bb) / bf(p) : NaN }; });
+  const bip = I.staff.bf - S0.so - S0.bb - S0.hbp - S0.hr; I.der = bip > 0 ? 1 - (S0.h - S0.hr) / bip : NaN; I.bip = bip;
+  I.err = gs.reduce((a, g) => a + (g.lines || []).reduce((b, l) => b + num(l.e), 0), 0);
+  return I;
+}
+function indLineup(I) {
+  const minPA = Math.max(5, 2 * I.n), ps = Object.values(I.bat).filter(p => S.roster[p.pid] && p.pa >= minPA).sort((a, b) => b.wadj - a.wadj).slice(0, 9); if (ps.length < 5) return [];
+  const top3 = ps.slice(0, 3), s4 = top3.reduce((a, b) => b.iso > a.iso ? b : a), rest3 = top3.filter(p => p !== s4).sort((a, b) => b.obp - a.obp);
+  const next2 = ps.slice(3, 5).sort((a, b) => b.iso - a.iso), out = [];
+  out[0] = [rest3[0], 'Entre los 3 mejores, el que más se embasa']; out[1] = [rest3[1], 'Uno de los 3 mejores: más turnos por juego']; out[3] = [s4, 'Entre los 3 mejores, el de más poder'];
+  out[4] = [next2[0], 'Siguiente mejor, con más poder']; out[2] = [next2[1], 'Siguiente mejor bateador'];
+  ps.slice(5).forEach((p, i) => out[5 + i] = [p, 'De mayor a menor wOBA']);
+  return out;
+}
+function indAlerts(I) {
+  const A = [], gap = I.W + I.T / 2 - I.expW, P = I.pa;
+  if (I.n >= 5 && gap >= 1) A.push(['mid', `Ganan ${gap.toFixed(1)} juegos más de lo que indica su diferencial: hubo suerte en juegos cerrados y el récord tenderá a bajar.`]);
+  if (I.n >= 5 && gap <= -1) A.push(['mid', `Ganan ${(-gap).toFixed(1)} juegos menos de lo que indica su diferencial: con el mismo juego, el récord tenderá a mejorar.`]);
+  if (P.loOn >= 8 && P.loOff >= 8) { const a = P.loOnSc / P.loOn, b = P.loOffSc / P.loOff; if (a - b >= .2) A.push(['ok', `Cuando el primero de la entrada se embasa anotan ${pct0(a)} de las veces; si hace out, ${pct0(b)}. El primer turno de cada entrada es para embasarse.`]); }
+  const th = I.innThem, nI = th.length; if (nI >= 6) { const early = th.slice(0, nI - 3).reduce((a, v) => a + (v || 0), 0) / (nI - 3), late = th.slice(-3).reduce((a, v) => a + (v || 0), 0) / 3; if (late >= 1.5 * early && th.slice(-3).reduce((a, v) => a + (v || 0), 0) >= 5) A.push(['mid', `En las últimas 3 entradas permiten ${(late / I.n).toFixed(2)} carreras por entrada por juego, contra ${(early / I.n).toFixed(2)} antes: ten el relevo listo antes del final.`]); }
+  const lgB = I.lg.babip; Object.values(I.bat).forEach(p => { if (p.pa < 15 || !isFinite(p.babip) || !isFinite(lgB)) return;
+    if (p.babip >= lgB + .1) A.push(['mid', `${p.name}: BABIP de ${fmtRate(p.babip)} (promedio ${fmtRate(lgB)}). Su AVG de ${fmtRate(p.avg)} tiene suerte y probablemente bajará.`]);
+    if (p.babip <= lgB - .1) A.push(['ok', `${p.name}: BABIP de ${fmtRate(p.babip)} (promedio ${fmtRate(lgB)}). Batea mejor de lo que dice su AVG de ${fmtRate(p.avg)}; no lo juzgues solo por el promedio.`]); });
+  Object.values(I.pit).forEach(p => { if (p.outs < 30) return; const d = p.era - p.fip;
+    if (d >= 1) A.push(['mid', `${p.name}: ERA ${p.era.toFixed(2)} contra FIP ${p.fip.toFixed(2)}. Ha sido desafortunado; lanza mejor de lo que dice su ERA.`]);
+    if (d <= -1) A.push(['mid', `${p.name}: ERA ${p.era.toFixed(2)} contra FIP ${p.fip.toFixed(2)}. La defensa lo ha ayudado; su ERA probablemente subirá.`]);
+    if (p.kbb < .05) A.push(['low', `${p.name}: K−BB% de ${(100 * p.kbb).toFixed(1)}%. Sus ponches apenas superan las bases por bolas: trabajar el control da más que buscar ponches.`]); });
+  if (I.n >= 5 && I.err / I.n >= 1) A.push(['low', `${(I.err / I.n).toFixed(1)} errores por juego: vale la pena dedicar práctica a la defensa.`]);
+  const o = P.outs; if (o[0][0] >= 30 && o[2][0] >= 30 && o[2][1] / o[2][0] < o[0][1] / o[0][0] - .1) A.push(['mid', `Con 2 outs se embasan ${fmtRate(o[2][1] / o[2][0])} contra ${fmtRate(o[0][1] / o[0][0])} sin outs: hay que mantener la concentración al cerrar la entrada.`]);
+  return A;
+}
+let iMode = null;
+function indSec(k, title, rel, left, right) { return `<section class="ind-sec" data-k="${k}"><div class="ind-hd"><h3>${title}</h3>${helpBtn(k)}${rel || ''}</div><div class="ind-col">${left}</div><div class="ind-col">${right}</div></section>`; }
+const indTbl = (head, rows) => `<details class="ind-tbl"><summary>Ver tabla de datos</summary><div class="scroll"><table><thead><tr>${head.map((h, i) => `<th${i ? '' : ' class="l"'}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${i ? '' : ' class="l"'}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
+function renderInd() {
+  const body = $('#indBody'); if (!body) return;
+  const mode = iMode || curStatMode(); $('#iMode').value = mode;
+  const all = sortedGames().filter(g => mode === 'all' || gameMode(g) === mode), sel = $('#iRange').value, gs = sel === 'all' ? all : all.slice(-Number(sel));
+  if (!gs.length) { body.innerHTML = '<div class="empty">No hay juegos capturados en esta modalidad. Los indicadores aparecen en cuanto guardes el primer box score.</div>'; return; }
+  const I = indCompute(gs), P = I.pa, ch = mode === 'chupon';
+  // color de rivales: si el color del equipo es azul, se usa naranja para que no se confundan
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), hx = /^#([0-9a-f]{6})$/i.test(acc) ? hexRgb(acc) : [200, 22, 30];
+  const mx = Math.max(...hx), mn = Math.min(...hx), hue = mx === mn ? 0 : mx === hx[0] ? ((hx[1] - hx[2]) / (mx - mn) * 60 + 360) % 360 : mx === hx[1] ? ((hx[2] - hx[0]) / (mx - mn) + 2) * 60 : ((hx[0] - hx[1]) / (mx - mn) + 4) * 60;
+  body.style.setProperty('--ind-rival', hue > 170 && hue < 260 ? '#c26a00' : 'var(--rival)');
+  const pOn = P.loOn ? P.loOnSc / P.loOn : NaN, pOff = P.loOff ? P.loOffSc / P.loOff : NaN;
+  const kpi = (k, lab, v, sub) => `<div class="leader"><span class="k">${lab}${helpBtn(k, 1)}</span><span class="v">${v}</span><span class="who">${sub}</span></div>`;
+  let h = `<div class="leaders">${kpi('rec', 'Récord real', `${I.W}-${I.L}${I.T ? '-' + I.T : ''}`, `${I.RS} carreras a favor, ${I.RA} en contra`)}${kpi('pyth', 'Récord esperado', isFinite(I.expW) ? `${I.expW.toFixed(1)}-${(I.n - I.expW).toFixed(1)}` : '—', isFinite(I.expW) ? `${sgn(I.W + I.T / 2 - I.expW)} victorias contra lo esperado` : 'Sin carreras')}${kpi('diff', 'Diferencial por juego', sgn((I.RS - I.RA) / I.n), `En ${I.n} juego${I.n === 1 ? '' : 's'}`)}${kpi('leadoff', '1º de la entrada en base', pct0(pOn), P.loOff ? `anotan; si hace out, ${pct0(pOff)}` : 'Sin hoja de anotación')}</div>`;
+  // 01 pitagórico
+  h += indSec('pyth', 'Expectativa pitagórica', relTag('g', I.n, `${I.n} juegos`),
+    `<p class="hint" style="margin:0">${I.RS}^1.83 / (${I.RS}^1.83 + ${I.RA}^1.83) = <b>${fmtRate(I.pyth)}</b> → ${isFinite(I.expW) ? I.expW.toFixed(1) : '—'} victorias esperadas en ${I.n} juegos. Reales: ${I.W}${I.T ? ' (y ' + I.T + ' empate' + (I.T > 1 ? 's' : '') + ')' : ''}.</p>`,
+    `<p class="ind-read">${!isFinite(I.expW) ? 'Todavía no hay carreras para calcularlo.' : Math.abs(I.W + I.T / 2 - I.expW) < 1 ? `El récord está respaldado por el diferencial de carreras: no es suerte. A largo plazo, con este diferencial, se espera ganar alrededor de ${pct0(I.pyth)} de los juegos.` : I.W + I.T / 2 > I.expW ? `Ganan ${(I.W + I.T / 2 - I.expW).toFixed(1)} juegos más de lo esperado: hubo suerte en juegos cerrados. Con este diferencial, el porcentaje de victorias tenderá a ${pct0(I.pyth)}.` : `Ganan ${(I.expW - I.W - I.T / 2).toFixed(1)} juegos menos de lo esperado: han perdido juegos cerrados. Con este diferencial, el porcentaje de victorias tenderá a subir hacia ${pct0(I.pyth)}.`}</p>`);
+  // 02 primer turno y outs
+  if (P.inns) {
+    const ob = P.outs.map(([n, on], i) => [i, n, n ? on / n : NaN]), maxOb = Math.max(.6, ...ob.map(o => isFinite(o[2]) ? o[2] : 0));
+    h += indSec('leadoff', 'El turno más valioso de la entrada', relTag('inn', P.inns, `${P.inns} entradas de ${P.games} juego${P.games === 1 ? '' : 's'}`),
+      `<div class="ind-big"><div><strong style="color:var(--accent)">${pct0(pOn)}</strong><span>anotan cuando el 1º se embasa (${P.loOnSc} de ${P.loOn} entradas)</span></div><div><strong>${pct0(pOff)}</strong><span>anotan cuando el 1º hace out (${P.loOffSc} de ${P.loOff})</span></div></div>
+       <p class="ind-read">${isFinite(pOn) && isFinite(pOff) && pOff > 0 ? `Embasar al primero de la entrada multiplica por ${(pOn / pOff).toFixed(1)} la probabilidad de anotar. A quien abra la entrada pídele ver lanzamientos y embasarse, no buscar el batazo largo.` : 'Faltan entradas para comparar.'}</p>`,
+      `<div style="display:flex;gap:8px;align-items:center"><h3 style="margin:0">Se embasan según los outs</h3>${helpBtn('outs', 1)}</div>
+       <div class="ind-bars">${ob.map(([i, n, v]) => `<div title="${i} outs: ${isFinite(v) ? fmtRate(v) : '—'} en ${n} turnos"><em>${i === 2 && ch ? '2+ outs' : i + (i === 1 ? ' out' : ' outs')}</em><span class="ind-bar"><i style="width:${isFinite(v) ? v / maxOb * 100 : 0}%"></i></span><b>${isFinite(v) ? fmtRate(v) : '—'}</b></div>`).join('')}</div>
+       ${indTbl(['Outs', 'Turnos', 'En base', '%'], ob.map(([i, n, v]) => [i, n, P.outs[i][1], isFinite(v) ? fmtRate(v) : '—']))}`);
+    h += indSec('scoring', 'Eficiencia para anotar', relTag('inn', P.inns, `${P.inns} entradas`),
+      `<div class="ind-big"><div><strong>${pct0(P.reached ? P.scored / P.reached : NaN)}</strong><span>de los corredores anotó (${P.scored} de ${P.reached}); ${P.lob} se quedaron en base</span></div><div><strong>${pct0(P.innRuns / P.inns)}</strong><span>de las entradas con carrera (${P.innRuns} de ${P.inns}); ${P.big} racimo${P.big === 1 ? '' : 's'} de 3+</span></div></div>`,
+      `<p class="ind-read">${P.reached && P.scored / P.reached < .35 ? 'Se embasan pero cuesta traerlos a home: practica batazo oportuno y corrido de bases.' : 'La conversión de corredores en carreras es buena; mantén la agresividad en las bases.'} En esta categoría, una entrada de 3 o más carreras suele decidir el juego: ${P.big} de ${P.inns} entradas (${pct0(P.big / P.inns)}).</p>`);
+  }
+  // 03 carreras por entrada
+  const nInn = Math.max(I.innUs.length, I.innThem.length);
+  if (nInn) {
+    const us = Array.from({ length: nInn }, (_, i) => I.innUs[i] || 0), th = Array.from({ length: nInn }, (_, i) => I.innThem[i] || 0), mxR = Math.max(4, ...us, ...th);
+    const step = mxR <= 8 ? 2 : mxR <= 20 ? 5 : 10, top = Math.ceil(mxR / step) * step, Wd = 560, Hd = 220, pl = 30, pb = 26, pt = 16, gw = (Wd - pl) / nInn, bw = Math.min(26, (gw - 12) / 2), y = v => pt + (Hd - pt - pb) * (1 - v / top);
+    const iU = us.indexOf(Math.max(...us)), iT = th.indexOf(Math.max(...th));
+    let svg = `<svg class="ind-svg" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Carreras anotadas y permitidas por entrada">`;
+    for (let t = 0; t <= top; t += step) svg += `<line x1="${pl}" x2="${Wd}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl - 6}" y="${y(t) + 3}" text-anchor="end" font-size="10">${t}</text>`;
+    us.forEach((v, i) => { const gx = pl + i * gw + (gw - 2 * bw - 2) / 2;
+      [[v, 'var(--accent)', S.team], [th[i], 'var(--ind-rival)', 'Rivales']].forEach(([val, c, who], j) => { const bx = gx + j * (bw + 2), yy = y(val);
+        if (val > 0) svg += `<path d="M${bx},${y(0)} V${yy + 4} q0,-4 4,-4 h${bw - 8} q4,0 4,4 V${y(0)} Z" fill="${c}"><title>${i + 1}ª entrada · ${esc(who)}: ${val} carreras</title></path>`;
+        if ((j === 0 && i === iU) || (j === 1 && i === iT)) svg += `<text class="lab" x="${bx + bw / 2}" y="${yy - 5}" text-anchor="middle" font-size="11">${val}</text>`; });
+      svg += `<text x="${gx + bw + 1}" y="${Hd - 8}" text-anchor="middle" font-size="11">${i + 1}ª</text>`; });
+    svg += '</svg>';
+    const late = nInn >= 6 ? th.slice(-3).reduce((a, v) => a + v, 0) / 3 : 0, early = nInn >= 6 ? th.slice(0, nInn - 3).reduce((a, v) => a + v, 0) / (nInn - 3) : 0;
+    h += indSec('inning', 'Carreras por entrada', relTag('g', I.n, `${I.n} juegos`),
+      `<p class="ind-read">La entrada más productiva es la ${iU + 1}ª (${us[iU]} carreras). En contra, la peor es la ${iT + 1}ª (${th[iT]}).${nInn >= 6 ? (late >= 1.5 * early && late > 0 ? ` En las últimas 3 entradas permiten ${(late / I.n).toFixed(2)} carreras por entrada por juego, contra ${(early / I.n).toFixed(2)} antes: el pitcheo se desgasta al final; ten el relevo listo.` : ` En las últimas 3 entradas permiten ${(late / I.n).toFixed(2)} carreras por entrada por juego, contra ${(early / I.n).toFixed(2)} antes: no se ve desgaste del pitcheo.`) : ''}</p>`,
+      `<div class="ind-legend"><span><i style="background:var(--accent)"></i>${esc(S.team)}</span><span><i style="background:var(--ind-rival)"></i>Rivales</span></div>${svg}${indTbl(['Entrada', esc(S.team), 'Rivales'], us.map((v, i) => [i + 1 + 'ª', v, th[i]]))}`);
+  }
+  // 04 valor ofensivo
+  const bats = Object.values(I.bat).sort((a, b) => b.wraa - a.wraa);
+  if (bats.length) {
+    const lo = Math.min(-2, ...bats.map(p => p.wraa)), hi = Math.max(2, ...bats.map(p => p.wraa)), Wd = 560, rh = 26, padL = 172, padR = 56, Hd = bats.length * rh + 24, x = v => padL + (v - lo) / (hi - lo) * (Wd - padL - padR);
+    const st = (hi - lo) > 24 ? 10 : (hi - lo) > 10 ? 5 : 2;
+    let svg = `<svg class="ind-svg" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Carreras sobre el promedio por jugador">`;
+    for (let t = Math.ceil(lo / st) * st; t <= hi; t += st) svg += `<line x1="${x(t)}" x2="${x(t)}" y1="0" y2="${Hd - 18}" stroke="var(--line)" stroke-width="${t === 0 ? 2 : 1}"/><text x="${x(t)}" y="${Hd - 4}" text-anchor="middle" font-size="10">${t > 0 ? '+' + t : t}</text>`;
+    bats.forEach((p, i) => { const yy = i * rh + 4, v = p.wraa, x0 = x(Math.min(0, v)), w = Math.max(2, Math.abs(x(v) - x(0)));
+      svg += `<text class="lab" x="${padL - 8}" y="${yy + 15}" text-anchor="end" font-size="11.5">${esc(p.name.length > 22 ? p.name.slice(0, 21) + '…' : p.name)}${p.pa < 30 ? ' *' : ''}</text>`;
+      svg += `<rect x="${x0}" y="${yy + 3}" width="${w}" height="${rh - 10}" rx="4" fill="${v >= 0 ? 'var(--accent)' : 'var(--muted)'}" opacity="${v >= 0 ? 1 : .55}"><title>${esc(p.name)}: ${sgn(v)} carreras · wOBA ${fmtRate(p.woba)} · ${p.pa} PA</title></rect>`;
+      svg += `<text class="lab" x="${v >= 0 ? x(v) + 6 : x(0) + 6}" y="${yy + 15}" font-size="11">${sgn(v)}</text>`; });
+    svg += '</svg>';
+    const best = bats[0], minPA = Math.min(...bats.map(p => p.pa)), maxPA = Math.max(...bats.map(p => p.pa));
+    h += indSec('woba', 'Valor ofensivo por jugador', relTag('pa', maxPA, `${minPA} a ${maxPA} PA`),
+      `<p class="hint" style="margin:0">wOBA promedio: <b>${fmtRate(I.lg.woba)}</b> (${I.oppPA ? `tu equipo y ${I.oppPA} PA de rivales` : 'solo tu equipo: no hay bateo de rivales capturado'}). * Menos de 30 PA: muestra chica.</p>
+       <p class="ind-read">${esc(best.name)} aporta ${sgn(best.wraa)} carreras sobre el promedio en ${best.pa} PA.${bats.length > 4 ? ` Del 2º al 5º la diferencia es de ${Math.abs(bats[1].wraa - bats[4].wraa).toFixed(1)} carreras: ${Math.abs(bats[1].wraa - bats[4].wraa) < 3 ? 'estadísticamente son el mismo nivel' : 'hay una separación real'}.` : ''}</p>`,
+      `${svg}${indTbl(['Jugador', 'PA', 'wOBA', 'wRAA', 'RC', 'Confiabilidad'], bats.map(p => [esc(p.name), p.pa, fmtRate(p.woba), sgn(p.wraa), p.rc.toFixed(1), relTag('pa', p.pa)]))}`);
+    // 05 BABIP
+    const lgB = I.lg.babip, flag = bats.filter(p => p.pa >= 15 && isFinite(p.babip) && Math.abs(p.babip - lgB) >= .1).sort((a, b) => b.babip - a.babip);
+    h += indSec('babip', 'Alertas de regresión (BABIP)', relTag('pa', flag.length ? Math.min(...flag.map(p => p.pa)) : maxPA),
+      `<p class="hint" style="margin:0">BABIP promedio: <b>${fmtRate(lgB)}</b>. Se marca a quien tiene 15 PA o más y se aleja .100 o más del promedio.</p>
+       <p class="ind-read">${flag.length ? flag.map(p => p.babip > lgB ? `${esc(p.name)} batea ${fmtRate(p.avg)} con BABIP ${fmtRate(p.babip)}: no esperes que lo sostenga.` : `${esc(p.name)} batea ${fmtRate(p.avg)} pero con BABIP ${fmtRate(p.babip)}${p.bbp >= I.lg.bbp || p.kp <= I.lg.kp ? `, ${p.bbp >= I.lg.bbp ? 'saca bases por bolas' : ''}${p.bbp >= I.lg.bbp && p.kp <= I.lg.kp ? ' y ' : ''}${p.kp <= I.lg.kp ? 'casi no se poncha' : ''}` : ''}: es mala fortuna, no lo saques del lineup por su AVG.`).join(' ') : 'Nadie está fuera de rango: los promedios reflejan bien cómo están bateando.'}</p>`,
+      flag.length ? `<div class="scroll"><table><thead><tr><th class="l">Jugador</th><th>PA</th><th>AVG</th><th>BABIP</th><th>BB%</th><th>K%</th><th>Esperado</th></tr></thead><tbody>${flag.map(p => `<tr><td class="l">${plink(p.pid, p.name)}</td><td>${p.pa}</td><td>${fmtRate(p.avg)}</td><td>${fmtRate(p.babip)}</td><td>${pct0(p.bbp)}</td><td>${pct0(p.kp)}</td><td><span class="rel ${p.babip > lgB ? 'mid' : 'ok'}">${p.babip > lgB ? 'Bajará' : 'Subirá'}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Sin alertas.</p>');
+  }
+  // 06 pitcheo
+  const pits = Object.values(I.pit).sort((a, b) => b.outs - a.outs);
+  if (pits.length) {
+    const diag = p => { const d = p.era - p.fip; return Math.abs(d) < .5 ? 'En línea con su pitcheo' : d > 0 ? 'Desafortunado' : 'La defensa lo ayuda'; };
+    const a = pits[0], b = pits[1];
+    h += indSec('fip', 'Pitcheo: ERA contra FIP', relTag('outs', a.outs, pits.map(p => outsToIp(p.outs) + ' IP').join(', ')),
+      `<p class="hint" style="margin:0">FIP del staff: <b>${I.staff.fip.toFixed(2)}</b> (igual a su ERA por construcción). K−BB% del staff: <b>${(100 * (I.staff.so - I.staff.bb) / I.staff.bf).toFixed(1)}%</b>. Base: ${innBase()} entradas por juego (se cambia en Pitcheo).</p>
+       <p class="ind-read">${b ? `Por lo que controlan, ${esc(a.name)} (FIP ${a.fip.toFixed(2)}) y ${esc(b.name)} (FIP ${b.fip.toFixed(2)}) ${Math.abs(a.fip - b.fip) < .5 ? 'lanzan al mismo nivel; la diferencia de ERA es defensa y suerte' : `no están al mismo nivel: ${a.fip < b.fip ? esc(a.name) : esc(b.name)} domina más`}.` : `${esc(a.name)}: ${diag(a).toLowerCase()}.`} ${(I.staff.so - I.staff.bb) / I.staff.bf < .1 ? 'El K−BB% del staff es bajo: reducir bases por bolas da más que buscar ponches.' : 'El staff domina bien el conteo.'}</p>`,
+      `<div class="scroll"><table><thead><tr><th class="l">Lanzador</th><th>IP</th><th>ERA</th><th>FIP</th><th>K−BB%</th><th class="l">Diagnóstico</th></tr></thead><tbody>${pits.map(p => `<tr><td class="l">${plink(p.pid, p.name)}</td><td>${outsToIp(p.outs)}</td><td>${p.era.toFixed(2)}</td><td>${p.fip.toFixed(2)}</td><td>${(100 * p.kbb).toFixed(1)}%</td><td class="l">${diag(p)} ${p.outs < 30 ? relTag('outs', p.outs) : ''}</td></tr>`).join('')}</tbody></table></div>`);
+    // 07 defensa
+    h += indSec('der', 'Eficiencia defensiva', relTag('g', I.n, `${I.bip} bolas en juego`),
+      `<div class="ind-big"><div><strong>${fmtRate(I.der)}</strong><span>de las bolas en juego del rival terminan en out</span></div><div><strong>${(I.err / I.n).toFixed(2)}</strong><span>errores por juego (${I.err} en ${I.n})</span></div></div>`,
+      `<p class="ind-read">La defensa saca out en ${isFinite(I.der) ? Math.round(I.der * 10) : '—'} de cada 10 batazos en juego. ${I.err / I.n >= 1 ? 'Con un error o más por juego, la defensa es la mejora más rápida.' : 'Los errores están controlados; la defensa no es la prioridad.'}</p>`);
+  }
+  // 08 lineup
+  const lu = indLineup(I);
+  if (lu.length) h += indSec('lineup', 'Lineup sugerido', '<span class="rel mid">Impacto pequeño</span>',
+    `<p class="ind-read">Ordenado con wOBA ajustado por muestra para no premiar a quien tuvo pocos turnos con suerte. Solo entran jugadores del roster con ${Math.max(5, 2 * I.n)} PA o más (2 por juego), para usar a los regulares. Optimizar el orden vale alrededor de 1 carrera cada 10 a 15 juegos: ayuda, pero pesa más quién juega que el orden.</p>`,
+    `<div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">Jugador</th><th>OBP</th><th>SLG</th><th>wOBA aj.</th><th class="l">Por qué</th></tr></thead><tbody>${lu.map(([p, why], i) => p ? `<tr><td class="l">${i + 1}</td><td class="l">${plink(p.pid, p.name)}</td><td>${fmtRate(p.obp)}</td><td>${fmtRate(p.slg)}</td><td>${fmtRate(p.wadj)}</td><td class="l">${why}</td></tr>` : '').join('')}</tbody></table></div>`);
+  // 09 alertas
+  const al = indAlerts(I);
+  h += indSec('alerts', 'Alertas para el coach', '<span class="sub">Etiquetas de confiabilidad</span>' + helpBtn('rel', 1),
+    `<p class="hint" style="margin:0">Se generan solas con los juegos del filtro. Las verdes son fortalezas, las amarillas son puntos a vigilar y las rojas son prioridades.</p>`,
+    al.length ? `<ul class="ind-alerts">${al.map(([c, t]) => `<li><span class="rel ${c}">${c === 'ok' ? 'Fortaleza' : c === 'mid' ? 'Vigilar' : 'Prioridad'}</span><span>${esc(t)}</span></li>`).join('')}</ul>` : '<p class="hint">Sin alertas con los juegos actuales.</p>');
+  if (!I.oppPA) h += '<p class="hint">En estos juegos no se capturó el bateo de los rivales, así que los promedios de comparación salen de tu propio equipo. Si capturas también la hoja del rival, los indicadores se comparan contra la categoría.</p>';
+  body.innerHTML = h;
+}
+$('#iMode').addEventListener('change', e => { iMode = e.target.value; renderInd(); });
+$('#iRange').addEventListener('change', renderInd);
+$('#pInnBase').addEventListener('change', renderInd);
+
 /* ---------- PROYECCIÓN (Marcel simplificado) ---------- */
 const PJ_K = ['ab', 'h', 'd', 't', 'hr', 'bb', 'so', 'hbp', 'sf', 'sh', 'r', 'rbi', 'sb', 'cs', 'onb', 'bases'];
 const PJ_REG_PA = 60, PJ_REG_OUTS = 60, PJ_W = [1, .6]; // pesos 5 y 3, normalizados al año más reciente
@@ -2002,6 +2277,9 @@ function openPlayer(pid) {
   if (b) tiles += tile('AVG', fmtRate(b.avg)) + tile('OBP', fmtRate(b.obp)) + tile('SLG', fmtRate(b.slg)) + tile('OPS', fmtRate(b.ops)) + tile('HR', b.hr) + tile('RBI', b.rbi) + tile('SB', b.sb);
   const mvps = d.log.filter(x => mvpsOf(x.g).some(m => m.pid === pid)).map(x => x.g.id);
   if (mvps.length) tiles += tile('MVP', mvps.length);
+  const IX = indCompute(sortedGames()), ib = IX.bat[pid], ip = IX.pit[pid];
+  if (ib) tiles += tile('wOBA', fmtRate(ib.woba)) + tile('wRAA', sgn(ib.wraa));
+  if (ip) tiles += tile('FIP', ip.fip.toFixed(2));
   if (pt) tiles += tile('G-P', pt.w + '-' + pt.l) + tile('ERA', fmtCell(pt, ['era', '', 'r2'])) + tile('IP', outsToIp(pt.outs)) + tile('K', pt.so) + tile('WHIP', fmtCell(pt, ['whip', '', 'r2']));
   const batT = b ? `<table id="pfBat"><thead><tr>${bCols.slice(1).map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${bCols.slice(1).map(c => `<td>${fmtCell(b, c)}</td>`).join('')}</tr></tbody></table>` : '';
   const pitT = pt ? `<table id="pfPit"><thead><tr>${pCols.slice(1).map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${pCols.slice(1).map(c => `<td>${fmtCell(pt, c)}</td>`).join('')}</tr></tbody></table>` : '';
@@ -2553,6 +2831,36 @@ function pdfProj() {
   pdfSave(doc, 'proyeccion_' + String(p.name).replace(/\(.*?\)/g, '').trim().replace(/\s+/g, '_'));
 }
 $('#btnPdfProj').addEventListener('click', pdfProj);
+// Reporte de Indicadores: tarjetas, y por indicador su lectura, cómo se mide y sus tablas (las gráficas van como tabla)
+function pdfInd() {
+  renderInd();
+  const body = $('#indBody'); if (!body.querySelector('.ind-sec')) { toast('Todavía no hay juegos para el reporte.'); return; }
+  const opt = id => $(id).selectedOptions[0].textContent;
+  const doc = pdfDoc('portrait', 'Indicadores sabermétricos', `${opt('#iRange')} · ${opt('#iMode')}`); if (!doc) return;
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64; let y = 90;
+  const room = need => { if (y + need > H - 40) { doc.addPage(); y = 40; } };
+  const para = (txt, size = 8.5, color = 90, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), CW); room(ls.length * size * 1.3); doc.text(ls, 32, y); y += ls.length * size * 1.3 + 6; };
+  const cards = [...body.querySelectorAll('.leaders .leader')], tw = (CW - (cards.length - 1) * 8) / cards.length;
+  cards.forEach((c, i) => { const x = 32 + i * (tw + 8), k = c.querySelector('.k').firstChild.textContent;
+    doc.setFillColor(...ROSE); doc.rect(x, y, tw, 52, 'F');
+    doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.text(pdfSafe(k).toUpperCase(), x + tw / 2, y + 11, { align: 'center' });
+    doc.setTextColor(...RED); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(pdfSafe(c.querySelector('.v').textContent), x + tw / 2, y + 31, { align: 'center' });
+    doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text(doc.splitTextToSize(pdfSafe(c.querySelector('.who').textContent), tw - 8), x + tw / 2, y + 42, { align: 'center' }); });
+  y += 70;
+  body.querySelectorAll('.ind-sec').forEach(sec => {
+    const k = sec.dataset.k, rel = [...sec.querySelectorAll('.ind-hd .rel')].map(r => r.textContent).join(' ');
+    y = pdfSection(doc, sec.querySelector('.ind-hd h3').textContent + (rel ? '  ·  ' + rel : ''), (room(70), y)) + 4;
+    if (IND_HELP[k]) para('Cómo se mide: ' + IND_HELP[k].como, 7.5, 120);
+    sec.querySelectorAll('.ind-big > div').forEach(d => para(d.querySelector('strong').textContent + '  ' + d.querySelector('span').textContent, 9.5, 40, true));
+    sec.querySelectorAll('p.hint, p.ind-read').forEach(p => para(p.textContent, p.classList.contains('ind-read') ? 9 : 8, p.classList.contains('ind-read') ? 40 : 90));
+    sec.querySelectorAll('.ind-alerts li').forEach(li => para('• ' + li.querySelector('.rel').textContent + ': ' + li.lastElementChild.textContent, 8.8, 40));
+    sec.querySelectorAll('table').forEach(t => { y = pdfTable(doc, t, y, { fs: 8 }); });
+    y += 4;
+  });
+  body.querySelectorAll(':scope > p.hint').forEach(p => para(p.textContent, 8));
+  pdfSave(doc, 'indicadores');
+}
+$('#btnPdfInd').addEventListener('click', pdfInd);
 $('#btnPdfB').addEventListener('click', () => pdfStats('b'));
 $('#btnPdfP').addEventListener('click', () => pdfStats('p'));
 $('#btnPdfF').addEventListener('click', () => pdfStats('f'));
@@ -3228,7 +3536,7 @@ document.querySelector('nav.tabs button[data-v="admin"]').addEventListener('clic
 
 /* ---------- Render global ---------- */
 function renderAll() {
-  renderHeader(); renderGames(); renderDemoBar(); renderBat(); renderPitStats(); renderFld(); renderProj(); renderRoster();
+  renderHeader(); renderGames(); renderDemoBar(); renderBat(); renderPitStats(); renderFld(); renderInd(); renderProj(); renderRoster();
   if (!draft.id && !noTouched) { draft.no = String(Object.keys(S.games).length + 1); $('#gNo').value = draft.no; }
   const a = document.activeElement;
   if (!$('#paDlg').open && !(a && a.closest && a.closest('#v-captura'))) renderSheet(); else renderClubs();
