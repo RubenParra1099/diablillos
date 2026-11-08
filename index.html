@@ -2315,7 +2315,7 @@ const SPRAY_XY = { 1: [150, 168, 'P'], 2: [150, 214, 'C'], 3: [206, 160, '1B'], 
 const SPRAY_T = [['ground', 'Rodado'], ['line', 'Línea'], ['fly', 'Elevado'], ['pop', 'Elevado al cuadro'], ['error', 'Error']];
 function sprayHTML(sp) {
   const mx = Math.max(1, ...Object.values(sp.zones));
-  let svg = `<svg viewBox="0 0 300 236" role="img" aria-label="Mapa de batazos por zona del campo">
+  let svg = `<svg viewBox="0 0 300 246" role="img" aria-label="Mapa de batazos por zona del campo">
     <path d="M150,226 L12,88 Q150,-36 288,88 Z" fill="var(--chip)" stroke="var(--line-strong)"/>
     <path d="M150,226 L206,170 L150,114 L94,170 Z" fill="var(--paper)" stroke="var(--line-strong)"/>`;
   Object.entries(SPRAY_XY).forEach(([z, [x, y, lab]]) => {
@@ -3199,10 +3199,13 @@ function pdfBox(id) {
 function pdfPhoto(doc, src, x, y, w, h) {
   try { const ip = doc.getImageProperties(src), k = Math.min(w / ip.width, h / ip.height), iw = ip.width * k, ih = ip.height * k, r = [x + (w - iw) / 2, y + (h - ih) / 2, iw, ih]; doc.addImage(src, /^data:image\/png/.test(src) ? 'PNG' : 'JPEG', ...r); return r; } catch { return null; }
 }
-function pdfPlayer(pid) {
+async function pdfPlayer(pid) {
   const p = S.roster[pid]; if (!p) return;
-  const doc = pdfDoc('portrait', 'Ficha técnica del jugador', `Temporada ${today().slice(0, 4)}`); if (!doc) return;
-  const W = doc.internal.pageSize.getWidth();
+  const host = $(shareMode ? '#shareBody' : '#playerBody');
+  // gráficas de la ficha a imagen (evolución y mapa de batazos)
+  const imgs = new Map(); for (const sv of host.querySelectorAll('.trend svg, .spray-blk svg.sc-svg')) imgs.set(sv, await pdfSvg(sv));
+  const doc = pdfDoc('portrait', 'Ficha técnica del jugador', seasonLabel()); if (!doc) return;
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
   const ph = p.photo ? pdfPhoto(doc, p.photo, 32, 88, 110, 110) : null;
   if (!ph) { doc.setFillColor(...RED); doc.circle(87, 143, 55, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(40); doc.text(pdfSafe(p.num ?? initials(p.name)), 87, 157, { align: 'center' }); }
   doc.setDrawColor(...RED); doc.setLineWidth(2); doc.rect(...(ph || [32, 88, 110, 110]));
@@ -3221,8 +3224,50 @@ function pdfPlayer(pid) {
       doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text(pdfSafe(k), x + tw / 2, yy + 36, { align: 'center' }); });
     y += Math.ceil(tiles.length / per) * 52 + 14;
   }
-  [['#pfBat', 'Bateo · temporada'], ['#pfPit', 'Pitcheo · temporada'], ['#pfFld', 'Fildeo por posición'], ['#pfLog', 'Juego por juego']].forEach(([sel, t]) => { const el = $((shareMode ? '#shareBody ' : '#playerBody ') + sel); if (el) { y = pdfSection(doc, t, y); y = pdfTable(doc, el, y, { fs: sel === '#pfLog' ? 7 : 7.5 }); } });
+  const room = need => { if (y + need > H - 40) { doc.addPage(); y = 40; } };
+  const para = (txt, size = 8.5, color = 90) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), CW); room(ls.length * size * 1.3); doc.text(ls, 32, y); y += ls.length * size * 1.3 + 6; };
+  const section = t => { room(60); y = pdfSection(doc, t, y) + 4; };
+  const table = sel => { const el = host.querySelector(sel); if (el) y = pdfTable(doc, el, y, { fs: sel === '#pfLog' ? 7 : 7.5 }); };
+  [['#pfBat', 'Bateo · temporada'], ['#pfPit', 'Pitcheo · temporada'], ['#pfFld', 'Fildeo por posición']].forEach(([sel, t]) => { if (host.querySelector(sel)) { section(t); table(sel); } });
+  // evolución: las tres gráficas lado a lado
+  const tr = [...host.querySelectorAll('.trend > div')];
+  if (tr.length) {
+    const w = (CW - 16) / 3, ims = tr.map(x => imgs.get(x.querySelector('svg'))), h = Math.max(...ims.map(im => im ? w * im.h / im.w : 0));
+    room(h + 70); section('Evolución · últimos 3 juegos');
+    tr.forEach((x, i) => { const xx = 32 + i * (w + 8), lab = x.querySelector('.sub').textContent, val = x.querySelector('b').textContent.replace(/[▲▼]/g, '').trim(), up = /▲/.test(x.querySelector('b').textContent), dn = /▼/.test(x.querySelector('b').textContent);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(100); doc.text(pdfSafe(lab), xx, y + 8);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(pdfSafe(val + (up ? ' (sube)' : dn ? ' (baja)' : '')), xx + w, y + 8, { align: 'right' });
+      if (ims[i]) doc.addImage(ims[i].src, 'JPEG', xx, y + 12, w, w * ims[i].h / ims[i].w, undefined, 'FAST'); });
+    y += h + 20;
+    para('Cada punto es el promedio de sus últimos 3 juegos.', 7.5, 120);
+  }
+  // metas
+  const goals = [...host.querySelectorAll('#pfGoals .goal')];
+  if (goals.length) { section('Metas'); goals.forEach(g => para('• ' + g.querySelector('span').textContent.replace(/\s+/g, ' ').trim(), 9.5, 40)); }
+  // por situación
+  const sit = [...host.querySelectorAll('h3')].find(h => h.textContent === 'Por situación');
+  if (sit) { const t = sit.closest('div').parentElement.querySelector('table'); if (t) { section('Por situación'); y = pdfTable(doc, t, y, { fs: 8 }); } }
+  // mapa de batazos y distribución por jardín
+  const sp = host.querySelector('.spray-blk');
+  if (sp) y = pdfSprayBlock(doc, sp, y, imgs);
+  if (host.querySelector('#pfLog')) { section('Juego por juego'); table('#pfLog'); }
   pdfSave(doc, 'ficha_' + String(p.name).replace(/\(.*?\)/g, '').trim().replace(/\s+/g, '_'));
+}
+// Mapa de batazos en un PDF: campo con los puntos y sectores con porcentajes, más conteos y lectura
+function pdfSprayBlock(doc, el, y, imgs) {
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  const say = (txt, size, color) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), W - 64); if (y + ls.length * size * 1.3 > H - 40) { doc.addPage(); y = 40; } doc.text(ls, 32, y); y += ls.length * size * 1.3 + 6; };
+  const svs = [...el.querySelectorAll('svg.sc-svg')], a = imgs.get(svs[0]), b = imgs.get(svs[1]);
+  if (!a) { const t = el.querySelector('.hint'); if (!t) return y; if (y + 60 > H - 40) { doc.addPage(); y = 40; } y = pdfSection(doc, 'Mapa de batazos', y) + 6; say(t.textContent, 8.5, 90); return y; }
+  const w1 = 280, h1 = w1 * a.h / a.w, w2 = 220, h2 = b ? w2 * b.h / b.w : 0;
+  if (y + Math.max(h1, h2) + 120 > H - 40) { doc.addPage(); y = 40; }
+  y = pdfSection(doc, 'Mapa de batazos', y) + 6;
+  doc.addImage(a.src, 'JPEG', 32, y, w1, h1, undefined, 'FAST'); if (b) doc.addImage(b.src, 'JPEG', W - 32 - w2, y, w2, h2, undefined, 'FAST');
+  y += Math.max(h1, h2) + 8;
+  say('Resultados: ' + [...el.querySelectorAll('.sc-legend button')].map(x => x.textContent).join('   ·   '), 8.5, 60);
+  say('Distribución: ' + [...el.querySelectorAll('.sc-bars .bar')].map(x => x.querySelector('span').textContent + ' ' + x.querySelector('b').textContent).join('   ·   '), 9.5, 40);
+  el.querySelectorAll('.sc-read, .sc-note').forEach(x => say(x.textContent, x.classList.contains('sc-read') ? 9 : 8, x.classList.contains('sc-read') ? 40 : 100));
+  return y;
 }
 // Reporte de la pestaña Proyección: recorre lo que se ve en pantalla (tarjetas, tablas y notas) en el mismo orden
 async function pdfProj() {
@@ -3254,18 +3299,7 @@ async function pdfProj() {
         doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(pdfSafe(c.querySelector('.who').textContent), x + tw / 2, y + 43, { align: 'center' }); });
       y += 66; return;
     }
-    if (el.classList.contains('spray-blk')) {
-      const svs = [...el.querySelectorAll('svg.sc-svg')], a = imgs.get(svs[0]), b = imgs.get(svs[1]);
-      if (!a) { if (el.textContent.trim()) para(el.textContent, 8.5); return; }
-      const w1 = 280, h1 = w1 * a.h / a.w, w2 = 220, h2 = b ? w2 * b.h / b.w : 0;
-      y = pdfSection(doc, 'Mapa de batazos', room(y, Math.max(h1, h2) + 110)) + 6;
-      doc.addImage(a.src, 'JPEG', 32, y, w1, h1, undefined, 'FAST'); if (b) doc.addImage(b.src, 'JPEG', W - 32 - w2, y, w2, h2, undefined, 'FAST');
-      y += Math.max(h1, h2) + 8;
-      para('Resultados: ' + [...el.querySelectorAll('.sc-legend button')].map(x => x.textContent).join('   ·   '), 8.5, 60);
-      para('Distribución: ' + [...el.querySelectorAll('.sc-bars .bar')].map(x => x.querySelector('span').textContent + ' ' + x.querySelector('b').textContent).join('   ·   '), 9.5, 40);
-      el.querySelectorAll('.sc-read, .sc-note').forEach(x => para(x.textContent, x.classList.contains('sc-read') ? 9 : 8, x.classList.contains('sc-read') ? 40 : 100));
-      return;
-    }
+    if (el.classList.contains('spray-blk')) { y = pdfSprayBlock(doc, el, y, imgs); return; }
     const h3 = el.querySelector('h3'); if (h3) y = pdfSection(doc, h3.textContent, room(y, 60));
     const rel = el.querySelector('.pj-rel');
     if (rel) {
@@ -3289,10 +3323,11 @@ function pdfSvg(svg) {
     c.querySelectorAll('title, .hit').forEach(t => t.remove());
     c.querySelectorAll('*').forEach(el => {
       ['fill', 'stroke'].forEach(a => { const v = el.getAttribute(a); if (v && map[v]) el.setAttribute(a, map[v]); });
-      if (el.tagName === 'text') { el.setAttribute('fill', el.classList.contains('lab') ? '#1e1f22' : '#6b6466'); el.setAttribute('font-family', 'Helvetica, Arial, sans-serif'); }
+      if (el.tagName === 'text') el.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+      if (el.tagName === 'text' && el.getAttribute('fill') !== 'var(--accent-ink)') { el.setAttribute('fill', el.classList.contains('lab') ? '#1e1f22' : '#6b6466'); el.setAttribute('font-family', 'Helvetica, Arial, sans-serif'); }
     });
     c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.setAttribute('width', vb.width * 2.5); c.setAttribute('height', vb.height * 2.5); c.removeAttribute('class');
-    const PAL = { accent: `rgb(${RED.join(',')})`, rhr: '#c8161e', r1b: '#2e9e5b', r2b: '#2f6fb0', r3b: '#b57a00', rout: '#8d8a8c', grass: '#dfeedd', 'grass-2': '#cfe4cc', dirt: '#ead9c4', chalk: '#ffffff', fence: '#7c8a7a', ink: '#1e1f22', paper: '#ffffff', muted: '#6b6466', line: '#e3d9da', 'ind-rival': rival };
+    const PAL = { accent: `rgb(${RED.join(',')})`, rhr: '#c8161e', r1b: '#2e9e5b', r2b: '#2f6fb0', r3b: '#b57a00', rout: '#8d8a8c', grass: '#dfeedd', 'grass-2': '#cfe4cc', dirt: '#ead9c4', chalk: '#ffffff', fence: '#7c8a7a', ink: '#1e1f22', paper: '#ffffff', muted: '#6b6466', line: '#e3d9da', chip: '#f3e6e7', 'line-strong': '#cfa9ac', 'accent-ink': '#ffffff', hover: '#fbf0f0', 'ind-rival': rival };
     const img = new Image();
     img.onload = () => { const cv = document.createElement('canvas'); cv.width = vb.width * 2.5; cv.height = vb.height * 2.5; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height); res({ src: cv.toDataURL('image/jpeg', .9), w: vb.width, h: vb.height }); };
     img.onerror = () => res(null);
@@ -3302,7 +3337,7 @@ function pdfSvg(svg) {
 async function pdfInd() {
   renderInd();
   const body = $('#indBody'); if (!body.querySelector('.ind-sec')) { toast('Todavía no hay juegos para el reporte.'); return; }
-  const charts = new Map(); for (const sv of body.querySelectorAll('svg.ind-svg')) charts.set(sv, await pdfSvg(sv));
+  const charts = new Map(); for (const sv of body.querySelectorAll('svg.ind-svg, .spray svg')) charts.set(sv, await pdfSvg(sv));
   const opt = id => $(id).selectedOptions[0].textContent;
   const doc = pdfDoc('portrait', 'Indicadores sabermétricos', `${opt('#iRange')} · ${opt('#iMode')}`); if (!doc) return;
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64; let y = 90;
@@ -3317,7 +3352,7 @@ async function pdfInd() {
   y += 70;
   body.querySelectorAll('.ind-sec').forEach(sec => {
     const k = sec.dataset.k, rel = [...sec.querySelectorAll('.ind-hd .rel')].map(r => r.textContent).join(' ');
-    const sv0 = sec.querySelector('svg.ind-svg'), im0 = sv0 && charts.get(sv0);
+    const sv0 = sec.querySelector('svg.ind-svg') || sec.querySelector('.spray svg'), im0 = sv0 && charts.get(sv0);
     y = pdfSection(doc, sec.querySelector('.ind-hd h3').textContent + (rel ? '  ·  ' + rel : ''), (room(im0 ? Math.min(CW, 470) * im0.h / im0.w + 130 : 70), y)) + 4;
     if (IND_HELP[k]) para('Cómo se mide: ' + IND_HELP[k].como, 7.5, 120);
     sec.querySelectorAll('.ind-big > div').forEach(d => para(d.querySelector('strong').textContent + '  ' + d.querySelector('span').textContent, 9.5, 40, true));
@@ -3331,6 +3366,11 @@ async function pdfInd() {
         doc.setFillColor(...ROSE); doc.roundedRect(90, y, bw, 8, 3, 3, 'F'); if (pctW > 0) { doc.setFillColor(...RED); doc.roundedRect(90, y, bw * pctW / 100, 8, 3, 3, 'F'); }
         doc.setFont('helvetica', 'bold'); doc.setTextColor(30); doc.text(pdfSafe(val), W - 32, y + 7, { align: 'right' }); y += 18; });
       y += 6; }
+    // mapa por zonas del equipo: imagen del campo y sus porcentajes por dirección y tipo
+    const spr = sec.querySelector('.spray');
+    if (spr) { const sv = spr.querySelector('svg'), im = charts.get(sv); if (im) { const w = 260, h = w * im.h / im.w; room(h + 10); doc.addImage(im.src, 'JPEG', 32, y, w, h, undefined, 'FAST');
+        let yy = y + 6; const xs = 32 + w + 20; spr.querySelectorAll(':scope > div:last-child > *').forEach(n => { if (n.tagName === 'H3') { doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...RED); doc.text(pdfSafe(n.textContent).toUpperCase(), xs, yy + 8); yy += 16; } else if (n.dataset.tip) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60); doc.text(pdfSafe(n.querySelector('.sub').textContent), xs, yy + 8); doc.setFont('helvetica', 'bold'); doc.text(pdfSafe(n.querySelector('b').textContent), W - 32, yy + 8, { align: 'right' }); const bw = W - 32 - xs - 150, pc = parseFloat(n.querySelector('i').style.width) || 0; doc.setFillColor(...ROSE); doc.roundedRect(xs + 105, yy + 2, bw, 7, 3, 3, 'F'); if (pc) { doc.setFillColor(...RED); doc.roundedRect(xs + 105, yy + 2, bw * pc / 100, 7, 3, 3, 'F'); } yy += 15; } });
+        y = Math.max(y + h, yy) + 10; } }
     sec.querySelectorAll('svg.ind-svg').forEach(sv => { const im = charts.get(sv); if (!im) return; const w = Math.min(CW, 470), h = w * im.h / im.w;
       const leg = [...sec.querySelectorAll('.ind-legend span')]; room(h + (leg.length ? 18 : 0) + 8);
       if (leg.length) { let lx = 32; leg.forEach((l, i) => { const col = i === 0 ? RED : (charts.get(sv) && getComputedStyle(body).getPropertyValue('--ind-rival').trim() === '#c26a00' ? [194, 106, 0] : [47, 111, 176]); doc.setFillColor(...col); doc.roundedRect(lx, y, 9, 9, 2, 2, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(80); const t = pdfSafe(l.textContent); doc.text(t, lx + 13, y + 8); lx += doc.getTextWidth(t) + 32; }); y += 16; }
