@@ -2267,7 +2267,11 @@ function mvpDrawPortada(ctx, d) { // A · Portada de revista
   if (d.img) { const k = Math.max(BD_W / d.img.width, BD_H / d.img.height) * 1.12; ctx.filter = 'blur(34px) brightness(.5) saturate(1.2)'; ctx.drawImage(d.img, (BD_W - d.img.width * k) / 2, (BD_H - d.img.height * k) / 2, d.img.width * k, d.img.height * k); ctx.filter = 'none'; }
   const [pw, ph] = bdFitBox(d, BD_W, 860); bdPhoto(ctx, d, (BD_W - pw) / 2, 150 + (860 - ph) / 2, pw, ph, 'rgba(0,0,0,0)');
   const g = ctx.createLinearGradient(0, 560, 0, 1060); g.addColorStop(0, rgb(d.red2, 0)); g.addColorStop(.6, rgb(d.red2, .92)); g.addColorStop(1, rgb(d.red2)); ctx.fillStyle = g; ctx.fillRect(0, 560, BD_W, BD_H - 560);
-  ctx.textAlign = 'left'; ctx.font = '700 330px "Barlow Condensed", sans-serif'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.lineJoin = 'round'; ctx.strokeText('MVP', 50, 300);
+  // "MVP" siempre legible: velo oscuro arriba de la foto y letras rellenas con borde blanco y sombra
+  const veil = ctx.createLinearGradient(0, 0, 0, 440); veil.addColorStop(0, 'rgba(0,0,0,.55)'); veil.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = veil; ctx.fillRect(0, 0, BD_W, 440);
+  ctx.textAlign = 'left'; ctx.font = '700 330px "Barlow Condensed", sans-serif'; ctx.lineJoin = 'round';
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12; ctx.strokeStyle = '#fff'; ctx.lineWidth = 22; ctx.strokeText('MVP', 50, 300); ctx.restore();
+  ctx.fillStyle = rgb(d.red); ctx.fillText('MVP', 50, 300);
   if (d.logo) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 16; const lw = 140 * d.logo.width / d.logo.height; ctx.drawImage(d.logo, BD_W - 55 - lw, 60, lw, 140); ctx.restore(); }
   ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 5); const tg = d.co ? 'MVP COMPARTIDO' : 'JUGADOR DEL JUEGO', tw = ctx.measureText(tg).width + 40;
   ctx.fillStyle = rgb(d.red); bdRound(ctx, BD_W - 55 - tw, 222, tw, 52, 8); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.fillText(tg, BD_W - 75, 258); bdSpacing(ctx, 0);
