@@ -384,6 +384,11 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .bd-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:var(--accent-soft);border-radius:6px;padding:10px 12px;font-size:13.5px}
 .bd-bar b{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
 .bd-bar span{display:inline-flex;gap:8px;align-items:center}
+.mvp-box{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--accent-soft)}
+.mvp-main{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mvp-main>div{flex:1}
+.chip.mvp{background:#e3a72f;color:#2a1b00}
+.game .mvpl{display:block;font-weight:400;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:6px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .games{display:flex;flex-direction:column}
 .game{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
@@ -1540,7 +1545,7 @@ function renderGames() {
     const s = gameScore(g);
     const conf = pendingDelete === g.id ? `<div class="confirm" style="grid-column:1/-1"><span>¿Eliminar el juego vs ${esc(g.opp)} del ${esc(g.date)}? Sus estadísticas dejarán de contar.</span><button class="btn sm danger" data-act="del-yes" data-id="${g.id}">Eliminar</button><button class="btn sm" data-act="del-no">Cancelar</button></div>` : '';
     return `<div class="game"><span class="date">${g.no ? '#' + esc(g.no) + ' · ' : ''}${esc(g.date)}</span>
-      <span class="opp">${g.ha === 'L' ? 'vs' : '@'} ${esc(g.opp)}</span>
+      <span class="opp">${g.ha === 'L' ? 'vs' : '@'} ${esc(g.opp)}${(m => m ? `<span class="mvpl"><span class="chip mvp">MVP</span> ${esc(pName(m.pid))} · ${fmtPts(m.pts)}</span>` : '')(mvpOf(g))}</span>
       <span class="score"><span class="chip ${s.res === 'G' ? 'w' : s.res === 'P' ? 'l' : ''}">${s.res}</span> ${s.us}–${s.them}</span>
       <span class="acts"><button class="btn sm" data-act="view" data-id="${g.id}">Resumen</button><button class="btn sm edit-only" data-act="edit" data-id="${g.id}">Abrir box score</button><button class="btn sm danger edit-only" data-act="del" data-id="${g.id}">Eliminar</button></span>${conf}</div>`;
   }).join('');
@@ -1604,12 +1609,14 @@ function openBox(id) {
   const notes = note('d', '2B') + note('t', '3B') + note('hr', 'HR') + (tb.length ? `<div><b>TB:</b> ${tb.join(', ')}.</div>` : '') + note('rbi', 'RBI') + note('sf', 'SF') + note('sh', 'SAC') + note('hbp', 'HBP') + note('sb', 'SB') + note('cs', 'CS') + note('e', 'E') + note('dp', 'DP') + (wps.length ? `<div><b>WP:</b> ${wps.join(', ')}.</div>` : '');
   $('#boxDlgBody').innerHTML = `<div class="boxhead"><div><div class="sub">${g.no ? 'Box score #' + esc(g.no) + ' · ' : ''}${esc(g.date)}${g.liga ? ' · ' + esc(g.liga) : ''}${g.notes ? ' · ' + esc(g.notes) : ''}</div><h2>${esc(S.team)} ${s.us}, ${esc(g.opp)} ${s.them}</h2></div><div class="row" style="gap:6px"><button class="btn sm primary" id="pdfBox">Guardar PDF</button><button class="btn sm" id="closeBox">Cerrar</button></div></div>
     <div class="scroll"><table class="linescore">${ls}</table></div>
+    ${mvpBoxHTML(g)}
     <div class="scroll"><table>${bt}</table></div>
     ${ot ? `<div class="scroll"><table>${ot}</table></div>` : ''}
     ${pt ? `<div class="scroll"><table>${pt}</table></div>` : ''}
     <div class="notes">${notes || '<span class="sub">Sin notas de juego.</span>'}</div>
     <p class="sub" style="margin:0">AVG, OPS, ERA y récord son de temporada hasta este juego, como en los box scores de MLB.</p>`;
   $('#closeBox').onclick = () => $('#boxDlg').close(); $('#pdfBox').onclick = () => pdfBox(id);
+  if ($('#mvpCard')) $('#mvpCard').onclick = () => openMvp(id);
   $('#boxDlg').showModal();
 }
 $('#boxDlg').addEventListener('click', e => { if (e.target === $('#boxDlg')) $('#boxDlg').close(); });
@@ -1993,13 +2000,15 @@ function openPlayer(pid) {
   const tile = (k, v) => `<div class="ptile"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   let tiles = '';
   if (b) tiles += tile('AVG', fmtRate(b.avg)) + tile('OBP', fmtRate(b.obp)) + tile('SLG', fmtRate(b.slg)) + tile('OPS', fmtRate(b.ops)) + tile('HR', b.hr) + tile('RBI', b.rbi) + tile('SB', b.sb);
+  const mvps = d.log.filter(x => { const m = mvpOf(x.g); return m && m.pid === pid; }).map(x => x.g.id);
+  if (mvps.length) tiles += tile('MVP', mvps.length);
   if (pt) tiles += tile('G-P', pt.w + '-' + pt.l) + tile('ERA', fmtCell(pt, ['era', '', 'r2'])) + tile('IP', outsToIp(pt.outs)) + tile('K', pt.so) + tile('WHIP', fmtCell(pt, ['whip', '', 'r2']));
   const batT = b ? `<table id="pfBat"><thead><tr>${bCols.slice(1).map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${bCols.slice(1).map(c => `<td>${fmtCell(b, c)}</td>`).join('')}</tr></tbody></table>` : '';
   const pitT = pt ? `<table id="pfPit"><thead><tr>${pCols.slice(1).map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody><tr>${pCols.slice(1).map(c => `<td>${fmtCell(pt, c)}</td>`).join('')}</tr></tbody></table>` : '';
   const fldT = d.byPos.length ? `<table id="pfFld"><thead><tr><th class="l">Posición</th><th>G</th><th>PO</th><th>A</th><th>E</th><th>DP</th><th>TC</th><th>FPCT</th></tr></thead><tbody>${d.byPos.map(x => `<tr><td class="l">${esc(x.pos)}</td><td>${x.g}</td><td>${x.po}</td><td>${x.a}</td><td>${x.e}</td><td>${x.dp}</td><td>${x.tc}</td><td>${fmtRate(x.fpct)}</td></tr>`).join('')}</tbody>${d.f ? `<tfoot><tr class="tot"><td class="l">Total</td><td>${d.f.g}</td><td>${d.f.po}</td><td>${d.f.a}</td><td>${d.f.e}</td><td>${d.f.dp}</td><td>${d.f.tc}</td><td>${fmtRate(d.f.fpct)}</td></tr></tfoot>` : ''}</table>` : '';
   const logT = d.log.length ? `<table id="pfLog"><thead><tr><th class="l">Fecha</th><th class="l">Rival</th><th>Res.</th><th>Pos</th><th>AB</th><th>R</th><th>H</th><th>2B</th><th>3B</th><th>HR</th><th>RBI</th><th>BB</th><th>SO</th><th>SB</th><th>AVG</th>${pt ? '<th>IP</th><th>H</th><th>C</th><th>CL</th><th>K</th><th>Dec</th>' : ''}</tr></thead><tbody>${d.log.map(x => {
     const l = x.l || {}, p = x.p;
-    return `<tr><td class="l">${esc(x.g.date)}</td><td class="l">${x.g.ha === 'L' ? 'vs' : '@'} ${esc(x.g.opp)}</td><td>${x.res} ${x.score}</td><td>${esc(l.pos || 'P')}</td>${['ab', 'r', 'h', 'd', 't', 'hr', 'rbi', 'bb', 'so', 'sb'].map(k => `<td>${x.pa ? num(l[k]) : '-'}</td>`).join('')}<td>${x.pa ? fmtRate(x.avg) : '-'}</td>${pt ? (p ? `<td>${outsToIp(num(p.outs))}</td><td>${p.h}</td><td>${p.r}</td><td>${p.er}</td><td>${p.so}</td><td>${p.dec || '-'}</td>` : '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>') : ''}</tr>`;
+    return `<tr><td class="l">${esc(x.g.date)}${mvps.includes(x.g.id) ? ' <span class="chip mvp">MVP</span>' : ''}</td><td class="l">${x.g.ha === 'L' ? 'vs' : '@'} ${esc(x.g.opp)}</td><td>${x.res} ${x.score}</td><td>${esc(l.pos || 'P')}</td>${['ab', 'r', 'h', 'd', 't', 'hr', 'rbi', 'bb', 'so', 'sb'].map(k => `<td>${x.pa ? num(l[k]) : '-'}</td>`).join('')}<td>${x.pa ? fmtRate(x.avg) : '-'}</td>${pt ? (p ? `<td>${outsToIp(num(p.outs))}</td><td>${p.h}</td><td>${p.r}</td><td>${p.er}</td><td>${p.so}</td><td>${p.dec || '-'}</td>` : '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>') : ''}</tr>`;
   }).join('')}</tbody></table>` : '';
   const rk = d.b && d.rank.n > 1 ? `<div class="sub">En el equipo: ${d.rank.ops}° en OPS · ${d.rank.hr}° en HR · ${d.rank.rbi}° en RBI (de ${d.rank.n} bateadores)</div>` : '';
   $('#playerBody').innerHTML = `
@@ -2144,35 +2153,43 @@ function bdDrawRedes(ctx, d) { // B · Tarjeta de colección
 const BD_DRAW = { jugador: bdDrawJugador, papas: bdDrawPapas, redes: bdDrawRedes };
 
 let bd = null;
+// Ventana de tarjetas (cumpleaños, MVP): cada diseño se dibuja en su canvas y se elige uno, varios o todos
+async function openCards(cfg) {
+  bd = { ...cfg, sel: Object.fromEntries(cfg.designs.map(x => [x.k, true])) };
+  const fld = f => `<label class="f">${f.lab}<input id="${f.id}" type="${f.type || 'text'}" value="${esc(bd.d[f.key] ?? '')}"></label>`;
+  $('#bdayBody').innerHTML = `<div class="row spread"><h2 style="margin:0">${esc(cfg.title)}</h2><button class="btn sm" id="bdClose">Cerrar</button></div>
+    ${cfg.hint ? `<p class="hint">${esc(cfg.hint)}</p>` : ''}
+    <div class="bd-fields">${cfg.fields.map(fld).join('')}</div>
+    <p class="hint">Marca las tarjetas que quieres mandar: una, dos o las tres.</p>
+    <div class="bd-grid">${cfg.designs.map(x => `<div class="bd-opt on" data-k="${x.k}"><label class="inline-check"><input type="checkbox" data-sel="${x.k}" checked> <b>${x.use}</b><span class="sub">· ${x.name}</span></label><canvas width="${BD_W}" height="${BD_H}" data-c="${x.k}" aria-label="Vista previa: ${x.name}"></canvas>${x.msg ? `<label class="f">Mensaje<textarea data-msg="${x.k}">${esc(bd.d.msgs[x.k])}</textarea></label>` : ''}</div>`).join('')}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="bdPng">Descargar imágenes</button><button class="btn" id="bdPdf">Descargar PDF</button><button class="btn primary" id="bdShare">Compartir por WhatsApp</button></div>`;
+  if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
+  const dv = $('.hero .devil');
+  [bd.d.img, bd.d.logo] = await Promise.all([loadImg(cfg.photo), loadImg(dv && !dv.hidden ? dv.src : '')]);
+  try { await Promise.all(['700 40px "Barlow Condensed"', '600 40px "Barlow Condensed"', '400 40px "Yellowtail"', '400 20px "IBM Plex Sans"', '600 20px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch {}
+  bdRender();
+}
 async function openBday(pid) {
   const p = S.roster[pid]; if (!p) return;
   const words = String(p.name).replace(/\(.*?\)/g, '').trim().split(/\s+/), info = bdayInfo(p.birth);
-  const dv = $('.hero .devil'), dflt = { first: words[0] || p.name, team: S.team || 'Mi equipo', num: p.num != null && p.num !== '' ? String(p.num) : '' };
-  bd = { pid, sel: { jugador: true, papas: true, redes: true }, d: { ...dflt, full: String(p.name).replace(/\(.*?\)/g, '').trim(), family: words.slice(1, 2).join(' ') || words[0] || '', age: info ? info.age : '', date: info ? info.date : today(), pos: p.pos || '', sign: `Coach y equipo ${dflt.team}`, msgs: Object.fromEntries(BD_DESIGNS.map(x => [x.k, x.msg(dflt)])) } };
-  const fld = (id, lab, v, type = 'text') => `<label class="f">${lab}<input id="${id}" type="${type}" value="${esc(v)}"></label>`;
-  $('#bdayBody').innerHTML = `<div class="row spread"><h2 style="margin:0">Tarjeta de cumpleaños · ${esc(p.name)}</h2><button class="btn sm" id="bdClose">Cerrar</button></div>
-    ${info ? '' : '<p class="hint">Este jugador no tiene fecha de nacimiento en el Roster. Escribe la edad y la fecha aquí, o agrégala en el Roster para que aparezca en el aviso de cumpleaños.</p>'}
-    <div class="bd-fields">${fld('bdFirst', 'Nombre', bd.d.first)}${fld('bdFull', 'Nombre completo', bd.d.full)}${fld('bdAge', 'Cumple (años)', bd.d.age, 'number')}${fld('bdDate', 'Fecha', bd.d.date, 'date')}${fld('bdFamily', 'Familia', bd.d.family)}${fld('bdSign', 'Firma', bd.d.sign)}</div>
-    <p class="hint">Marca las tarjetas que quieres mandar: una, dos o las tres. Cada una tiene su propio mensaje.</p>
-    <div class="bd-grid">${BD_DESIGNS.map(x => `<div class="bd-opt on" data-k="${x.k}"><label class="inline-check"><input type="checkbox" data-sel="${x.k}" checked> <b>${x.use}</b><span class="sub">· ${x.name}</span></label><canvas width="${BD_W}" height="${BD_H}" data-c="${x.k}" aria-label="Vista previa: ${x.name}"></canvas><label class="f">Mensaje<textarea data-msg="${x.k}">${esc(bd.d.msgs[x.k])}</textarea></label></div>`).join('')}</div>
-    <div class="row" style="justify-content:flex-end"><button class="btn" id="bdPng">Descargar imágenes</button><button class="btn" id="bdPdf">Descargar PDF</button><button class="btn primary" id="bdShare">Compartir por WhatsApp</button></div>`;
-  if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
-  [bd.d.img, bd.d.logo] = await Promise.all([loadImg(p.photo), loadImg(dv && !dv.hidden ? dv.src : '')]);
-  try { await Promise.all(['700 40px "Barlow Condensed"', '600 40px "Barlow Condensed"', '400 40px "Yellowtail"', '400 20px "IBM Plex Sans"', '600 20px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch {}
-  bdRender();
+  const dflt = { first: words[0] || p.name, team: S.team || 'Mi equipo', num: p.num != null && p.num !== '' ? String(p.num) : '' };
+  const d = { ...dflt, full: String(p.name).replace(/\(.*?\)/g, '').trim(), family: words.slice(1, 2).join(' ') || words[0] || '', age: info ? info.age : '', date: info ? info.date : today(), pos: p.pos || '', sign: `Coach y equipo ${dflt.team}`, msgs: Object.fromEntries(BD_DESIGNS.map(x => [x.k, x.msg(dflt)])) };
+  await openCards({ title: `Tarjeta de cumpleaños · ${p.name}`, d, designs: BD_DESIGNS, draw: BD_DRAW, photo: p.photo, file: () => `cumple_${String(bd.d.full).replace(/\s+/g, '_')}`, share: () => `Feliz cumpleaños, ${bd.d.first}`,
+    hint: info ? '' : 'Este jugador no tiene fecha de nacimiento en el Roster. Escribe la edad y la fecha aquí, o agrégala en el Roster para que aparezca en el aviso de cumpleaños.',
+    fields: [{ id: 'bdFirst', key: 'first', lab: 'Nombre' }, { id: 'bdFull', key: 'full', lab: 'Nombre completo' }, { id: 'bdAge', key: 'age', lab: 'Cumple (años)', type: 'number' }, { id: 'bdDate', key: 'date', lab: 'Fecha', type: 'date' }, { id: 'bdFamily', key: 'family', lab: 'Familia' }, { id: 'bdSign', key: 'sign', lab: 'Firma' }] });
 }
 function bdRender() {
   if (!bd) return; const red = RED, d = bd.d;
   d.red = red; d.red2 = red.map(v => Math.round(v * .62)); d.stripe = STRIPE; d.date = d.date || today();
-  BD_DESIGNS.forEach(x => { const cv = $(`#bdayBody canvas[data-c="${x.k}"]`); if (!cv) return; const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, BD_W, BD_H); BD_DRAW[x.k](ctx, { ...d, msg: d.msgs[x.k] }); });
+  bd.designs.forEach(x => { const cv = $(`#bdayBody canvas[data-c="${x.k}"]`); if (!cv) return; const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, BD_W, BD_H); bd.draw[x.k](ctx, { ...d, msg: (d.msgs || {})[x.k] }); });
 }
-const bdChosen = () => BD_DESIGNS.filter(x => bd.sel[x.k]);
-const bdFile = x => `cumple_${String(bd.d.full).replace(/\s+/g, '_')}_${x.k}`;
+const bdChosen = () => bd.designs.filter(x => bd.sel[x.k]);
+const bdFile = x => `${bd.file()}_${x.k}`;
 const bdBlob = x => new Promise(r => $(`#bdayBody canvas[data-c="${x.k}"]`).toBlob(r, 'image/png'));
 async function bdDownloadPngs(list) { for (const x of list) { const b = await bdBlob(x); await saveFile(bdFile(x) + '.png', await b.arrayBuffer(), 'image/png'); } }
 $('#bdayBody').addEventListener('input', e => {
-  if (!bd) return; const t = e.target, map = { bdFirst: 'first', bdFull: 'full', bdAge: 'age', bdDate: 'date', bdFamily: 'family', bdSign: 'sign' };
-  if (map[t.id]) bd.d[map[t.id]] = t.value; else if (t.dataset.msg) bd.d.msgs[t.dataset.msg] = t.value; else return;
+  if (!bd) return; const t = e.target, f = bd.fields.find(f => f.id === t.id);
+  if (f) bd.d[f.key] = t.value; else if (t.dataset.msg) bd.d.msgs[t.dataset.msg] = t.value; else return;
   cancelAnimationFrame(bdRender._r); bdRender._r = requestAnimationFrame(bdRender);
 });
 $('#bdayBody').addEventListener('change', e => { const k = e.target.dataset.sel; if (!k || !bd) return; bd.sel[k] = e.target.checked; e.target.closest('.bd-opt').classList.toggle('on', e.target.checked); });
@@ -2187,15 +2204,152 @@ $('#bdayBody').addEventListener('click', async e => {
     if (!window.jspdf) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return; }
     const doc = new window.jspdf.jsPDF({ unit: 'pt', format: [540, 675] });
     list.forEach((x, i) => { if (i) doc.addPage([540, 675]); doc.addImage($(`#bdayBody canvas[data-c="${x.k}"]`).toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 540, 675); });
-    await saveFile(`cumple_${String(bd.d.full).replace(/\s+/g, '_')}.pdf`, doc.output('arraybuffer'), 'application/pdf'); return;
+    await saveFile(bd.file() + '.pdf', doc.output('arraybuffer'), 'application/pdf'); return;
   }
   // WhatsApp: en el celular abre el menú de compartir con las imágenes; si no se puede, las descarga para adjuntarlas
   const files = await Promise.all(list.map(async x => new File([await bdBlob(x)], bdFile(x) + '.png', { type: 'image/png' })));
   if (navigator.canShare && navigator.canShare({ files })) {
-    try { await navigator.share({ files, title: `Feliz cumpleaños, ${bd.d.first}` }); } catch (err) { if (err && err.name !== 'AbortError') toast('No se pudo compartir. Usa "Descargar imágenes".'); }
+    try { await navigator.share({ files, title: bd.share() }); } catch (err) { if (err && err.name !== 'AbortError') toast('No se pudo compartir. Usa "Descargar imágenes".'); }
   } else { await bdDownloadPngs(list); toast('Imágenes descargadas. Adjúntalas en el chat de WhatsApp.'); }
 });
 $('#bdayDlg').addEventListener('click', e => { if (e.target === $('#bdayDlg')) $('#bdayDlg').close(); });
+
+/* ---------- MVP del juego ---------- */
+// Puntos: bateo (bases del hit, C, CI, BB, HBP, BR, −AR, −0.5 K), pitcheo (0.5 por out, K, G/S +2, −0.5 H/BB/HBP, −1 sucia, −2 limpia), defensa (DP, −E)
+function mvpScores(g) {
+  const m = {}, P = pid => m[pid] ||= { pid, bat: 0, pit: 0, fld: 0, b: null, p: null };
+  (g.lines || []).forEach(l => {
+    if (!l.pid) return; const x = P(l.pid), s1 = num(l.h) - num(l.d) - num(l.t) - num(l.hr);
+    x.b ||= zero([...BATK, ...FLDK]); [...BATK, ...FLDK].forEach(k => x.b[k] += num(l[k]));
+    x.bat += s1 + 2 * num(l.d) + 3 * num(l.t) + 4 * num(l.hr) + num(l.r) + num(l.rbi) + num(l.bb) + num(l.hbp) + num(l.sb) - num(l.cs) - .5 * num(l.so);
+    x.fld += num(l.dp) - num(l.e);
+  });
+  (g.pit || []).forEach(p => {
+    if (!p.pid) return; const x = P(p.pid); x.p = p;
+    x.pit += .5 * num(p.outs) + num(p.so) + (p.dec === 'G' || p.dec === 'S' ? 2 : 0) - .5 * (num(p.h) + num(p.bb) + num(p.hbp)) - (num(p.r) - num(p.er)) - 2 * num(p.er);
+  });
+  const st = (x, k) => x.b ? x.b[k] : 0;
+  return Object.values(m).map(x => ({ ...x, pts: x.bat + x.pit + x.fld })).sort((a, b) => b.pts - a.pts || st(b, 'rbi') - st(a, 'rbi') || st(b, 'h') - st(a, 'h'));
+}
+const mvpOf = g => { const r = mvpScores(g); return r.length && r[0].pts > 0 ? r[0] : null; };
+const fmtPts = v => (Number.isInteger(v) ? v : v.toFixed(1)) + ' pts';
+// Las 4 cifras que mejor cuentan su juego: línea de pitcheo si ganó por el pitcheo, si no su línea de bateo
+function mvpTiles(x) {
+  if (x.p && x.pit >= x.bat) { const p = x.p; return [[outsToIp(num(p.outs)), 'IP'], [num(p.so), 'K'], [num(p.h), 'H'], [num(p.er), 'CL']]; }
+  const b = x.b || zero(BATK), out = [[`${b.h}-${b.ab}`, 'H-AB']];
+  [['hr', 'HR'], ['rbi', 'CI'], ['r', 'C'], ['d', '2B'], ['t', '3B'], ['bb', 'BB'], ['sb', 'BR']].forEach(([k, lab]) => { if (out.length < 4 && b[k] > 0) out.push([b[k], lab]); });
+  [['rbi', 'CI'], ['r', 'C'], ['hr', 'HR']].forEach(([k, lab]) => { if (out.length < 4 && !out.some(o => o[1] === lab)) out.push([b[k], lab]); });
+  return out;
+}
+const mvpText = x => mvpTiles(x).map(([v, k]) => k === 'H-AB' ? String(v).replace('-', ' de ') : `${v} ${k}`).join(', ');
+function mvpBoxHTML(g) {
+  const r = mvpScores(g).filter(x => x.pts > 0).slice(0, 3); if (!r.length) return '';
+  const x = r[0], pv = v => v ? (Number.isInteger(v) ? v : v.toFixed(1)) : '—';
+  return `<div class="mvp-box"><div class="mvp-main">${avatarHTML(x.pid, 52)}<div style="min-width:0"><span class="chip mvp">MVP</span> <b>${plink(x.pid, pName(x.pid))}</b> <span class="sub">${fmtPts(x.pts)}</span><div class="sub">${esc(mvpText(x))}</div></div><button class="btn sm primary" id="mvpCard">Tarjeta MVP</button></div>
+    <div class="scroll"><table><thead><tr><th class="l">Mejores del juego</th><th>Bateo</th><th>Pitcheo</th><th>Defensa</th><th>Total</th></tr></thead><tbody>${r.map((y, i) => `<tr><td class="l name">${i + 1}. ${plink(y.pid, pName(y.pid))}</td><td>${pv(y.bat)}</td><td>${pv(y.pit)}</td><td>${pv(y.fld)}</td><td><b>${pv(y.pts)}</b></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+const MVP_DESIGNS = [
+  { k: 'portada', name: 'Portada', use: 'Para redes sociales' },
+  { k: 'marcador', name: 'Marcador', use: 'Para el chat del equipo' },
+  { k: 'medalla', name: 'Medalla', use: 'Para los papás', msg: d => `Por su actuación en ${d.res === 'G' ? 'la victoria' : d.res === 'P' ? 'el juego' : 'el empate'} ${d.us}-${d.them} contra ${d.opp}.` },
+];
+const shortDate = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]} ${MESES[+m[2] - 1].slice(0, 3)} ${m[1]}` : ''; };
+function mvpTile(ctx, x, y, w, h, v, k, o) {
+  ctx.fillStyle = o.fill; bdRound(ctx, x, y, w, h, 12); ctx.fill(); ctx.strokeStyle = o.stroke; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = o.ink; bdFit(ctx, String(v), '700 #px "Barlow Condensed", sans-serif', o.size, w - 30);
+  if (o.side) { ctx.textAlign = 'left'; ctx.fillText(String(v), x + 18, y + h * .74); ctx.textAlign = 'right'; ctx.fillStyle = o.lab; ctx.font = '600 24px "IBM Plex Mono", monospace'; ctx.fillText(k, x + w - 16, y + h * .74); return; }
+  ctx.textAlign = 'center'; ctx.fillText(String(v), x + w / 2, y + h * .62); ctx.fillStyle = o.lab; ctx.font = '600 24px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3); ctx.fillText(k, x + w / 2, y + h * .88); bdSpacing(ctx, 0);
+}
+function mvpDrawPortada(ctx, d) { // A · Portada de revista
+  ctx.fillStyle = rgb(d.red2); ctx.fillRect(0, 0, BD_W, BD_H);
+  if (d.img) { const k = Math.max(BD_W / d.img.width, BD_H / d.img.height) * 1.12; ctx.filter = 'blur(34px) brightness(.5) saturate(1.2)'; ctx.drawImage(d.img, (BD_W - d.img.width * k) / 2, (BD_H - d.img.height * k) / 2, d.img.width * k, d.img.height * k); ctx.filter = 'none'; }
+  const [pw, ph] = bdFitBox(d, BD_W, 860); bdPhoto(ctx, d, (BD_W - pw) / 2, 150 + (860 - ph) / 2, pw, ph, 'rgba(0,0,0,0)');
+  const g = ctx.createLinearGradient(0, 560, 0, 1060); g.addColorStop(0, rgb(d.red2, 0)); g.addColorStop(.6, rgb(d.red2, .92)); g.addColorStop(1, rgb(d.red2)); ctx.fillStyle = g; ctx.fillRect(0, 560, BD_W, BD_H - 560);
+  ctx.textAlign = 'left'; ctx.font = '700 330px "Barlow Condensed", sans-serif'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.lineJoin = 'round'; ctx.strokeText('MVP', 50, 300);
+  if (d.logo) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 16; const lw = 140 * d.logo.width / d.logo.height; ctx.drawImage(d.logo, BD_W - 55 - lw, 60, lw, 140); ctx.restore(); }
+  ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 5); const tg = 'JUGADOR DEL JUEGO', tw = ctx.measureText(tg).width + 40;
+  ctx.fillStyle = rgb(d.red); bdRound(ctx, BD_W - 55 - tw, 222, tw, 52, 8); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.fillText(tg, BD_W - 75, 258); bdSpacing(ctx, 0);
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = '600 46px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 4); ctx.fillText([d.num !== '' ? '#' + d.num : '', d.pos].filter(Boolean).join(' · '), 55, 1000); bdSpacing(ctx, 0);
+  ctx.fillStyle = '#fff'; bdFit(ctx, d.full.toUpperCase(), '700 #px "Barlow Condensed", sans-serif', 124, BD_W - 110); ctx.fillText(d.full.toUpperCase(), 55, 1108);
+  const tw4 = (BD_W - 110 - 3 * 18) / 4; d.tiles.forEach(([v, k], i) => mvpTile(ctx, 55 + i * (tw4 + 18), 1138, tw4, 124, v, k, { fill: 'rgba(255,255,255,.12)', stroke: 'rgba(255,255,255,.38)', ink: '#fff', lab: 'rgba(255,255,255,.8)', size: 96 }));
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(55, 1282, BD_W - 110, 3);
+  ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3); ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  const sd = shortDate(d.date).toUpperCase(), sdw = ctx.measureText(sd).width, sc = `${d.team} ${d.us} · ${d.opp} ${d.them}`.toUpperCase();
+  ctx.textAlign = 'right'; ctx.fillText(sd, BD_W - 55, 1322); ctx.textAlign = 'left'; bdFit(ctx, sc, '600 #px "IBM Plex Mono", monospace', 28, BD_W - 110 - sdw - 30); ctx.fillText(sc, 55, 1322); bdSpacing(ctx, 0);
+}
+function mvpDrawMarcador(ctx, d) { // B · Marcador del estadio
+  const BOARD = '#14211a', CELL = '#0a120d', BULB = '#ffd84a';
+  ctx.fillStyle = BOARD; ctx.fillRect(0, 0, BD_W, BD_H); ctx.strokeStyle = rgb(d.red); ctx.lineWidth = 28; ctx.strokeRect(14, 14, BD_W - 28, BD_H - 28);
+  if (d.logo) ctx.drawImage(d.logo, 64, 56, 110 * d.logo.width / d.logo.height, 110);
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 4);
+  if (d.liga) { bdFit(ctx, d.liga.toUpperCase(), '600 #px "IBM Plex Mono", monospace', 26, 700); ctx.fillText(d.liga.toUpperCase(), BD_W - 64, 100); ctx.font = '600 26px "IBM Plex Mono", monospace'; }
+  ctx.fillText([d.no ? 'JUEGO ' + d.no : '', shortDate(d.date).toUpperCase()].filter(Boolean).join(' · '), BD_W - 64, d.liga ? 140 : 110); bdSpacing(ctx, 0);
+  // pizarra entrada por entrada (visitante arriba)
+  const n = d.ls.n, cols = n + 3, nameW = 230, gap = 8, cw = Math.min(70, (BD_W - 128 - nameW - gap * cols) / cols), x0 = BD_W - 64 - cols * (cw + gap) + gap;
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '600 28px "Barlow Condensed", sans-serif';
+  [...Array.from({ length: n }, (_, i) => i + 1), 'C', 'H', 'E'].forEach((h, i) => ctx.fillText(String(h), x0 + i * (cw + gap) + cw / 2, 232));
+  d.ls.rows.forEach((r, ri) => {
+    const y = 250 + ri * 86; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; bdFit(ctx, r.name, '700 #px "Barlow Condensed", sans-serif', 44, x0 - 64 - 16); ctx.fillText(r.name, 64, y + 52);
+    [...r.cells, r.c, r.h, r.e].forEach((v, i) => { const x = x0 + i * (cw + gap), tot = i === n;
+      ctx.fillStyle = tot ? rgb(d.red) : CELL; bdRound(ctx, x, y, cw, 72, 8); ctx.fill();
+      ctx.save(); if (!tot) { ctx.shadowColor = 'rgba(255,216,74,.6)'; ctx.shadowBlur = 14; } ctx.fillStyle = tot ? '#fff' : BULB; ctx.textAlign = 'center'; bdFit(ctx, String(v), '700 #px "Barlow Condensed", sans-serif', 54, cw - 8); ctx.fillText(String(v), x + cw / 2, y + 55); ctx.restore(); });
+  });
+  // MVP
+  const [pw, ph] = bdFitBox(d, 370, 560), cx = 64 + 185, cy = 520 + 330;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-2 * Math.PI / 180); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14; ctx.fillStyle = '#fff'; ctx.fillRect(-pw / 2 - 14, -ph / 2 - 14, pw + 28, ph + 28); ctx.restore();
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-2 * Math.PI / 180); bdPhoto(ctx, d, -pw / 2, -ph / 2, pw, ph, '#dfe6e1'); ctx.restore();
+  const rx = 500, rw = BD_W - 64 - rx; let y = 600;
+  ctx.fillStyle = BULB; bdRound(ctx, rx, y, 170, 78, 10); ctx.fill(); ctx.fillStyle = BOARD; ctx.textAlign = 'center'; ctx.font = '700 66px "Barlow Condensed", sans-serif'; ctx.fillText('MVP', rx + 85, y + 62);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; bdFit(ctx, d.full, '400 #px "Yellowtail", cursive', 92, rw); ctx.fillText(d.full, rx, y + 180);
+  ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3); ctx.fillText([d.num !== '' ? '#' + d.num : '', d.pos, fmtPts(d.pts)].filter(Boolean).join(' · ').toUpperCase(), rx, y + 232); bdSpacing(ctx, 0);
+  const tw = (rw - 18) / 2; d.tiles.forEach(([v, k], i) => mvpTile(ctx, rx + (i % 2) * (tw + 18), y + 270 + Math.floor(i / 2) * 128, tw, 110, v, k, { fill: 'rgba(0,0,0,0)', stroke: 'rgba(255,255,255,.28)', ink: BULB, lab: 'rgba(255,255,255,.75)', size: 84, side: true }));
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '600 24px "IBM Plex Mono", monospace'; bdSpacing(ctx, 4); ctx.fillText(d.sign.toUpperCase(), BD_W / 2, 1290); bdSpacing(ctx, 0);
+}
+function mvpDrawMedalla(ctx, d) { // C · Reconocimiento con medalla
+  const GOLD = '#e3a72f'; ctx.fillStyle = '#fbf8f8'; ctx.fillRect(0, 0, BD_W, BD_H);
+  ctx.strokeStyle = rgb(d.red); ctx.lineWidth = 10; bdRound(ctx, 30, 30, BD_W - 60, BD_H - 60, 18); ctx.stroke();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 4; bdRound(ctx, 50, 50, BD_W - 100, BD_H - 100, 12); ctx.stroke();
+  ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 5); const ht = `${d.team} · Temporada ${d.date.slice(0, 4)}`.toUpperCase(), htw = ctx.measureText(ht).width, lw = d.logo ? 70 * d.logo.width / d.logo.height : 0, hx = (BD_W - htw - (lw ? lw + 18 : 0)) / 2;
+  if (d.logo) ctx.drawImage(d.logo, hx, 88, lw, 70); ctx.fillStyle = rgb(d.red); ctx.textAlign = 'left'; ctx.fillText(ht, hx + (lw ? lw + 18 : 0), 133); bdSpacing(ctx, 0);
+  // medalla
+  const mx = BD_W / 2; ctx.fillStyle = rgb(d.red); ctx.beginPath(); ctx.moveTo(mx - 95, 180); ctx.lineTo(mx - 25, 180); ctx.lineTo(mx + 20, 320); ctx.lineTo(mx - 50, 320); ctx.fill();
+  ctx.fillStyle = rgb(d.red2); ctx.beginPath(); ctx.moveTo(mx + 95, 180); ctx.lineTo(mx + 25, 180); ctx.lineTo(mx - 20, 320); ctx.lineTo(mx + 50, 320); ctx.fill();
+  const rg = ctx.createRadialGradient(mx - 40, 330, 10, mx, 365, 125); rg.addColorStop(0, '#ffe9a8'); rg.addColorStop(.55, GOLD); rg.addColorStop(1, '#a8761c');
+  ctx.save(); ctx.shadowColor = 'rgba(120,80,0,.35)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10; ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(mx, 375, 115, 0, 7); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(mx, 375, 96, 0, 7); ctx.stroke();
+  ctx.fillStyle = rgb(d.red2); ctx.textAlign = 'center'; ctx.font = '700 84px "Barlow Condensed", sans-serif'; ctx.fillText('MVP', mx, 404);
+  ctx.fillStyle = rgb(d.red); bdFit(ctx, 'Jugador más valioso', '400 #px "Yellowtail", cursive', 104, BD_W - 160); ctx.fillText('Jugador más valioso', mx, 590);
+  // foto y datos
+  const [pw, ph] = bdFitBox(d, 380, 480), px = 100 + (380 - pw) / 2, py = 640 + (480 - ph) / 2;
+  ctx.save(); ctx.shadowColor = 'rgba(60,0,4,.22)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12; ctx.fillStyle = '#fff'; bdRound(ctx, px - 14, py - 14, pw + 28, ph + 28, 20); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 5; bdRound(ctx, px - 16, py - 16, pw + 32, ph + 32, 22); ctx.stroke();
+  ctx.save(); bdRound(ctx, px, py, pw, ph, 12); ctx.clip(); bdPhoto(ctx, d, px, py, pw, ph, '#ece6e7'); ctx.restore();
+  const rx = 530, rw = BD_W - 100 - rx; let y = 700; ctx.textAlign = 'left'; ctx.fillStyle = '#1e1f22';
+  ctx.font = `700 ${d.full.length > 18 ? 80 : 92}px "Barlow Condensed", sans-serif`; y += bdWrap(ctx, d.full.toUpperCase(), rx, y, rw, d.full.length > 18 ? 76 : 86, 3) + 10;
+  ctx.fillStyle = '#4c4547'; ctx.font = '400 32px "IBM Plex Sans", sans-serif'; y += bdWrap(ctx, d.msg, rx, y, rw, 44, 4) + 10;
+  let cx = rx, cy = y; ctx.font = '600 30px "IBM Plex Mono", monospace';
+  d.tiles.forEach(([v, k]) => { const t = k === 'H-AB' ? String(v) : `${v} ${k}`, w = ctx.measureText(t).width + 28; if (cx + w > rx + rw) { cx = rx; cy += 60; }
+    ctx.fillStyle = '#fff'; bdRound(ctx, cx, cy, w, 48, 8); ctx.fill(); ctx.strokeStyle = rgb(d.red); ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = rgb(d.red); ctx.fillText(t, cx + 14, cy + 34); cx += w + 12; });
+  ctx.fillStyle = rgb(d.red); ctx.fillRect(100, 1180, BD_W - 200, 4);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#6b6466'; ctx.font = '600 24px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3); const fd = bdayLabel(d.date).toUpperCase() + ' DE ' + d.date.slice(0, 4), fdw = ctx.measureText(fd).width; ctx.fillText(fd, BD_W - 100, 1254); bdSpacing(ctx, 0);
+  ctx.textAlign = 'left'; ctx.fillStyle = rgb(d.red); bdFit(ctx, d.sign, '400 #px "Yellowtail", cursive', 62, BD_W - 200 - fdw - 30); ctx.fillText(d.sign, 100, 1258);
+}
+const MVP_DRAW = { portada: mvpDrawPortada, marcador: mvpDrawMarcador, medalla: mvpDrawMedalla };
+function openMvp(gid) {
+  const g = { id: gid, ...S.games[gid] }, x = mvpOf(g); if (!x) { toast('Este juego todavía no tiene MVP.'); return; }
+  const p = S.roster[x.pid] || {}, s = gameScore(g), n = g.inns || 9, home = g.ha === 'L' ? 'us' : 'them';
+  const t = zero(['h', 'e']); (g.lines || []).forEach(l => { t.h += num(l.h); t.e += num(l.e); });
+  const row = side => ({ name: side === 'us' ? S.team : g.opp, cells: Array.from({ length: n }, (_, i) => { const v = (g[side] || [])[i]; return v === '' || v == null ? (side === home && i === n - 1 ? 'X' : '') : v; }),
+    c: side === 'us' ? s.us : s.them, h: side === 'us' ? t.h : (g.themH ?? 0), e: side === 'us' ? t.e : (g.themE ?? 0) });
+  const team = S.team || 'Mi equipo', base = { opp: g.opp || 'Rival', us: s.us, them: s.them, res: s.res };
+  const d = { ...base, full: String(p.name || pName(x.pid)).replace(/\(.*?\)/g, '').trim(), num: p.num != null && p.num !== '' ? String(p.num) : '', pos: ((g.lines || []).find(l => l.pid === x.pid) || {}).pos || p.pos || '',
+    team, date: g.date || today(), liga: g.liga || '', no: g.no || '', pts: x.pts, tiles: mvpTiles(x), ls: { n, rows: (g.ha === 'L' ? ['them', 'us'] : ['us', 'them']).map(row) },
+    sign: `Coach y equipo ${team}`, msgs: Object.fromEntries(MVP_DESIGNS.filter(y => y.msg).map(y => [y.k, y.msg(base)])) };
+  openCards({ title: `Tarjeta MVP · ${d.full}`, d, designs: MVP_DESIGNS, draw: MVP_DRAW, photo: p.photo, file: () => `MVP_${String(bd.d.full).replace(/\s+/g, '_')}_${d.date}`, share: () => `MVP: ${bd.d.full}`,
+    hint: `${fmtPts(x.pts)} en el juego ${g.ha === 'L' ? 'vs' : 'en'} ${g.opp} del ${bdayLabel(g.date)}: ${mvpText(x)}.`,
+    fields: [{ id: 'mvName', key: 'full', lab: 'Nombre' }, { id: 'mvSign', key: 'sign', lab: 'Firma' }] });
+}
 
 /* ---------- Reportes PDF ---------- */
 let RED = [200, 22, 30], ROSE = [246, 225, 226], STRIPE = [141, 144, 150]; const INK = [30, 31, 34];
