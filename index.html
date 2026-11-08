@@ -374,6 +374,16 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .pj-bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
 .pj-bar span{display:block;height:100%;background:var(--accent)}
 .pj-up{color:var(--win);font-weight:600} .pj-dn{color:var(--loss);font-weight:600}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.bd-opt{display:flex;flex-direction:column;gap:8px;min-width:0;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--paper)}
+.bd-opt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.bd-opt canvas{width:100%;height:auto;border-radius:4px;display:block;box-shadow:0 4px 14px rgba(40,0,4,.18);cursor:pointer}
+.bd-opt textarea{min-height:64px;resize:vertical;width:100%;font-family:var(--f-body)}
+.bd-opt .inline-check b{font-family:var(--f-display);font-size:17px}
+.bd-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.bd-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:var(--accent-soft);border-radius:6px;padding:10px 12px;font-size:13.5px}
+.bd-bar b{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.bd-bar span{display:inline-flex;gap:8px;align-items:center}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:6px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .games{display:flex;flex-direction:column}
 .game{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
@@ -696,6 +706,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <button class="btn primary" type="submit" id="rSubmit">Agregar jugador</button>
         <button class="btn" type="button" id="rCancel" hidden>Cancelar</button>
       </form>
+      <div class="bd-bar" id="bdayBar" hidden></div>
       <div class="scroll"><table id="rTbl"></table></div>
       <div class="backup">
         <div><h3>Respaldo de datos</h3><p class="hint">Descarga un archivo con el roster, las fotos y todos los juegos. Sirve para guardar una copia o para pasar los datos a otra computadora o a otra versión de la plataforma.</p></div>
@@ -768,6 +779,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
   <div class="row spread"><button type="button" class="btn" id="udPw">Cambiar contraseña</button><div class="row"><button type="button" class="btn" id="udClose">Cerrar</button><button type="button" class="btn primary" id="udLogout">Cerrar sesión</button></div></div>
 </div></dialog>
 <dialog id="playerDlg"><div class="dlg" id="playerBody"></div></dialog>
+<dialog id="bdayDlg"><div class="dlg" id="bdayBody"></div></dialog>
 <dialog id="boxDlg"><div class="dlg" id="boxDlgBody"></div></dialog>
 <dialog id="admTeamDlg" class="adm-dlg"><form class="adm-modal" id="admTeamForm" novalidate>
   <div class="adm-mhead"><div><div class="sub" id="atSub">Editar equipo</div><h2 id="atTitle">Equipo</h2></div><button type="button" class="btn sm" data-close>Cerrar</button></div>
@@ -1882,6 +1894,7 @@ $('#btnCsvF').addEventListener('click', () => exportCsv('#fTbl', 'fildeo'));
 /* ---------- ROSTER ---------- */
 $('#rPos').innerHTML = POS.filter(p => !['BE', 'CE'].includes(p)).map(p => `<option>${p}</option>`).join('');
 function renderRoster() {
+  renderBdayBar();
   const ps = players(), cnt = {};
   sortedGames().forEach(g => (g.lines || []).forEach(l => cnt[l.pid] = (cnt[l.pid] || 0) + 1));
   if (!ps.length) { $('#rTbl').innerHTML = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Agrega a tus jugadores con el formulario de arriba. Después podrás elegirlos en cada box score.</td></tr></tbody>'; return; }
@@ -1998,7 +2011,7 @@ function openPlayer(pid) {
         <div class="pf-meta"><span class="chip">${esc(p.pos || '-')}</span><span>Batea: ${esc(p.bats || 'D')}</span><span>Tira: ${esc(p.throws || 'D')}</span><span>${d.log.length} juego${d.log.length === 1 ? '' : 's'}</span></div>
         ${rk}
       </div>
-      <div class="pf-acts"><button class="btn sm" id="pfProj">Proyección</button><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
+      <div class="pf-acts"><button class="btn sm" id="pfProj">Proyección</button><button class="btn sm" id="pfBday">Tarjeta de cumpleaños</button><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
     </div>
     ${tiles ? `<div class="ptiles">${tiles}</div>` : '<div class="empty">Todavía no tiene juegos registrados.</div>'}
     ${sparkAvg(d.log) ? `<div><h3 style="margin-bottom:6px">Promedio acumulado</h3>${sparkAvg(d.log)}</div>` : ''}
@@ -2009,9 +2022,180 @@ function openPlayer(pid) {
   $('#pfClose').onclick = () => $('#playerDlg').close();
   $('#pfPdf').onclick = () => pdfPlayer(pid);
   $('#pfProj').onclick = () => { pjPid = pid; $('#playerDlg').close(); showView('proy'); renderProj(); };
+  $('#pfBday').onclick = () => { $('#playerDlg').close(); openBday(pid); };
   if (!$('#playerDlg').open) $('#playerDlg').showModal();
 }
 $('#playerDlg').addEventListener('click', e => { if (e.target === $('#playerDlg')) $('#playerDlg').close(); });
+
+/* ---------- Tarjetas de cumpleaños ---------- */
+// Se dibujan en canvas de 1080×1350 (formato vertical de WhatsApp/Instagram) para exportar PNG y PDF iguales
+const BD_W = 1080, BD_H = 1350, MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const BD_DESIGNS = [
+  { k: 'jugador', name: 'Pizarra', use: 'Para el jugador', msg: d => `¡Feliz cumpleaños, ${d.first}! Gracias por dejar todo en cada práctica y cada juego. ¡Que lo disfrutes en grande!` },
+  { k: 'papas', name: 'Carta a la familia', use: 'Para los papás', msg: d => `Gracias por traerlo a cada práctica y por echarle porras desde la tribuna. Es un orgullo tenerlo en el equipo.` },
+  { k: 'redes', name: 'Tarjeta de colección', use: 'Para redes sociales', msg: d => `Todo el equipo ${d.team} celebra a nuestro${d.num !== '' ? ' #' + d.num : ''}. ¡Feliz cumpleaños, campeón!` },
+];
+// Próximo cumpleaños (o uno de hace 3 días o menos, para felicitar tarde)
+function bdayInfo(birth, from = today()) {
+  const b = String(birth || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!b) return null;
+  const t = new Date(from + 'T12:00:00'); let y = t.getFullYear();
+  const at = yy => new Date(`${yy}-${b[2]}-${b[3]}T12:00:00`);
+  let d = at(y); if ((d - t) / 864e5 < -3) d = at(++y);
+  return { date: `${y}-${b[2]}-${b[3]}`, age: y - +b[1], days: Math.round((d - t) / 864e5) };
+}
+const bdayLabel = iso => { const m = String(iso || '').match(/^\d{4}-(\d{2})-(\d{2})$/); return m ? `${+m[2]} de ${MESES[+m[1] - 1]}` : ''; };
+function renderBdayBar() {
+  const el = $('#bdayBar'); if (!el) return;
+  const list = players().map(p => ({ p, b: bdayInfo(p.birth) })).filter(x => x.b && x.b.days <= 7).sort((a, b) => a.b.days - b.b.days);
+  el.hidden = !list.length; if (!list.length) return;
+  const when = d => d === 0 ? 'hoy' : d === 1 ? 'mañana' : d < 0 ? `hace ${-d} día${d === -1 ? '' : 's'}` : `el ${bdayLabel(list.find(x => x.b.days === d).b.date)}`;
+  el.innerHTML = '<b>Cumpleaños</b>' + list.map(x => `<span>${plink(x.p.id, x.p.name)} cumple ${x.b.age} ${when(x.b.days)} <button class="btn sm" data-bday="${esc(x.p.id)}">Crear tarjeta</button></span>`).join('');
+}
+$('#bdayBar').addEventListener('click', e => { const b = e.target.closest('[data-bday]'); if (b) openBday(b.dataset.bday); });
+
+const loadImg = src => new Promise(res => { if (!src) return res(null); const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function bdSpacing(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; }
+function bdFit(ctx, txt, font, size, maxW) { let s = size; do { ctx.font = font.replace('#', s); } while (ctx.measureText(txt).width > maxW && (s -= 2) > 10); return s; }
+function bdWrap(ctx, txt, x, y, maxW, lh, maxLines = 6) {
+  const words = String(txt || '').split(/\s+/).filter(Boolean), lines = []; let cur = '';
+  words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
+  if (cur) lines.push(cur); lines.slice(0, maxLines).forEach((l, i) => ctx.fillText(l, x, y + i * lh)); return Math.min(lines.length, maxLines) * lh;
+}
+function bdRound(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+// Foto completa (sin recortar) dentro de la caja; sin foto, dibuja el número o las iniciales
+function bdPhoto(ctx, d, x, y, w, h, bg) {
+  ctx.fillStyle = bg; ctx.fillRect(x, y, w, h);
+  if (d.img) { const k = Math.min(w / d.img.width, h / d.img.height), iw = d.img.width * k, ih = d.img.height * k; ctx.drawImage(d.img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); return; }
+  ctx.fillStyle = rgb(d.red); ctx.fillRect(x, y, w, h); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `700 ${Math.round(h * .42)}px "Barlow Condensed", sans-serif`; ctx.fillText(d.num !== '' ? d.num : initials(d.full), x + w / 2, y + h / 2); ctx.textBaseline = 'alphabetic';
+}
+const bdFitBox = (d, maxW, maxH) => { const r = d.img ? d.img.width / d.img.height : .8; return r > maxW / maxH ? [maxW, maxW / r] : [maxH * r, maxH]; };
+
+function bdDrawJugador(ctx, d) { // A · Pizarra
+  const g = ctx.createLinearGradient(0, 0, BD_W, BD_H); g.addColorStop(0, rgb(d.red)); g.addColorStop(1, rgb(d.red2)); ctx.fillStyle = g; ctx.fillRect(0, 0, BD_W, BD_H);
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; const m = 34, sp = 44;
+  for (let x = m; x <= BD_W - m + 1; x += (BD_W - 2 * m) / Math.round((BD_W - 2 * m) / sp)) [m, BD_H - m].forEach(y => { ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); });
+  for (let y = m; y <= BD_H - m + 1; y += (BD_H - 2 * m) / Math.round((BD_H - 2 * m) / sp)) [m, BD_W - m].forEach(x => { ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); });
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; bdSpacing(ctx, 5); const tf = bdFit(ctx, d.team.toUpperCase(), '700 #px "Barlow Condensed", sans-serif', 84, 700);
+  const tw = ctx.measureText(d.team.toUpperCase()).width, lw = d.logo ? 120 * d.logo.width / d.logo.height : 0, x0 = (BD_W - tw - (lw ? lw + 22 : 0)) / 2;
+  if (d.logo) ctx.drawImage(d.logo, x0, 92, lw, 120); ctx.fillText(d.team.toUpperCase(), x0 + (lw ? lw + 22 : 0), 152 + tf * .34); bdSpacing(ctx, 0);
+  // marcador CUMPLE | edad
+  ctx.font = '700 46px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 7); const lab = 'CUMPLE', lbw = ctx.measureText(lab).width + 60; bdSpacing(ctx, 0);
+  ctx.font = '700 110px "Barlow Condensed", sans-serif'; const ag = String(d.age || '?'), agw = ctx.measureText(ag).width + 60, bx = (BD_W - lbw - agw) / 2, by = 240, bh = 118;
+  ctx.fillStyle = '#1e1f22'; ctx.fillRect(bx + lbw, by, agw, bh); ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; bdRound(ctx, bx, by, lbw + agw, bh, 12); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = '700 46px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 7); ctx.fillText(lab, bx + 30, by + 75); bdSpacing(ctx, 0);
+  ctx.save(); ctx.shadowColor = 'rgba(255,216,74,.7)'; ctx.shadowBlur = 24; ctx.fillStyle = '#ffd84a'; ctx.font = '700 110px "Barlow Condensed", sans-serif'; ctx.fillText(ag, bx + lbw + 30, by + 99); ctx.restore();
+  // foto tipo instantánea
+  const [pw, ph] = bdFitBox(d, 470, 450), cy = 620; ctx.save(); ctx.translate(BD_W / 2, cy); ctx.rotate(-2 * Math.PI / 180);
+  ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 16; ctx.fillStyle = '#fff'; ctx.fillRect(-pw / 2 - 16, -ph / 2 - 16, pw + 32, ph + 32); ctx.restore();
+  ctx.save(); ctx.translate(BD_W / 2, cy); ctx.rotate(-2 * Math.PI / 180); bdPhoto(ctx, d, -pw / 2, -ph / 2, pw, ph, '#e9e4e5'); ctx.restore();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  bdFit(ctx, '¡FELIZ CUMPLEAÑOS!', '700 #px "Barlow Condensed", sans-serif', 100, 900); ctx.fillText('¡FELIZ CUMPLEAÑOS!', BD_W / 2, 965);
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetY = 6; bdFit(ctx, d.full, '400 #px "Yellowtail", cursive', 112, 900); ctx.fillText(d.full, BD_W / 2, 1072); ctx.restore();
+  ctx.font = '400 36px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.95)'; bdWrap(ctx, d.msg, BD_W / 2, 1140, 840, 46, 3);
+  ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 4); ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.fillText(d.sign.toUpperCase(), BD_W / 2, 1290); bdSpacing(ctx, 0);
+}
+function bdDrawPapas(ctx, d) { // C · Carta a la familia
+  ctx.fillStyle = '#fbf8f8'; ctx.fillRect(0, 0, BD_W, BD_H);
+  ctx.save(); ctx.strokeStyle = rgb(d.red, .35); ctx.lineWidth = 5; ctx.setLineDash([18, 14]);
+  [[-80, -120], [BD_W + 60, BD_H + 140]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 420, 0, 7); ctx.stroke(); }); ctx.restore();
+  if (d.logo) ctx.drawImage(d.logo, 72, 62, 110 * d.logo.width / d.logo.height, 110);
+  ctx.textAlign = 'right'; ctx.fillStyle = rgb(d.red); ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 5); ctx.fillText(`${d.team} · ${d.date.slice(0, 4)}`.toUpperCase(), BD_W - 72, 128); bdSpacing(ctx, 0);
+  // foto con marco blanco y filo del color del equipo
+  const [pw, ph] = bdFitBox(d, 440, 640), px = 72 + (440 - pw) / 2, py = 230 + (640 - ph) / 2;
+  ctx.save(); ctx.shadowColor = 'rgba(60,0,4,.25)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 14; ctx.fillStyle = '#fff'; bdRound(ctx, px - 14, py - 14, pw + 28, ph + 28, 24); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = rgb(d.red); ctx.lineWidth = 5; bdRound(ctx, px - 16, py - 16, pw + 32, ph + 32, 26); ctx.stroke();
+  ctx.save(); bdRound(ctx, px, py, pw, ph, 14); ctx.clip(); bdPhoto(ctx, d, px, py, pw, ph, '#ece6e7'); ctx.restore();
+  const cx = 570, cw = BD_W - 72 - cx; let y = 270; ctx.textAlign = 'left';
+  ctx.fillStyle = '#6b6466'; ctx.font = '600 40px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 2); y += bdWrap(ctx, `Querida familia ${d.family}`.toUpperCase(), cx, y, cw, 46, 2) + 30; bdSpacing(ctx, 0);
+  ctx.fillStyle = rgb(d.red); ctx.font = '700 92px "Barlow Condensed", sans-serif'; y += bdWrap(ctx, `FELIZ CUMPLE, ${d.first.toUpperCase()}`, cx, y + 50, cw, 88, 3) + 60;
+  if (d.age) { ctx.fillStyle = '#1e1f22'; ctx.font = '700 190px "Barlow Condensed", sans-serif'; const aw = ctx.measureText(String(d.age)).width; ctx.fillText(String(d.age), cx, y + 120);
+    ctx.fillStyle = '#6b6466'; ctx.font = '700 46px "Barlow Condensed", sans-serif'; ctx.fillText('AÑOS', cx + aw + 16, y + 118); y += 170; }
+  ctx.fillStyle = '#1e1f22'; ctx.font = '400 34px "IBM Plex Sans", sans-serif'; bdWrap(ctx, d.msg, cx, y + 20, cw, 48, Math.max(2, Math.floor((1140 - y) / 48)));
+  ctx.fillStyle = rgb(d.red); ctx.fillRect(72, 1180, BD_W - 144, 4);
+  ctx.textAlign = 'left'; bdFit(ctx, d.sign, '400 #px "Yellowtail", cursive', 68, 640); ctx.fillText(d.sign, 72, 1262);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#6b6466'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 4); ctx.fillText(bdayLabel(d.date).toUpperCase(), BD_W - 72, 1258); bdSpacing(ctx, 0);
+}
+function bdDrawRedes(ctx, d) { // B · Tarjeta de colección
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, BD_W, BD_H);
+  const ix = 36, iw = BD_W - 72, ih = BD_H - 72, plateH = 430;
+  ctx.save(); bdRound(ctx, ix, ix, iw, ih, 54); ctx.clip();
+  if (d.img) { const k = Math.max(iw / d.img.width, ih / d.img.height) * 1.15; ctx.filter = 'blur(34px) brightness(.55) saturate(1.2)'; ctx.drawImage(d.img, ix + (iw - d.img.width * k) / 2, ix + (ih - d.img.height * k) / 2, d.img.width * k, d.img.height * k); ctx.filter = 'none'; }
+  else { ctx.fillStyle = rgb(d.red2); ctx.fillRect(ix, ix, iw, ih); }
+  const [pw, ph] = bdFitBox(d, iw, ih - plateH + 60); bdPhoto(ctx, d, ix + (iw - pw) / 2, ix + (ih - plateH + 60 - ph) / 2, pw, ph, 'rgba(0,0,0,0)');
+  // placa inclinada con franja
+  const top = BD_H - ix - plateH; ctx.fillStyle = rgb(d.stripe);
+  ctx.beginPath(); ctx.moveTo(ix, top + 60); ctx.lineTo(ix + iw, top); ctx.lineTo(ix + iw, top + 22); ctx.lineTo(ix, top + 82); ctx.fill();
+  ctx.fillStyle = rgb(d.red); ctx.beginPath(); ctx.moveTo(ix, top + 82); ctx.lineTo(ix + iw, top + 22); ctx.lineTo(ix + iw, BD_H); ctx.lineTo(ix, BD_H); ctx.fill();
+  if (d.num !== '') { ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.font = '700 300px "Barlow Condensed", sans-serif'; ctx.fillText(String(d.num), ix + iw - 40, BD_H - ix - 150); }
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; bdFit(ctx, d.full.toUpperCase(), '700 #px "Barlow Condensed", sans-serif', 116, iw - 120); ctx.fillText(d.full.toUpperCase(), ix + 60, top + 230);
+  let cxp = ix + 60; ctx.font = '600 30px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3);
+  [d.age ? `${d.age} AÑOS` : '', d.pos, bdayLabel(d.date).replace(/ de (\w{3})\w*/, ' $1').toUpperCase()].filter(Boolean).forEach(t => { const w = ctx.measureText(t).width + 30; ctx.fillStyle = '#fff'; bdRound(ctx, cxp, top + 262, w, 46, 8); ctx.fill(); ctx.fillStyle = rgb(d.red); ctx.fillText(t, cxp + 15, top + 296); cxp += w + 16; });
+  bdSpacing(ctx, 0); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.font = '400 32px "IBM Plex Sans", sans-serif'; bdWrap(ctx, d.msg, ix + 60, top + 360, iw - 120, 42, 2);
+  ctx.restore();
+  ctx.strokeStyle = rgb(d.red); ctx.lineWidth = 26; bdRound(ctx, ix + 13, ix + 13, iw - 26, ih - 26, 44); ctx.stroke();
+  // listón y logo
+  ctx.fillStyle = rgb(d.red); ctx.font = '700 60px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 2); const rt = '¡FELIZ CUMPLEAÑOS!', rw = ctx.measureText(rt).width + 110;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8; ctx.beginPath(); ctx.moveTo(20, 96); ctx.lineTo(20 + rw, 96); ctx.lineTo(rw - 10, 140); ctx.lineTo(20 + rw, 184); ctx.lineTo(20, 184); ctx.fill(); ctx.restore();
+  ctx.fillStyle = '#fff'; ctx.fillText(rt, 60, 162); bdSpacing(ctx, 0);
+  if (d.logo) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 16; const lh = 140; ctx.drawImage(d.logo, BD_W - 90 - lh * d.logo.width / d.logo.height, 82, lh * d.logo.width / d.logo.height, lh); ctx.restore(); }
+}
+const BD_DRAW = { jugador: bdDrawJugador, papas: bdDrawPapas, redes: bdDrawRedes };
+
+let bd = null;
+async function openBday(pid) {
+  const p = S.roster[pid]; if (!p) return;
+  const words = String(p.name).replace(/\(.*?\)/g, '').trim().split(/\s+/), info = bdayInfo(p.birth);
+  const dv = $('.hero .devil'), dflt = { first: words[0] || p.name, team: S.team || 'Mi equipo', num: p.num != null && p.num !== '' ? String(p.num) : '' };
+  bd = { pid, sel: { jugador: true, papas: true, redes: true }, d: { ...dflt, full: String(p.name).replace(/\(.*?\)/g, '').trim(), family: words.slice(1, 2).join(' ') || words[0] || '', age: info ? info.age : '', date: info ? info.date : today(), pos: p.pos || '', sign: `Coach y equipo ${dflt.team}`, msgs: Object.fromEntries(BD_DESIGNS.map(x => [x.k, x.msg(dflt)])) } };
+  const fld = (id, lab, v, type = 'text') => `<label class="f">${lab}<input id="${id}" type="${type}" value="${esc(v)}"></label>`;
+  $('#bdayBody').innerHTML = `<div class="row spread"><h2 style="margin:0">Tarjeta de cumpleaños · ${esc(p.name)}</h2><button class="btn sm" id="bdClose">Cerrar</button></div>
+    ${info ? '' : '<p class="hint">Este jugador no tiene fecha de nacimiento en el Roster. Escribe la edad y la fecha aquí, o agrégala en el Roster para que aparezca en el aviso de cumpleaños.</p>'}
+    <div class="bd-fields">${fld('bdFirst', 'Nombre', bd.d.first)}${fld('bdFull', 'Nombre completo', bd.d.full)}${fld('bdAge', 'Cumple (años)', bd.d.age, 'number')}${fld('bdDate', 'Fecha', bd.d.date, 'date')}${fld('bdFamily', 'Familia', bd.d.family)}${fld('bdSign', 'Firma', bd.d.sign)}</div>
+    <p class="hint">Marca las tarjetas que quieres mandar: una, dos o las tres. Cada una tiene su propio mensaje.</p>
+    <div class="bd-grid">${BD_DESIGNS.map(x => `<div class="bd-opt on" data-k="${x.k}"><label class="inline-check"><input type="checkbox" data-sel="${x.k}" checked> <b>${x.use}</b><span class="sub">· ${x.name}</span></label><canvas width="${BD_W}" height="${BD_H}" data-c="${x.k}" aria-label="Vista previa: ${x.name}"></canvas><label class="f">Mensaje<textarea data-msg="${x.k}">${esc(bd.d.msgs[x.k])}</textarea></label></div>`).join('')}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="bdPng">Descargar imágenes</button><button class="btn" id="bdPdf">Descargar PDF</button><button class="btn primary" id="bdShare">Compartir por WhatsApp</button></div>`;
+  if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
+  [bd.d.img, bd.d.logo] = await Promise.all([loadImg(p.photo), loadImg(dv && !dv.hidden ? dv.src : '')]);
+  try { await Promise.all(['700 40px "Barlow Condensed"', '600 40px "Barlow Condensed"', '400 40px "Yellowtail"', '400 20px "IBM Plex Sans"', '600 20px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch {}
+  bdRender();
+}
+function bdRender() {
+  if (!bd) return; const red = RED, d = bd.d;
+  d.red = red; d.red2 = red.map(v => Math.round(v * .62)); d.stripe = STRIPE; d.date = d.date || today();
+  BD_DESIGNS.forEach(x => { const cv = $(`#bdayBody canvas[data-c="${x.k}"]`); if (!cv) return; const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, BD_W, BD_H); BD_DRAW[x.k](ctx, { ...d, msg: d.msgs[x.k] }); });
+}
+const bdChosen = () => BD_DESIGNS.filter(x => bd.sel[x.k]);
+const bdFile = x => `cumple_${String(bd.d.full).replace(/\s+/g, '_')}_${x.k}`;
+const bdBlob = x => new Promise(r => $(`#bdayBody canvas[data-c="${x.k}"]`).toBlob(r, 'image/png'));
+async function bdDownloadPngs(list) { for (const x of list) { const b = await bdBlob(x); await saveFile(bdFile(x) + '.png', await b.arrayBuffer(), 'image/png'); } }
+$('#bdayBody').addEventListener('input', e => {
+  if (!bd) return; const t = e.target, map = { bdFirst: 'first', bdFull: 'full', bdAge: 'age', bdDate: 'date', bdFamily: 'family', bdSign: 'sign' };
+  if (map[t.id]) bd.d[map[t.id]] = t.value; else if (t.dataset.msg) bd.d.msgs[t.dataset.msg] = t.value; else return;
+  cancelAnimationFrame(bdRender._r); bdRender._r = requestAnimationFrame(bdRender);
+});
+$('#bdayBody').addEventListener('change', e => { const k = e.target.dataset.sel; if (!k || !bd) return; bd.sel[k] = e.target.checked; e.target.closest('.bd-opt').classList.toggle('on', e.target.checked); });
+$('#bdayBody').addEventListener('click', async e => {
+  if (!bd) return; const cv = e.target.closest('canvas[data-c]');
+  if (cv) { const box = $(`#bdayBody [data-sel="${cv.dataset.c}"]`); box.checked = !box.checked; box.dispatchEvent(new Event('change', { bubbles: true })); return; }
+  const id = e.target.id; if (id === 'bdClose') { $('#bdayDlg').close(); return; }
+  if (!['bdPng', 'bdPdf', 'bdShare'].includes(id)) return;
+  const list = bdChosen(); if (!list.length) { toast('Marca al menos una tarjeta.'); return; }
+  if (id === 'bdPng') { await bdDownloadPngs(list); return; }
+  if (id === 'bdPdf') {
+    if (!window.jspdf) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return; }
+    const doc = new window.jspdf.jsPDF({ unit: 'pt', format: [540, 675] });
+    list.forEach((x, i) => { if (i) doc.addPage([540, 675]); doc.addImage($(`#bdayBody canvas[data-c="${x.k}"]`).toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 540, 675); });
+    await saveFile(`cumple_${String(bd.d.full).replace(/\s+/g, '_')}.pdf`, doc.output('arraybuffer'), 'application/pdf'); return;
+  }
+  // WhatsApp: en el celular abre el menú de compartir con las imágenes; si no se puede, las descarga para adjuntarlas
+  const files = await Promise.all(list.map(async x => new File([await bdBlob(x)], bdFile(x) + '.png', { type: 'image/png' })));
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try { await navigator.share({ files, title: `Feliz cumpleaños, ${bd.d.first}` }); } catch (err) { if (err && err.name !== 'AbortError') toast('No se pudo compartir. Usa "Descargar imágenes".'); }
+  } else { await bdDownloadPngs(list); toast('Imágenes descargadas. Adjúntalas en el chat de WhatsApp.'); }
+});
+$('#bdayDlg').addEventListener('click', e => { if (e.target === $('#bdayDlg')) $('#bdayDlg').close(); });
 
 /* ---------- Reportes PDF ---------- */
 let RED = [200, 22, 30], ROSE = [246, 225, 226], STRIPE = [141, 144, 150]; const INK = [30, 31, 34];
