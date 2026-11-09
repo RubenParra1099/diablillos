@@ -475,6 +475,8 @@ body.share .brand .eyebrow,body.share header.board nav.tabs,body.share #subTabs,
 .sc-col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .sc svg{display:block;width:100%;height:auto}
 .sc svg text{font-family:var(--f-mono)}
+.sc-tr path{pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.sc-tr path{stroke-dasharray:1;stroke-dashoffset:1;animation:scTr .7s ease-out forwards}@keyframes scTr{to{stroke-dashoffset:0}}}
 .sc-legend{display:flex;flex-wrap:wrap;gap:6px}
 .sc-legend button{display:inline-flex;align-items:center;gap:6px;font:500 13px var(--f-body);color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
 .sc-legend button[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
@@ -2244,6 +2246,18 @@ function scShape(kind, x, y, s, color, dashed) {
   if (kind === 'star') { let d = ''; for (let k = 0; k < 10; k++) { const an = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? s * .55 : s * 1.35; d += (k ? 'L' : 'M') + (x + rr * Math.cos(an)).toFixed(1) + ',' + (y + rr * Math.sin(an)).toFixed(1); } return `<path d="${d}Z" style="${st}"/>`; }
   return `<circle cx="${x}" cy="${y}" r="${kind === 'ring' ? s * .8 : s}" style="${st}${dashed ? ';stroke-dasharray:2 2' : ''}"/>`;
 }
+// Trayectoria simulada desde home: rodado con botes, línea casi recta, elevado en arco (se abre hacia la línea de foul de su lado)
+const SC_TRT = { ground: 'Rodado', line: 'Línea', fly: 'Elevado', pop: 'Elevado al cuadro' };
+const scType = x => { const t = (parsePlay(x.play) || {}).type; return SC_TRT[t] ? t : x.cat === 'HR' || x.d >= .85 ? 'fly' : x.d >= .5 ? 'line' : 'ground'; };
+function scTrail(x, bats) {
+  const [hx, hy] = SC_H, [ex, ey] = scPt(x.a, x.d), dx = ex - hx, dy = ey - hy, len = Math.hypot(dx, dy) || 1;
+  const s = x.a < -1 ? -1 : x.a > 1 ? 1 : bats === 'Z' ? 1 : -1, nx = -dy / len * s, ny = dx / len * s;
+  const P = (f, h) => (hx + dx * f + nx * h * len).toFixed(1) + ',' + (hy + dy * f + ny * h * len).toFixed(1);
+  const t = scType(x);
+  if (t === 'ground') { let d = `M${hx},${hy}`, f = 0; [[.46, .05], [.32, .035], [.22, .02]].forEach(([w, h]) => { d += ` Q${P(f + w / 2, h * 2)} ${P(f += w, 0)}`; }); return [t, d]; }
+  return [t, `M${hx},${hy} Q${P(.5, (t === 'pop' ? .4 : t === 'fly' ? .2 : .07) * 2)} ${P(1, 0)}`];
+}
+const scTrailPath = (x, bats, col, i) => `<path d="${scTrail(x, bats)[1]}" pathLength="1" fill="none" stroke="var(${col})" stroke-width="1.6" stroke-linecap="round" stroke-opacity=".6" style="animation-delay:${Math.min(i * 35, 700)}ms"/>`;
 function scField(extra, label) {
   const [lx, ly] = scPt(-45, 1), [rx, ry] = scPt(45, 1), b1 = scPt(45, .343), b2 = scPt(0, .485), b3 = scPt(-45, .343), d1 = scPt(-45, .573), d2 = scPt(45, .573);
   return `<svg class="sc-svg" viewBox="0 0 400 345" role="img" aria-label="${esc(label)}">
@@ -2259,12 +2273,14 @@ function sprayPtsOf(pid, gs) { return paList(gs).filter(x => x.pid === pid).map(
 function mountSpray(el, pid, gs, tag) {
   const p = S.roster[pid] || {}, pts = sprayPtsOf(pid, gs), pas = paList(gs).filter(x => x.pid === pid), bip = pas.filter(x => !NO_BIP.includes(x.res));
   const hits = pas.filter(x => /^H[123]$|^HR$/.test(x.res)), hitsIn = pts.filter(x => x.cat !== 'O').length, exact = pts.filter(x => !x.approx).length;
-  const st = { f: 'all', hide: new Set() };
+  const st = { f: 'all', hide: new Set(), tr: true };
   const draw = () => {
     const d = pts.filter(x => !st.hide.has(x.cat) && (st.f === 'all' || (st.f === 'hit' ? x.cat !== 'O' : x.cat === 'O')));
-    let marks = '';
-    d.forEach(x => { const [nm, col, kind] = SC_RES[x.cat], [px, py] = scPt(x.a, x.d);
-      marks += `<g data-tip="${esc(`${nm}${x.cat === 'O' && x.res !== 'O' ? ' (' + x.res + ')' : ''}|${bdayLabel(x.date)} · ${x.inn}ª entrada${x.play ? ' · jugada ' + x.play : ''}|${SC_SEC[x.sec]}${x.approx ? ' · posición aproximada' : ''}`)}">${scShape(kind, +px.toFixed(1), +py.toFixed(1), 6, col, x.approx)}<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="12" fill="transparent"/></g>`; });
+    let marks = '', trails = '';
+    d.forEach((x, i) => { const [nm, col, kind] = SC_RES[x.cat], [px, py] = scPt(x.a, x.d);
+      if (st.tr) trails += scTrailPath(x, p.bats, col, i);
+      marks += `<g data-tip="${esc(`${nm}${x.cat === 'O' && x.res !== 'O' ? ' (' + x.res + ')' : ''}|${bdayLabel(x.date)} · ${x.inn}ª entrada${x.play ? ' · jugada ' + x.play : ''}|${SC_SEC[x.sec]} · ${SC_TRT[scType(x)].toLowerCase()}${x.approx ? ' · posición aproximada' : ''}`)}">${scShape(kind, +px.toFixed(1), +py.toFixed(1), 6, col, x.approx)}<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="12" fill="transparent"/></g>`; });
+    if (trails) marks = `<g class="sc-tr" aria-hidden="true">${trails}</g>` + marks;
     const n = d.length, c = { L: 0, C: 0, R: 0 }; d.forEach(x => c[x.sec]++);
     const pc = k => n ? 100 * c[k] / n : 0, f1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '%', mx = Math.max(pc('L'), pc('C'), pc('R'), 1);
     const wedge = (a0, a1, k) => { const [x0, y0] = scPt(a0, 1), [x1, y1] = scPt(a1, 1), [tx, ty] = scPt((a0 + a1) / 2, .67);
@@ -2274,7 +2290,8 @@ function mountSpray(el, pid, gs, tag) {
     const side = c.R > c.L ? 'R' : c.L > c.R ? 'L' : '', top = side ? pc(side) : 0, pullSide = p.bats === 'D' ? 'L' : p.bats === 'Z' ? 'R' : '';
     const read = !n ? 'Sin batazos con el filtro elegido.' : !side ? `Reparte la bola igual a izquierda y derecha (${f1(pc('L'))} cada lado).` : `${f1(top)} de sus batazos van al ${SC_SEC[side].toLowerCase()}${pullSide ? (pullSide === side ? `: como batea ${p.bats === 'D' ? 'a la derecha' : 'a la izquierda'}, jala la bola` : ': batea hacia la banda contraria') : ''}${top >= 45 ? '. La defensa puede cargarse a ese lado.' : '.'}${n < 15 ? ' Con menos de 15 batazos es solo una referencia.' : ''}`;
     el.innerHTML = `<div class="sc"><div class="sc-hd"><h3>Mapa de batazos</h3>${helpBtn('spraychart', 1)}
-        <span class="seg" role="group" aria-label="Qué batazos">${[['all', 'Todos'], ['hit', 'Solo hits'], ['out', 'Solo outs']].map(([k, l]) => `<button type="button" data-scf="${k}" aria-pressed="${st.f === k}">${l}</button>`).join('')}</span></div>
+        <span class="seg" role="group" aria-label="Qué batazos">${[['all', 'Todos'], ['hit', 'Solo hits'], ['out', 'Solo outs']].map(([k, l]) => `<button type="button" data-scf="${k}" aria-pressed="${st.f === k}">${l}</button>`).join('')}</span>
+        <span class="seg"><button type="button" data-sctr aria-pressed="${st.tr}">Trayectoria</button></span></div>
       ${pts.length ? '' : '<p class="hint" style="margin:0">Todavía no hay batazos ubicados. Al anotar cada turno, toca en el campo dónde cayó la bola (o escribe la jugada, por ejemplo F8) para ver este mapa.</p>'}
       <div class="sc-grid"><div class="sc-col">${scField(marks, 'Mapa de batazos de ' + (p.name || ''))}
         <div class="sc-legend" aria-label="Resultados: toca para ocultar o mostrar">${Object.entries(SC_RES).map(([k, [nm, col, kind]]) => `<button type="button" data-scr="${k}" aria-pressed="${!st.hide.has(k)}"><svg viewBox="0 0 16 16">${scShape(kind, 8, 8, 5, col)}</svg>${nm} · ${pts.filter(x => x.cat === k).length}</button>`).join('')}</div>
@@ -2285,7 +2302,8 @@ function mountSpray(el, pid, gs, tag) {
   };
   el.onclick = e => {
     const f = e.target.closest('[data-scf]'), rr = e.target.closest('[data-scr]');
-    if (f) { st.f = f.dataset.scf; draw(); } else if (rr) { const k = rr.dataset.scr; st.hide.has(k) ? st.hide.delete(k) : st.hide.add(k); draw(); }
+    if (e.target.closest('[data-sctr]')) { st.tr = !st.tr; draw(); }
+    else if (f) { st.f = f.dataset.scf; draw(); } else if (rr) { const k = rr.dataset.scr; st.hide.has(k) ? st.hide.delete(k) : st.hide.add(k); draw(); }
   };
   draw();
 }
@@ -2294,7 +2312,7 @@ function renderPaLoc() {
   const pa = paCtx && paCtx.pa, wrap = $('#paLocWrap'); if (!pa || !wrap) return;
   const show = !pa.res || !NO_BIP.includes(pa.res); wrap.hidden = !show; if (!show) return;
   let mk = '';
-  if (pa.loc) { const [x, y] = scPt(pa.loc.a, pa.loc.d), [nm, col, kind] = SC_RES[sprayCat(pa.res || 'O')]; mk = `<circle cx="${x}" cy="${y}" r="16" fill="var(--accent)" fill-opacity=".18"/>${scShape(kind, x, y, 7, col)}`; }
+  if (pa.loc) { const [x, y] = scPt(pa.loc.a, pa.loc.d), cat = sprayCat(pa.res || 'O'), [nm, col, kind] = SC_RES[cat]; mk = `<g class="sc-tr" aria-hidden="true">${scTrailPath({ a: pa.loc.a, d: pa.loc.d, cat, play: $('#paPlay').value }, '', col, 0)}</g><circle cx="${x}" cy="${y}" r="16" fill="var(--accent)" fill-opacity=".18"/>${scShape(kind, x, y, 7, col)}`; }
   $('#paLoc').innerHTML = scField(mk, 'Toca dónde cayó la bola');
   $('#paLocClr').hidden = !pa.loc;
 }
