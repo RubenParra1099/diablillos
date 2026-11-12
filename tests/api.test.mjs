@@ -87,6 +87,8 @@ ok('el administrador puede cambiar la dirección', r.team.slug === 'las-aguilas'
 r = await call({ op: 'adminTeamSave', id: team3, name: 'Otro nombre', category: '' });
 r = await call(null, { team: team3 });
 ok('renombrar el equipo no cambia su dirección', r.team.slug === 'las-aguilas', r.team.slug);
+r = await call(null, { home: '1' });
+ok('el inicio trae los equipos con sus totales y sin datos de juegos', r.home && r.me.teams.length === 3 && r.stats[team].players === 2 && r.stats[team].games === 1 && r.stats[team].last === "2026-11-01" && r.stats[team3].games === 0 && !r.games && !r.roster, JSON.stringify(r.stats));
 
 // R4 límite de intentos
 await call({ op: 'logout' });

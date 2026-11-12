@@ -262,6 +262,17 @@ export default async function handler(req, res) {
       let teamId = String(q.team || ''), slugMiss = false;
       // Si se abrió boxscoremx.vercel.app/<slug>, ese equipo manda (si el usuario tiene acceso)
       if (q.slug) { const t = me.teams.find(t => t.slug === String(q.slug).toLowerCase()); if (t) teamId = t.id; else slugMiss = true; }
+      // Inicio de la plataforma (boxscoremx.vercel.app sin equipo): solo los equipos del usuario y sus totales
+      if (q.home === '1') {
+        const ids = me.teams.map(t => t.id);
+        const [r, g] = await Promise.all([
+          p.query('select team_id, count(*)::int as n from bs_roster where team_id = any($1) group by team_id', [ids]),
+          p.query(`select team_id, count(*)::int as n, max(data->>'date') as last from bs_games where team_id = any($1) group by team_id`, [ids]),
+        ]);
+        const stats = Object.fromEntries(ids.map(id => [id, { players: 0, games: 0, last: null }]));
+        r.rows.forEach(x => stats[x.team_id].players = x.n); g.rows.forEach(x => Object.assign(stats[x.team_id], { games: x.n, last: x.last }));
+        return send(res, 200, { me: publicMe(me), home: true, stats });
+      }
       if (!canRead(me, teamId)) teamId = me.teams[0] ? me.teams[0].id : '';
       const since = /^\d{1,20}$/.test(String(q.since || '')) && q.team === teamId ? String(q.since) : '';
       const out = { me: publicMe(me), team: null, roster: {}, games: {}, ver: { roster: {}, games: {} }, canEdit: false, partial: !!since, slugMiss,
