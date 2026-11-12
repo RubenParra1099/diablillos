@@ -1,7 +1,7 @@
 {
-  "name": "Diablillos · Box Score",
+  "name": "BoxScore MX",
   "short_name": "Box Score",
-  "description": "Box score, estadísticas e indicadores del equipo.",
+  "description": "Box score, estadísticas e indicadores de tu equipo.",
   "lang": "es-MX",
   "start_url": "/",
   "scope": "/",

@@ -47,10 +47,28 @@ async function db() {
       create table if not exists bs_shares (token text primary key, team_id text not null references bs_teams(id) on delete cascade, pid text not null,
         created_by text, created_at timestamptz not null default now(), revoked boolean not null default false);
       create index if not exists bs_shares_team on bs_shares(team_id, pid);
-    `).catch(e => { ready = null; throw e; });
+      alter table bs_teams add column if not exists slug text;
+      create unique index if not exists bs_teams_slug on bs_teams(slug);
+    `).then(() => fillSlugs(p)).catch(e => { ready = null; throw e; });
   }
   await ready;
   return p;
+}
+
+/* ---------- dirección de cada equipo: boxscoremx.vercel.app/<slug> ---------- */
+const RESERVED = new Set(['api', 'js', 'tests', 'admin', 'login', 'index', 'app', 'www', 'static', 'assets', 'p']);
+const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40).replace(/-$/, '');
+const okSlug = s => /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(s) && !RESERVED.has(s);
+// Primer slug libre: nombre, luego nombre-categoría, luego nombre-2, nombre-3…
+async function freeSlug(c, name, category, exceptId) {
+  const base = slugify(name) || 'equipo', tries = [base, slugify(base + '-' + category), ...Array.from({ length: 50 }, (_, i) => `${base}-${i + 2}`)];
+  for (const s of tries) if (okSlug(s) && !(await c.query('select 1 from bs_teams where slug = $1 and id <> $2', [s, exceptId || ''])).rows[0]) return s;
+  return base + '-' + crypto.randomBytes(3).toString('hex');
+}
+// Equipos creados antes de que existieran las direcciones
+async function fillSlugs(c) {
+  const rows = (await c.query('select id, name, category from bs_teams where slug is null order by created_at')).rows;
+  for (const t of rows) await c.query('update bs_teams set slug = $2 where id = $1', [t.id, await freeSlug(c, t.name, t.category, t.id)]);
 }
 
 /* ---------- utilidades ---------- */
@@ -136,10 +154,10 @@ async function loadUser(p, req) {
   // La sesión deja de valer si cambió la contraseña
   if (s.ph !== u.pass_hash.slice(-12)) return null;
   const teams = (u.is_admin || u.is_supervisor)
-    ? (await p.query(`select t.id, t.name, t.category, t.data, $1::text as role, (m.user_id is not null) as own
+    ? (await p.query(`select t.id, t.name, t.category, t.slug, t.data, $1::text as role, (m.user_id is not null) as own
                       from bs_teams t left join bs_members m on m.team_id = t.id and m.user_id = $2
                       order by (m.user_id is null), t.name`, [u.is_admin ? 'admin' : 'supervisor', u.id])).rows
-    : (await p.query('select t.id, t.name, t.category, t.data, m.role from bs_members m join bs_teams t on t.id = m.team_id where m.user_id = $1 order by t.name', [u.id])).rows;
+    : (await p.query('select t.id, t.name, t.category, t.slug, t.data, m.role from bs_members m join bs_teams t on t.id = m.team_id where m.user_id = $1 order by t.name', [u.id])).rows;
   return { id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, mustChange: u.must_change, ph: u.pass_hash, teams };
 }
 const roleIn = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); return t ? t.role : null; };
@@ -147,7 +165,7 @@ const canRead = (u, teamId) => !!roleIn(u, teamId);
 const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
 const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad' });
-const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), role: t.role, own: t.own !== false });
+const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), role: t.role, own: t.own !== false });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
 async function body(req) { return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); }
@@ -184,6 +202,7 @@ export default async function handler(req, res) {
           await client.query('update bs_games  set team_id = $1 where team_id is null', [tid]);
         }
         await client.query('commit');
+        await fillSlugs(p);
         const row = (await p.query('select pass_hash from bs_users where id = $1', [uid])).rows[0];
         const token = sign({ uid, ph: row.pass_hash.slice(-12), exp: Date.now() + SESSION_DAYS * 864e5 });
         return send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, token, SESSION_DAYS * 86400) });
@@ -240,10 +259,12 @@ export default async function handler(req, res) {
 
     if (op === 'load') {
       const q = req.query || Object.fromEntries(new URLSearchParams(String(req.url || '').split('?')[1] || ''));
-      let teamId = String(q.team || '');
+      let teamId = String(q.team || ''), slugMiss = false;
+      // Si se abrió boxscoremx.vercel.app/<slug>, ese equipo manda (si el usuario tiene acceso)
+      if (q.slug) { const t = me.teams.find(t => t.slug === String(q.slug).toLowerCase()); if (t) teamId = t.id; else slugMiss = true; }
       if (!canRead(me, teamId)) teamId = me.teams[0] ? me.teams[0].id : '';
       const since = /^\d{1,20}$/.test(String(q.since || '')) && q.team === teamId ? String(q.since) : '';
-      const out = { me: publicMe(me), team: null, roster: {}, games: {}, ver: { roster: {}, games: {} }, canEdit: false, partial: !!since,
+      const out = { me: publicMe(me), team: null, roster: {}, games: {}, ver: { roster: {}, games: {} }, canEdit: false, partial: !!since, slugMiss,
         now: (await p.query('select (extract(epoch from now()) * 1000000)::bigint::text as v')).rows[0].v };
       if (teamId) {
         const cond = since ? 'team_id = $1 and updated_at > to_timestamp($2::numeric / 1000000)' : 'team_id = $1', args = since ? [teamId, since] : [teamId];
@@ -317,7 +338,7 @@ export default async function handler(req, res) {
       if (!me.isAdmin) fail(403, 'forbidden', 'Solo un administrador puede hacer esto.');
       if (op === 'adminList') {
         const [teams, users, members, recent, week] = await Promise.all([
-          p.query(`select t.id, t.name, t.category, t.data, t.created_at,
+          p.query(`select t.id, t.name, t.category, t.slug, t.data, t.created_at,
                      (select count(*)::int from bs_roster r where r.team_id = t.id) as players,
                      (select count(*)::int from bs_games g where g.team_id = t.id) as games,
                      (select max(g.data->>'date') from bs_games g where g.team_id = t.id) as last_game
@@ -329,7 +350,7 @@ export default async function handler(req, res) {
           p.query(`select count(*)::int as n from bs_games where data->>'date' >= to_char(current_date - 7, 'YYYY-MM-DD')`),
         ]);
         return send(res, 200, {
-          teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, ...teamLook(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
+          teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
           users: users.rows.map(u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, active: u.active, mustChange: u.must_change, lastLogin: u.last_login,
             teams: members.rows.filter(m => m.user_id === u.id).map(m => ({ team: m.team_id, role: m.role })) })),
           recent: recent.rows.map(g => ({ team: g.team_id, date: g.date, opp: g.opp, ha: g.ha, us: Array.isArray(g.us) ? g.us : [], them: Array.isArray(g.them) ? g.them : [], by: g.by || '' })),
@@ -346,11 +367,17 @@ export default async function handler(req, res) {
         const mode = ['trad', 'chupon'].includes(b.mode) ? b.mode : undefined;
         const dup = (await p.query('select id from bs_teams where lower(trim(name)) = lower($1) and lower(trim(category)) = lower($2) and id <> $3', [name, category, String(b.id || '')])).rows[0];
         if (dup) fail(409, 'team_exists', 'Ya existe un equipo con ese nombre y categoría.');
+        // Dirección: la que escribió el administrador o, si la dejó vacía, una libre a partir del nombre
+        let slug = typeof b.slug === 'string' && b.slug.trim() ? slugify(b.slug) : '';
+        if (slug) {
+          if (!okSlug(slug)) fail(400, 'bad_slug', 'Esa dirección no se puede usar. Usa letras, números y guiones.');
+          if ((await p.query('select 1 from bs_teams where slug = $1 and id <> $2', [slug, String(b.id || '')])).rows[0]) fail(409, 'slug_taken', 'Esa dirección ya la usa otro equipo.');
+        }
         const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
         const colors = b.colors === null ? null : (isObj(b.colors) && hex(b.colors.primary) ? { primary: hex(b.colors.primary), secondary: hex(b.colors.secondary) || '#8d9096' } : undefined);
         if (b.id) {
           if (!validId(b.id)) fail(400, 'bad_request');
-          const cur = (await p.query('select data from bs_teams where id = $1', [b.id])).rows[0];
+          const cur = (await p.query('select data, slug from bs_teams where id = $1', [b.id])).rows[0];
           if (!cur) fail(404, 'not_found', 'Ese equipo ya no existe.');
           const data = { ...(cur.data || {}) };
           if (logo !== undefined) { if (logo) data.logo = logo; else delete data.logo; }
@@ -359,12 +386,14 @@ export default async function handler(req, res) {
           if (font !== undefined) data.font = font;
           if (lettering !== undefined) data.lettering = lettering;
           if (mode !== undefined) data.mode = mode;
-          await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb where id = $1', [b.id, name, category, JSON.stringify(data)]);
+          if (!slug && !cur.slug) slug = await freeSlug(p, name, category, b.id);
+          await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb, slug = coalesce($5, slug) where id = $1', [b.id, name, category, JSON.stringify(data), slug || null]);
           return send(res, 200, { ok: true, id: b.id });
         }
         const id = newId('t');
         const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font; if (lettering) data.lettering = lettering; if (mode) data.mode = mode;
-        await p.query('insert into bs_teams (id, name, category, data) values ($1, $2, $3, $4::jsonb)', [id, name, category, JSON.stringify(data)]);
+        if (!slug) slug = await freeSlug(p, name, category, id);
+        await p.query('insert into bs_teams (id, name, category, data, slug) values ($1, $2, $3, $4::jsonb, $5)', [id, name, category, JSON.stringify(data), slug]);
         return send(res, 200, { ok: true, id });
       }
       if (op === 'adminTeamDelete') {

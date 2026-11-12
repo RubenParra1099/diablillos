@@ -64,6 +64,30 @@ r = await call({ op: 'shareRevoke', team, pid: 'p1' });
 r = await call(null, { share: tok }, { noCookie: true });
 ok('al desactivarlo deja de funcionar', r.code === 404 && r.error === 'share_gone');
 
+// Dirección de cada equipo (boxscoremx.vercel.app/<slug>)
+r = await call(null, { team });
+ok('el equipo recibe su dirección a partir del nombre', r.team.slug === 'diablillos', r.team.slug);
+r = await call({ op: 'adminTeamSave', name: 'Diablillos', category: 'Juvenil' }); const team2 = r.id;
+r = await call({ op: 'adminTeamSave', name: 'Águilas', category: '' }); const team3 = r.id;
+r = await call(null, { team });
+const slugOf = id => r.me.teams.find(t => t.id === id).slug;
+ok('mismo nombre en otra categoría usa nombre-categoría', slugOf(team2) === 'diablillos-juvenil', slugOf(team2));
+ok('los acentos se quitan', slugOf(team3) === 'aguilas', slugOf(team3));
+r = await call(null, { team, slug: 'aguilas' });
+ok('abrir /aguilas carga ese equipo', r.team.id === team3 && !r.slugMiss);
+r = await call(null, { team, slug: 'no-existe' });
+ok('una dirección desconocida avisa y abre el equipo pedido', r.team.id === team && r.slugMiss);
+r = await call({ op: 'adminTeamSave', id: team3, name: 'Águilas', category: '', slug: 'diablillos' });
+ok('no se repite una dirección', r.code === 409 && r.error === 'slug_taken');
+r = await call({ op: 'adminTeamSave', id: team3, name: 'Águilas', category: '', slug: 'api' });
+ok('no se usan direcciones reservadas', r.code === 400 && r.error === 'bad_slug');
+r = await call({ op: 'adminTeamSave', id: team3, name: 'Águilas Reales', category: '', slug: 'Las Águilas' });
+r = await call(null, { team: team3 });
+ok('el administrador puede cambiar la dirección', r.team.slug === 'las-aguilas' && r.team.name === 'Águilas Reales', r.team.slug);
+r = await call({ op: 'adminTeamSave', id: team3, name: 'Otro nombre', category: '' });
+r = await call(null, { team: team3 });
+ok('renombrar el equipo no cambia su dirección', r.team.slug === 'las-aguilas', r.team.slug);
+
 // R4 límite de intentos
 await call({ op: 'logout' });
 for (let i = 0; i < 5; i++) { r = await call({ op: 'login', email: 'coach@x.mx', password: 'mala' + i }, {}, { ip: '10.0.0.' + (i + 2) }); }

@@ -1,4 +1,4 @@
-# Diablillos · Box Score
+# BoxScore MX
 
 Plataforma para capturar box scores de béisbol (tradicional y categoría Chupón) y llevar las estadísticas de bateo, pitcheo y fildeo del equipo, con indicadores sabermétricos, proyecciones, MVP por juego, tarjetas para compartir, fichas de jugador y reportes en PDF. Se puede instalar en el celular y capturar sin señal.
 
@@ -63,13 +63,14 @@ Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno.
 
 - **Resumen**: totales, últimos juegos de toda la liga (con quién los capturó) y pendientes (contraseñas temporales, equipos sin nadie asignado, equipos sin juegos).
 - **Equipos**: tarjetas con el estilo de cada equipo. Cada equipo se identifica como **Nombre · Categoría**; no se permiten dos equipos con el mismo nombre y categoría. La ventana de equipo tiene pestañas Datos (incluye modalidad por defecto: Tradicional o Chupón), Identidad, Letras, Colores y Acceso.
+- **Dirección de cada equipo**: cada equipo se abre en `boxscoremx.vercel.app/<dirección>` (por ejemplo `/diablillos` o `/aguilas`). Se arma sola con el nombre (sin acentos; si el nombre se repite en otra categoría, `nombre-categoría`) y el administrador la puede cambiar en Datos. Renombrar el equipo no cambia su dirección, para que los enlaces guardados sigan sirviendo. Si alguien abre la dirección de un equipo al que no tiene acceso, se le avisa y se abre el suyo. La regla de rutas está en `vercel.json`.
 - **Usuarios**: buscador y filtros, menú ⋯ (editar, restablecer contraseña, activar/desactivar, eliminar) y asistente de alta en 3 pasos que genera la contraseña temporal y un mensaje listo para WhatsApp.
 
 ## Tablas (las crea la API sola)
 
 | Tabla | Contenido |
 |---|---|
-| `bs_teams` | equipos (nombre, categoría, logo) |
+| `bs_teams` | equipos (nombre, categoría, dirección `slug`, logo) |
 | `bs_users` | usuarios (correo, nombre, contraseña cifrada con scrypt, administrador, supervisor, activo) |
 | `bs_members` | acceso de cada usuario a cada equipo (`editor` o `viewer`) |
 | `bs_roster` | jugadores (`team_id`, `data` jsonb: incluye fecha de nacimiento y metas) |
