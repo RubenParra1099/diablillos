@@ -39,6 +39,25 @@ Máximo por día: 7-8 años 50 · 9-10 años 75 · 11-12 años 85 · 13-16 años
 Descanso (14 años o menos): 66+ lanzamientos 4 días · 51-65 3 · 36-50 2 · 21-35 1. De 15 a 18 años: 76+ 4 · 61-75 3 · 46-60 2 · 31-45 1.
 La edad sale de la fecha de nacimiento del Roster. Están en `js/calc.js` (`PITCH_MAX`, `restDays`) por si la liga usa otra tabla.
 
+## Paquetes por equipo (Básico, Gold, Pro)
+
+Cada equipo tiene un paquete y una vigencia, según el análisis de pricing de Dugout Digital. El administrador los asigna en **Admin › Equipos › Editar › Datos**. Los roles de abajo dicen *quién* hace qué; el paquete dice *qué módulos* tiene el equipo.
+
+| Módulo | Básico | Gold | Pro |
+|---|---|---|---|
+| Box score, lista de juegos, resumen y Compartir resumen | Sí | Sí | Sí |
+| MVP por juego y tarjeta MVP | Sí | Sí | Sí |
+| Roster y tarjetas de cumpleaños | Sí | Sí | Sí |
+| Bateo, Pitcheo (¿quién puede lanzar hoy?), Fildeo | — | Sí | Sí |
+| Ficha del jugador, metas y enlace para papás | — | Sí | Sí |
+| Contra cada rival y reporte de temporada PDF | — | Sí | Sí |
+| Indicadores, mapa de batazos, wOBA/FIP en la ficha, Proyección | — | — | Sí |
+
+- Un equipo nuevo empieza en **Gold** con seis meses de vigencia. Los equipos que ya existían antes de los paquetes quedaron en **Pro** y sin vencimiento.
+- Los módulos fuera del paquete se ven en las pestañas con su etiqueta (GOLD o PRO) y muestran qué incluyen y cómo activarlos. Los juegos capturados siempre cuentan: al subir de paquete aparecen las estadísticas de toda la temporada.
+- **Vigencia**: la licencia vale hasta la fecha indicada. Desde 15 días antes se avisa en el equipo. Al vencer, el equipo queda en solo lectura (Captura y Supervisor ya no guardan; el administrador sí) y los datos se conservan. El botón **+6 meses** renueva desde el vencimiento actual, o desde hoy si ya venció.
+- El servidor bloquea el enlace para papás en Básico y las escrituras con la licencia vencida.
+
 ## Usuarios y roles
 
 | Rol | Alcance |

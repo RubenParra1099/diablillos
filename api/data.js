@@ -160,11 +160,21 @@ async function loadUser(p, req) {
     : (await p.query('select t.id, t.name, t.category, t.slug, t.data, m.role from bs_members m join bs_teams t on t.id = m.team_id where m.user_id = $1 order by t.name', [u.id])).rows;
   return { id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, mustChange: u.must_change, ph: u.pass_hash, teams };
 }
+/* ---------- paquetes (Básico, Gold, Pro) y vigencia de la licencia de cada equipo ---------- */
+const PLANS = ['basico', 'gold', 'pro'];
+// Equipos dados de alta antes de los paquetes: Pro y sin vencimiento, para que no pierdan nada
+const planOf = d => PLANS.includes(d && d.plan) ? d.plan : 'pro';
+const hasPlan = (d, need) => PLANS.indexOf(planOf(d)) >= PLANS.indexOf(need);
+const todayMx = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+// La licencia vale hasta el día de vencimiento inclusive
+const isExpired = d => !!(d && d.expires) && d.expires < todayMx();
 const roleIn = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); return t ? t.role : null; };
 const canRead = (u, teamId) => !!roleIn(u, teamId);
-const canWrite = (u, teamId) => ['admin', 'supervisor', 'editor'].includes(roleIn(u, teamId));
+// Con la licencia vencida el equipo queda en solo lectura; el administrador puede seguir corrigiendo
+const canWrite = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); if (!t) return false; return t.role === 'admin' || (['supervisor', 'editor'].includes(t.role) && !isExpired(t.data)); };
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
-const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad' });
+const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad',
+  plan: planOf(d), expires: (d && d.expires) || '', expired: isExpired(d) });
 const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), role: t.role, own: t.own !== false });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
 
@@ -235,6 +245,7 @@ export default async function handler(req, res) {
       if (q0.share) {
         const sh = (await p.query('select s.team_id, s.pid, t.name, t.category, t.data from bs_shares s join bs_teams t on t.id = s.team_id where s.token = $1 and not s.revoked', [String(q0.share).slice(0, 80)])).rows[0];
         if (!sh) fail(404, 'share_gone', 'Este enlace ya no está disponible. Pide uno nuevo al coach.');
+        if (!hasPlan(sh.data, 'gold')) fail(404, 'share_gone', 'Este enlace ya no está disponible en el paquete del equipo.');
         const [pr, gr] = await Promise.all([
           p.query('select data from bs_roster where id = $1 and team_id = $2', [sh.pid, sh.team_id]),
           p.query('select id, data from bs_games where team_id = $1', [sh.team_id]),
@@ -313,6 +324,8 @@ export default async function handler(req, res) {
         return send(res, 200, { ok: true });
       }
       if (op === 'shareCreate') {
+        const td = (me.teams.find(t => t.id === teamId) || {}).data;
+        if (!hasPlan(td, 'gold')) fail(403, 'plan', 'El enlace para papás es parte del paquete Gold.');
         if (!validId(b.pid) || !(await p.query('select 1 from bs_roster where id = $1 and team_id = $2', [b.pid, teamId])).rows[0]) fail(404, 'not_found', 'Ese jugador no está en el roster.');
         const cur = (await p.query('select token from bs_shares where team_id = $1 and pid = $2 and not revoked', [teamId, b.pid])).rows[0];
         if (cur) return send(res, 200, { ok: true, token: cur.token });
@@ -376,6 +389,10 @@ export default async function handler(req, res) {
         const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan','dafoe'].includes(b.font) ? b.font : undefined;
         const lettering = isObj(b.lettering) ? { tail: b.lettering.tail === 'thick' ? 'thick' : !!b.lettering.tail, fill: ['team', 'solid', 'varsity'].includes(b.lettering.fill) ? b.lettering.fill : 'white', tilt: !!b.lettering.tilt } : undefined;
         const mode = ['trad', 'chupon'].includes(b.mode) ? b.mode : undefined;
+        const plan = PLANS.includes(b.plan) ? b.plan : undefined;
+        // Vigencia: fecha AAAA-MM-DD; vacía = sin vencimiento
+        if (b.expires !== undefined && b.expires !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(String(b.expires))) fail(400, 'bad_date', 'La fecha de vencimiento no es válida.');
+        const expires = b.expires === undefined ? undefined : String(b.expires);
         const dup = (await p.query('select id from bs_teams where lower(trim(name)) = lower($1) and lower(trim(category)) = lower($2) and id <> $3', [name, category, String(b.id || '')])).rows[0];
         if (dup) fail(409, 'team_exists', 'Ya existe un equipo con ese nombre y categoría.');
         // Dirección: la que escribió el administrador o, si la dejó vacía, una libre a partir del nombre
@@ -397,12 +414,15 @@ export default async function handler(req, res) {
           if (font !== undefined) data.font = font;
           if (lettering !== undefined) data.lettering = lettering;
           if (mode !== undefined) data.mode = mode;
+          if (plan !== undefined) data.plan = plan;
+          if (expires !== undefined) { if (expires) data.expires = expires; else delete data.expires; }
           if (!slug && !cur.slug) slug = await freeSlug(p, name, category, b.id);
           await p.query('update bs_teams set name = $2, category = $3, data = $4::jsonb, slug = coalesce($5, slug) where id = $1', [b.id, name, category, JSON.stringify(data), slug || null]);
           return send(res, 200, { ok: true, id: b.id });
         }
         const id = newId('t');
         const data = {}; if (logo) data.logo = logo; if (colors) data.colors = colors; if (wordmark) data.wordmark = wordmark; if (font) data.font = font; if (lettering) data.lettering = lettering; if (mode) data.mode = mode;
+        data.plan = plan || 'gold'; if (expires) data.expires = expires;
         if (!slug) slug = await freeSlug(p, name, category, id);
         await p.query('insert into bs_teams (id, name, category, data, slug) values ($1, $2, $3, $4::jsonb, $5)', [id, name, category, JSON.stringify(data), slug]);
         return send(res, 200, { ok: true, id });

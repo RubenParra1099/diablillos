@@ -90,6 +90,29 @@ ok('renombrar el equipo no cambia su dirección', r.team.slug === 'las-aguilas',
 r = await call(null, { home: '1' });
 ok('el inicio trae los equipos con sus totales y sin datos de juegos', r.home && r.me.teams.length === 3 && r.stats[team].players === 2 && r.stats[team].games === 1 && r.stats[team].last === "2026-11-01" && r.stats[team3].games === 0 && !r.games && !r.roster, JSON.stringify(r.stats));
 
+// Paquetes (Básico, Gold, Pro) y vigencia de la licencia
+r = await call(null, { team });
+ok('un equipo nuevo empieza en Gold y sin vencer', r.team.plan === 'gold' && !r.team.expired, r.team.plan);
+await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', plan: 'basico' });
+r = await call({ op: 'shareCreate', team, pid: 'p1' });
+ok('en Básico no se crea enlace para papás', r.code === 403 && r.error === 'plan');
+await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', plan: 'gold', expires: '2020-01-01' });
+r = await call(null, { team });
+ok('la licencia vencida se marca', r.team.plan === 'gold' && r.team.expired && r.team.expires === '2020-01-01');
+ok('el administrador puede seguir corrigiendo un equipo vencido', r.canEdit === true);
+r = await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', expires: 'mañana' });
+ok('una fecha de vencimiento inválida se rechaza', r.code === 400 && r.error === 'bad_date');
+await call({ op: 'adminUserSave', email: 'captura@x.mx', name: 'Capturista', password: 'temporal123', teams: [{ team, role: 'editor' }] });
+await call({ op: 'login', email: 'captura@x.mx', password: 'temporal123' }, {}, { ip: '10.0.1.1' });
+r = await call(null, { team });
+ok('con la licencia vencida, Captura queda en solo lectura', r.team.id === team && r.canEdit === false);
+r = await call({ op: 'put', team, col: 'roster', id: 'p9', data: { name: 'Nuevo' }, base: null });
+ok('con la licencia vencida, Captura no puede guardar', r.code === 403);
+await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.1.2' });
+await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', expires: '' });
+r = await call(null, { team });
+ok('al quitar el vencimiento vuelve a estar vigente', !r.team.expired && r.team.expires === '' && r.canEdit);
+
 // R4 límite de intentos
 await call({ op: 'logout' });
 for (let i = 0; i < 5; i++) { r = await call({ op: 'login', email: 'coach@x.mx', password: 'mala' + i }, {}, { ip: '10.0.0.' + (i + 2) }); }
