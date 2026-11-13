@@ -3573,20 +3573,34 @@ function scDraw(ctx, d) {
   for (let a = 0; a < 360; a += 12) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, H * 1.7, a * Math.PI / 180, (a + 4) * Math.PI / 180); ctx.closePath(); ctx.fill(); }
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
-  const hasNum = d.num !== '';
+  // Encabezado: número a la izquierda; nombre a la derecha (en dos renglones si no cabe grande) y posición · equipo
+  const hasNum = d.num !== '', nameW = W - 2 * m - (hasNum ? 260 : 0), name = String(d.full || '').toUpperCase(), NF = '800 #px "Barlow Condensed", sans-serif';
   if (hasNum) { ctx.fillStyle = Y; ctx.textAlign = 'left'; ctx.font = '800 200px "Barlow Condensed", sans-serif'; ctx.fillText(d.num, m - 6, m + 150); }
-  const name = String(d.full || '').toUpperCase();
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; bdFit(ctx, name, '800 #px "Barlow Condensed", sans-serif', 108, W - 2 * m - (hasNum ? 250 : 0)); ctx.fillText(name, W - m, m + 92);
-  ctx.globalAlpha = .85; ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText(`${d.pos ? d.pos + ' · ' : ''}${d.team}`.toUpperCase(), W - m, m + 146); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
-  ctx.textAlign = 'left'; ctx.globalAlpha = .85; ctx.font = '600 30px "IBM Plex Mono", monospace'; bdSpacing(ctx, 7); ctx.fillText(s.lab.toUpperCase(), m, 560); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
+  let y = m + 92;
+  const one = bdFit(ctx, name, NF, 108, nameW), words = name.split(/\s+/);
+  if (one >= 84 || words.length < 2) ctx.fillText(name, W - m, y);
+  else {
+    const cut = Math.ceil(words.length / 2), l1 = words.slice(0, cut).join(' '), l2 = words.slice(cut).join(' ');
+    const sz = Math.min(bdFit(ctx, l1, NF, 96, nameW), bdFit(ctx, l2, NF, 96, nameW)); ctx.font = NF.replace('#', sz);
+    ctx.fillText(l1, W - m, m + 78); y = m + 78 + sz * .92; ctx.fillText(l2, W - m, y);
+  }
+  ctx.globalAlpha = .85; ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText(`${d.pos ? d.pos + ' · ' : ''}${d.team}`.toUpperCase(), W - m, y + 54); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
+  const top = Math.max(y + 54, hasNum ? m + 150 : 0) + 30, bottom = 1250;
+  // Bloque de números centrado entre el encabezado y el pie: etiqueta, promedio grande, tres recuadros y lo destacado
   const avg = isFinite(b.avg) ? fmtRate(b.avg) : '—';
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetY = 14; ctx.font = '800 380px "Barlow Condensed", sans-serif'; ctx.fillText(avg, m - 10, 900); const aw = ctx.measureText(avg).width; ctx.restore();
-  ctx.globalAlpha = .85; ctx.font = '700 92px "Barlow Condensed", sans-serif'; ctx.fillText('AVG', Math.min(W - m - 150, m + aw + 6), 670); ctx.globalAlpha = 1;
+  ctx.textAlign = 'left'; const AF = '800 #px "Barlow Condensed", sans-serif', asz = bdFit(ctx, avg, AF, 360, W - 2 * m - 190), cap = asz * .72;
+  const blockH = 30 + 44 + cap + 54 + 176 + 46 + 84, y0 = top + Math.max(0, (bottom - top - blockH) / 2);
+  const labY = y0 + 30, avgY = labY + 44 + cap, tileY = avgY + 54, bestY = tileY + 176 + 46;
+  ctx.globalAlpha = .85; ctx.font = '600 30px "IBM Plex Mono", monospace'; bdSpacing(ctx, 7); ctx.fillText(s.lab.toUpperCase(), m, labY); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetY = 14; ctx.font = AF.replace('#', asz); ctx.fillText(avg, m, avgY); const aw = ctx.measureText(avg).width; ctx.restore();
+  // "AVG" pegado al promedio, alineado con la parte de arriba de los dígitos
+  ctx.globalAlpha = .85; ctx.font = '700 84px "Barlow Condensed", sans-serif'; ctx.fillText('AVG', m + aw + 22, avgY - cap + 60); ctx.globalAlpha = 1;
   const tw = (W - 2 * m - 2 * 28) / 3, tile = { fill: 'rgba(0,0,0,.28)', stroke: 'rgba(255,255,255,.22)', ink: '#ffffff', lab: 'rgba(255,255,255,.82)', size: 104 };
-  [[b.obp, 'OBP'], [b.slg, 'SLG'], [b.ops, 'OPS']].forEach(([v, k], i) => mvpTile(ctx, m + i * (tw + 28), 950, tw, 176, isFinite(v) ? fmtRate(v) : '—', k, tile));
-  ctx.fillStyle = Y; ctx.fillRect(m, 1166, 8, 84);
-  ctx.textAlign = 'left'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText('DESTACADO', m + 30, 1194); bdSpacing(ctx, 0);
-  ctx.fillStyle = '#fff'; const best = scBest(b); bdFit(ctx, best, '500 #px "IBM Plex Sans", sans-serif', 42, W - 2 * m - 30); ctx.fillText(best, m + 30, 1244);
+  [[b.obp, 'OBP'], [b.slg, 'SLG'], [b.ops, 'OPS']].forEach(([v, k], i) => mvpTile(ctx, m + i * (tw + 28), tileY, tw, 176, isFinite(v) ? fmtRate(v) : '—', k, tile));
+  ctx.fillStyle = Y; ctx.fillRect(m, bestY, 8, 84);
+  ctx.textAlign = 'left'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText('DESTACADO', m + 30, bestY + 28); bdSpacing(ctx, 0);
+  ctx.fillStyle = '#fff'; const best = scBest(b); bdFit(ctx, best, '500 #px "IBM Plex Sans", sans-serif', 42, W - 2 * m - 30); ctx.fillText(best, m + 30, bestY + 78);
   ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(m, 1272, W - 2 * m, 2);
   ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3);
   ctx.fillText(`${s.g} ${s.g === 1 ? 'juego' : 'juegos'} · ${b.pa} turnos`, m, 1314); ctx.textAlign = 'right'; ctx.fillText(`BOXSCORE MX · ${shortDate(today()).toUpperCase()}`, W - m, 1314); bdSpacing(ctx, 0);
@@ -3634,41 +3648,100 @@ async function teaserSeasonCard(p, st) {
 // En el enlace para papás no viajan las líneas de los demás: se usan los totales del equipo de cada juego (g.tl)
 function teamBatLine(gs) { const t = zero(BATK); if (shareMode) gs.forEach(g => BATK.forEach(k => t[k] += num((g.tl || {})[k]))); else Object.values(aggBat(gs)).forEach(p => BATK.forEach(k => t[k] += num(p[k]))); return derive(t); }
 const TREND_ICON = { hot: '↑', cold: '↓', power: 'P', contact: 'K', strikeouts: 'K', eye: 'BB', speed: 'BR', lead: '1º', twoout: '2' };
-function playerInsightsHTML(pid, d) {
-  const b = d.b; if (!b || !b.pa) return '';
-  const gs = seasonGames(), o = batOutcomes(b), pc = n => Math.round(100 * n / o.pa) + '%', out = [];
-  // En qué terminan sus turnos
-  const segs = [['Hits', o.h, 'var(--r1b)'], ['BB y golpes', o.onb, 'var(--o-bb)'], ['Sacrificios', o.sac, 'var(--o-sac)'], ['Outs y errores', o.inplay, 'var(--o-out)'], ['Ponches', o.so, 'var(--rout)']];
-  const hits = [['Sencillo', o.s1, 'var(--r1b)'], ['Doble', o.d, 'var(--r2b)'], ['Triple', o.t, 'var(--r3b)'], ['HR', o.hr, 'var(--rhr)']], hmax = Math.max(1, ...hits.map(x => x[1])), xbh = o.d + o.t + o.hr;
-  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">En qué terminan sus turnos</h3><span class="sub">${o.pa} turnos</span></div>
-    <div class="pi-stack" role="img" aria-label="${esc(segs.map(s => `${s[0]} ${s[1]}`).join(', '))}">${segs.filter(s => s[1]).map(s => `<i style="flex:${s[1]};background:${s[2]}"></i>`).join('')}</div>
-    <div class="pi-leg">${segs.map(s => `<div><i style="background:${s[2]}"></i><span>${s[0]}</span><b>${s[1]}<small>${pc(s[1])}</small></b></div>`).join('')}</div>
-    ${o.h ? `<h3 style="margin:6px 0 0">Cómo se reparten sus ${o.h} hit${o.h === 1 ? '' : 's'}</h3><div class="pi-hits">${hits.map(([l, v, c]) => `<div><b>${v}</b><i style="height:${Math.max(3, Math.round(100 * v / hmax))}%;background:${c}"></i><span>${l}</span></div>`).join('')}</div>` : ''}
-    <p class="ind-read" style="margin:0">Se embasa por hit, base por bolas o golpe en ${pc(o.h + o.onb)} de sus turnos.${o.h ? ` ${xbh} de sus ${o.h} hits ${xbh === 1 ? 'es' : 'son'} de extrabase.` : ''}</p></div>`);
+const BB_ROWS = [['ground', 'Rodados'], ['fly', 'Elevados'], ['line', 'Líneas']];
+// Los mismos números para la ficha y para el PDF
+function playerInsightData(pid, d) {
+  const b = d.b; if (!b || !b.pa) return null;
+  const gs = seasonGames(), o = batOutcomes(b);
+  const outcomes = [['Hits', o.h, 'r1b'], ['BB y golpes', o.onb, 'o-bb'], ['Sacrificios', o.sac, 'o-sac'], ['Outs y errores', o.inplay, 'o-out'], ['Ponches', o.so, 'rout']];
+  const hits = [['Sencillo', o.s1, 'r1b'], ['Doble', o.d, 'r2b'], ['Triple', o.t, 'r3b'], ['HR', o.hr, 'rhr']], xbh = o.d + o.t + o.hr;
+  const onPct = Math.round(100 * (o.h + o.onb) / o.pa);
+  const outRead = `Se embasa por hit, base por bolas o golpe en ${onPct}% de sus turnos.${o.h ? ` ${xbh} de sus ${o.h} hits ${xbh === 1 ? 'es' : 'son'} de extrabase.` : ''}`;
   // Tendencias (en el enlace para papás no salen las de "atención")
   const pl = paList(gs).filter(x => x.pid === pid), last3 = d.log.filter(x => x.pa && x.l).slice(-3);
   const recent = { ab: last3.reduce((a, x) => a + num(x.l.ab), 0), h: last3.reduce((a, x) => a + num(x.l.h), 0) };
-  let tr = batTrends({ b, team: teamBatLine(gs), recent, pas: pl }); if (shareMode) tr = tr.filter(x => x.tone !== 'warn');
-  const icon = x => x.k === 'spray' ? ({ izquierdo: '←', central: '↑', derecho: '→' })[x.title.split(' ').pop()] : (TREND_ICON[x.k] || '•');
-  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tendencias</h3><span class="sub">comparado con el equipo</span></div>
-    ${b.pa < 15 ? `<p class="hint" style="margin:0">Las tendencias aparecen cuando tenga al menos 15 turnos (lleva ${b.pa}).</p>`
-      : tr.length ? `<div class="pi-tends">${tr.map(x => `<div class="pi-tend ${x.tone}"><span class="ico">${icon(x)}</span><div><b>${esc(x.title)}</b><small>${esc(x.txt)}</small></div><span class="v">${esc(x.v)}</span></div>`).join('')}</div>`
-      : '<p class="hint" style="margin:0">Sin tendencias claras todavía: sus números van parejos con los del equipo.</p>'}</div>`);
-  // Tipo de batazo, de la jugada anotada
-  const bt = bbTypes(pl), tt = bbTypes(paList(gs)), P = (x, t) => t.n ? x / t.n : 0, f = x => Math.round(100 * x) + '%';
-  const rows = [['ground', 'Rodados', 'var(--o-gb)'], ['fly', 'Elevados', 'var(--r2b)'], ['line', 'Líneas', 'var(--r1b)']];
-  let read = 'Su reparto es parecido al del equipo.';
-  if (bt.n >= 5) {
-    // El tipo en que más se separa del equipo (hacia arriba)
-    const x = rows.map(([k]) => ({ k, me: P(bt[k], bt), tm: P(tt[k], tt) })).sort((a, c) => (c.me - c.tm) - (a.me - a.tm))[0], vs = `(${f(x.me)} contra ${f(x.tm)})`;
-    if (tt.n && x.me - x.tm >= .05) read = { line: `Pega más líneas que el equipo ${vs}. La línea es el batazo que más seguido cae de hit.`, fly: `Eleva la bola más que el equipo ${vs}.`, ground: `Pega más rodados que el equipo ${vs}. Con piernas rápidas, el rodado obliga a la defensa a tirar bien.` }[x.k];
+  let trends = batTrends({ b, team: teamBatLine(gs), recent, pas: pl }); if (shareMode) trends = trends.filter(x => x.tone !== 'warn');
+  // Tipo de batazo, de la jugada anotada, contra el equipo
+  const bt = bbTypes(pl), tt = bbTypes(paList(gs)), P = (k, t) => t.n ? t[k] / t.n : 0, f = x => Math.round(100 * x) + '%';
+  const bb = BB_ROWS.map(([k, lab]) => ({ k, lab, me: P(k, bt), tm: P(k, tt) }));
+  let bbRead = 'Su reparto es parecido al del equipo.';
+  if (bt.n >= 5 && tt.n) {
+    const x = [...bb].sort((a, c) => (c.me - c.tm) - (a.me - a.tm))[0], vs = `(${f(x.me)} contra ${f(x.tm)})`;
+    if (x.me - x.tm >= .05) bbRead = { line: `Pega más líneas que el equipo ${vs}. La línea es el batazo que más seguido cae de hit.`, fly: `Eleva la bola más que el equipo ${vs}.`, ground: `Pega más rodados que el equipo ${vs}. Con piernas rápidas, el rodado obliga a la defensa a tirar bien.` }[x.k];
   }
-  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tipo de batazo</h3><span class="sub">${bt.n} batazo${bt.n === 1 ? '' : 's'} con jugada</span></div>
-    ${bt.n < 5 ? `<p class="hint" style="margin:0">Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${bt.n}.</p>`
-      : `<div class="pi-bb">${rows.map(([k, l, c]) => `<div class="pi-bbrow"><span>${l}</span><div class="pi-bbbar"><i style="width:${f(P(bt[k], bt))};background:${c}"></i>${tt.n ? `<u style="left:${f(P(tt[k], tt))}" title="Equipo: ${f(P(tt[k], tt))}"></u>` : ''}</div><b>${f(P(bt[k], bt))}</b></div>`).join('')}
-        <div class="pi-bbleg"><u></u> Promedio del equipo</div></div><p class="ind-read" style="margin:0">${read}</p>`}
+  return { o, outcomes, hits, outRead, trends, pa: b.pa, bt, tt, bb, bbRead };
+}
+function playerInsightsHTML(pid, d) {
+  const x = playerInsightData(pid, d); if (!x) return '';
+  const o = x.o, pc = n => Math.round(100 * n / o.pa) + '%', f = v => Math.round(100 * v) + '%', hmax = Math.max(1, ...x.hits.map(h => h[1])), out = [];
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">En qué terminan sus turnos</h3><span class="sub">${o.pa} turnos</span></div>
+    <div class="pi-stack" role="img" aria-label="${esc(x.outcomes.map(s => `${s[0]} ${s[1]}`).join(', '))}">${x.outcomes.filter(s => s[1]).map(s => `<i style="flex:${s[1]};background:var(--${s[2]})"></i>`).join('')}</div>
+    <div class="pi-leg">${x.outcomes.map(s => `<div><i style="background:var(--${s[2]})"></i><span>${s[0]}</span><b>${s[1]}<small>${pc(s[1])}</small></b></div>`).join('')}</div>
+    ${o.h ? `<h3 style="margin:6px 0 0">Cómo se reparten sus ${o.h} hit${o.h === 1 ? '' : 's'}</h3><div class="pi-hits">${x.hits.map(([l, v, c]) => `<div><b>${v}</b><i style="height:${Math.max(3, Math.round(100 * v / hmax))}%;background:var(--${c})"></i><span>${l}</span></div>`).join('')}</div>` : ''}
+    <p class="ind-read" style="margin:0">${esc(x.outRead)}</p></div>`);
+  const icon = t => t.k === 'spray' ? ({ izquierdo: '←', central: '↑', derecho: '→' })[t.title.split(' ').pop()] : (TREND_ICON[t.k] || '•');
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tendencias</h3><span class="sub">comparado con el equipo</span></div>
+    ${x.pa < 15 ? `<p class="hint" style="margin:0">Las tendencias aparecen cuando tenga al menos 15 turnos (lleva ${x.pa}).</p>`
+      : x.trends.length ? `<div class="pi-tends">${x.trends.map(t => `<div class="pi-tend ${t.tone}"><span class="ico">${icon(t)}</span><div><b>${esc(t.title)}</b><small>${esc(t.txt)}</small></div><span class="v">${esc(t.v)}</span></div>`).join('')}</div>`
+      : '<p class="hint" style="margin:0">Sin tendencias claras todavía: sus números van parejos con los del equipo.</p>'}</div>`);
+  const col = { ground: 'o-gb', fly: 'r2b', line: 'r1b' };
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tipo de batazo</h3><span class="sub">${x.bt.n} batazo${x.bt.n === 1 ? '' : 's'} con jugada</span></div>
+    ${x.bt.n < 5 ? `<p class="hint" style="margin:0">Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${x.bt.n}.</p>`
+      : `<div class="pi-bb">${x.bb.map(r => `<div class="pi-bbrow"><span>${r.lab}</span><div class="pi-bbbar"><i style="width:${f(r.me)};background:var(--${col[r.k]})"></i>${x.tt.n ? `<u style="left:${f(r.tm)}" title="Equipo: ${f(r.tm)}"></u>` : ''}</div><b>${f(r.me)}</b></div>`).join('')}
+        <div class="pi-bbleg"><u></u> Promedio del equipo</div></div><p class="ind-read" style="margin:0">${esc(x.bbRead)}</p>`}
     <p class="hint" style="margin:0">Sale de la jugada que anota el coach: 6-3 es rodado, F8 elevado, L7 línea. Los batazos sin jugada no cuentan.</p></div>`);
   return `<div class="pi-wrap">${out.join('')}</div>`;
+}
+// Las mismas tres secciones en el PDF del jugador, dibujadas con jsPDF (nítidas al imprimir)
+const PDF_PI = { r1b: [46, 158, 91], r2b: [47, 111, 176], r3b: [181, 122, 0], rout: [141, 138, 140], 'o-bb': [123, 92, 196], 'o-sac': [196, 138, 92], 'o-out': [201, 191, 192], 'o-gb': [160, 112, 60] };
+const PDF_TONE = { hot: () => RED, good: () => [47, 111, 79], info: () => [47, 111, 176], warn: () => [154, 100, 0] };
+function pdfInsights(doc, x, y, section, room) {
+  const W = doc.internal.pageSize.getWidth(), CW = W - 64, L = 32, col = k => k === 'rhr' ? RED : PDF_PI[k];
+  const o = x.o, pc = n => Math.round(100 * n / o.pa) + '%', f = v => Math.round(100 * v) + '%';
+  const text = (t, xx, yy, size, color, bold, opt) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(...(Array.isArray(color) ? color : [color, color, color])); doc.text(pdfSafe(t), xx, yy, opt); };
+  const wrap = (t, size, color, w = CW) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); const ls = doc.splitTextToSize(pdfSafe(t), w); y = room(y, ls.length * size * 1.3 + 4); doc.setTextColor(color); doc.text(ls, L, y); y += ls.length * size * 1.3 + 4; };
+  // En qué terminan sus turnos: barra, leyenda y gráfica de hits
+  y = section('En qué terminan sus turnos', 150 + (o.h ? 100 : 0), y);
+  let xx = L; const tot = x.outcomes.reduce((a, s) => a + s[1], 0) || 1, segs = x.outcomes.filter(s => s[1]), gap = 1.5, bw = CW - gap * (segs.length - 1);
+  segs.forEach(s => { const w = bw * s[1] / tot; doc.setFillColor(...col(s[2])); doc.rect(xx, y, w, 14, 'F'); xx += w + gap; });
+  y += 30;
+  const lw = CW / 3;
+  x.outcomes.forEach((s, i) => { const cx = L + (i % 3) * lw, cy = y + Math.floor(i / 3) * 18; doc.setFillColor(...col(s[2])); doc.rect(cx, cy - 7, 8, 8, 'F'); text(s[0], cx + 13, cy, 9, 60); text(`${s[1]}  (${pc(s[1])})`, cx + lw - 12, cy, 9, 30, true, { align: 'right' }); });
+  y += 18 * Math.ceil(x.outcomes.length / 3) + 8;
+  if (o.h) {
+    text(`Cómo se reparten sus ${o.h} hit${o.h === 1 ? '' : 's'}`, L, y, 8.5, 100, true); y += 10;
+    const hmax = Math.max(1, ...x.hits.map(h => h[1])), bh = 64, cw = 70, base = y + bh + 14;
+    x.hits.forEach(([lab, v, c], i) => { const cx = L + i * (cw + 18), h = Math.max(2, bh * v / hmax); doc.setFillColor(...col(c)); doc.rect(cx + 14, base - h, cw - 28, h, 'F'); text(String(v), cx + cw / 2, base - h - 4, 11, 30, true, { align: 'center' }); text(lab, cx + cw / 2, base + 11, 8, 100, false, { align: 'center' }); });
+    y = base + 32;
+  }
+  wrap(x.outRead, 9, 40);
+  // Tendencias
+  y = section('Tendencias · comparado con el equipo', 60, y);
+  if (x.pa < 15) wrap(`Las tendencias aparecen cuando tenga al menos 15 turnos (lleva ${x.pa}).`, 9, 90);
+  else if (!x.trends.length) wrap('Sin tendencias claras todavía: sus números van parejos con los del equipo.', 9, 90);
+  else x.trends.forEach(t => {
+    y = room(y, 38); const c = PDF_TONE[t.tone]();
+    if (t.tone === 'warn') { doc.setFillColor(251, 241, 220); doc.rect(L, y, CW, 32, 'F'); }
+    doc.setDrawColor(234, 214, 215); doc.setLineWidth(.8); doc.rect(L, y, CW, 32); doc.setFillColor(...c); doc.rect(L, y, 5, 32, 'F');
+    text(t.title, L + 14, y + 13, 10, 30, true); text(t.txt, L + 14, y + 25, 8.5, 100);
+    text(t.v, L + CW - 10, y + 21, 15, c, true, { align: 'right' });
+    y += 38;
+  });
+  // Tipo de batazo
+  y = section('Tipo de batazo', 120, y);
+  if (x.bt.n < 5) wrap(`Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${x.bt.n}.`, 9, 90);
+  else {
+    const bx = L + 70, bwid = CW - 70 - 50, cols = { ground: 'o-gb', fly: 'r2b', line: 'r1b' };
+    x.bb.forEach(r => {
+      text(r.lab, L, y + 9, 9.5, 50); doc.setFillColor(...ROSE); doc.rect(bx, y, bwid, 11, 'F'); doc.setFillColor(...col(cols[r.k])); doc.rect(bx, y, Math.max(1, bwid * r.me), 11, 'F');
+      if (x.tt.n) { doc.setDrawColor(30); doc.setLineWidth(1.4); doc.line(bx + bwid * r.tm, y - 3, bx + bwid * r.tm, y + 14); }
+      text(f(r.me), L + CW, y + 10, 11, 30, true, { align: 'right' }); y += 22;
+    });
+    text(`La raya negra es el promedio del equipo.   ${x.bt.n} batazos con jugada.`, L, y + 2, 8, 110); y += 14;
+    wrap(x.bbRead, 9, 40);
+  }
+  wrap('Sale de la jugada que anota el coach: 6-3 es rodado, F8 elevado, L7 línea. Los batazos sin jugada no cuentan.', 7.5, 120);
+  return y + 10;
 }
 
 /* ---------- MVP del juego ---------- */
@@ -3956,6 +4029,9 @@ async function pdfPlayer(pid) {
   const para = (txt, size = 8.5, color = 90) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), CW); room(ls.length * size * 1.3); doc.text(ls, 32, y); y += ls.length * size * 1.3 + 6; };
   const section = t => { room(60); y = pdfSection(doc, t, y) + 4; };
   const table = sel => { const el = host.querySelector(sel); if (el) y = pdfTable(doc, el, y, { fs: sel === '#pfLog' ? 7 : 7.5 }); };
+  // en qué terminan sus turnos, tendencias y tipo de batazo (lo mismo que en la ficha)
+  const pi = playerInsightData(pid, d);
+  if (pi) y = pdfInsights(doc, pi, y, (t, need, yy) => { y = yy + 12; room(need + 40); y = pdfSection(doc, t, y) + 6; return y; }, (yy, need) => { y = yy; room(need); return y; });
   [['#pfBat', 'Bateo · temporada'], ['#pfPit', 'Pitcheo · temporada'], ['#pfFld', 'Fildeo por posición']].forEach(([sel, t]) => { if (host.querySelector(sel)) { section(t); table(sel); } });
   // evolución: las tres gráficas lado a lado
   const tr = [...host.querySelectorAll('.trend > div')];
