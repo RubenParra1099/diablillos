@@ -232,3 +232,46 @@ function playFromPoint(a, d, res) {
   if (res === 'DP') return ({ 4: '4-6-3', 5: '5-4-3', 6: '6-4-3' })[z] || z + '-3';
   return z === 3 ? '3U' : z + '-3';
 }
+
+// Juego en vivo: en qué va el juego según la hoja que se está capturando.
+// g: { ha, inns, mode, bpi, us: { slots, cells }, them: { slots, cells, runs } }; runs son las carreras del rival escritas a mano
+// (cuando no se lleva su hoja). ha 'L' = somos locales: el rival batea en la alta.
+// Devuelve la entrada y mitad actual, outs, corredores (turno del lineup en 1a, 2a y 3a), el turno que sigue de cada equipo y las jugadas en orden.
+function sidePAs(slots, cells, inns) {
+  const L = lineupLen(slots || []) || 9, list = []; let start = 0;
+  for (let inn = 1; inn <= inns; inn++) {
+    const pas = [];
+    Object.entries(cells || {}).forEach(([k, arr]) => { const [si, i] = k.split('_').map(Number); if (i === inn) (arr || []).forEach((pa, idx) => { if (RES[pa.res]) pas.push({ si, idx, inn, pa }); }); });
+    if (!pas.length) continue;
+    pas.sort((a, b) => a.idx - b.idx || ((a.si - start + L) % L) - ((b.si - start + L) % L));
+    list.push(...pas); start = (pas[pas.length - 1].si + 1) % L;
+  }
+  return { list, L };
+}
+function liveState(g) {
+  const inns = g.inns || 9, ch = g.mode === 'chupon', bpi = Math.max(1, num(g.bpi) || 10);
+  const first = g.ha === 'L' ? 'them' : 'us', second = first === 'us' ? 'them' : 'us';
+  const S = { us: sidePAs(g.us.slots, g.us.cells, inns), them: sidePAs(g.them.slots, g.them.cells, inns) };
+  const manual = !S.them.list.length, runs = (g.them && g.them.runs) || [];
+  const typed = inn => String(runs[inn - 1] ?? '').trim() !== '';
+  const info = (side, inn) => {
+    const pas = S[side].list.filter(x => x.inn === inn), outs = Math.min(3, pas.filter(x => num(x.pa.out)).length);
+    if (side === 'them' && manual) return { pas, outs: 0, active: typed(inn), done: typed(inn), manual: true };
+    return { pas, outs, active: pas.length > 0, done: ch ? pas.length >= bpi : outs >= 3 };
+  };
+  const halves = [];
+  for (let inn = 1; inn <= inns; inn++) halves.push({ inn, half: 'top', side: first }, { inn, half: 'bot', side: second });
+  let last = -1; halves.forEach((h, j) => { if (info(h.side, h.inn).active) last = j; });
+  let cur = Math.max(0, last), over = false;
+  if (last >= 0 && info(halves[cur].side, halves[cur].inn).done) { if (cur + 1 < halves.length) cur++; else over = true; }
+  const H = halves[cur], hi = info(H.side, H.inn), bases = [null, null, null];
+  hi.pas.forEach(x => { const r = num(x.pa.reach); if (r >= 1 && r <= 3 && !num(x.pa.out)) bases[r - 1] = x.si; });
+  const nextOf = side => { const l = S[side].list; return l.length ? (l[l.length - 1].si + 1) % S[side].L : 0; };
+  const plays = [];
+  halves.slice(0, Math.max(last, -1) + 1).forEach(h => {
+    const x = info(h.side, h.inn);
+    if (x.manual) { if (x.active) plays.push({ inn: h.inn, half: h.half, side: h.side, manual: true, runs: num(runs[h.inn - 1]) }); return; }
+    x.pas.forEach(p => plays.push({ inn: h.inn, half: h.half, side: h.side, si: p.si, pa: p.pa }));
+  });
+  return { inn: H.inn, half: H.half, side: H.side, outs: hi.outs, pas: hi.pas.length, manual: !!hi.manual, bases, next: { us: nextOf('us'), them: nextOf('them') }, over, started: last >= 0, plays };
+}

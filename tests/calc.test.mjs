@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat };', ctx);
+vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState };', ctx);
 const C = ctx.C;
 const fx = JSON.parse(fs.readFileSync(new URL('./fixture.json', import.meta.url), 'utf8'));
 const games = Object.entries(fx.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => a.date.localeCompare(b.date));
@@ -101,4 +101,31 @@ test('jugada sugerida desde el punto tocado', () => {
   assert.equal(C.playFromPoint(28, .9, 'O'), 'F9'); assert.equal(C.playFromPoint(-30, .9, 'H2'), 'F7'); assert.equal(C.playFromPoint(0, .6, 'H1'), 'L8');
   assert.equal(C.playFromPoint(-18, .4, 'O'), '6-3'); assert.equal(C.playFromPoint(18, .4, 'DP'), '4-6-3'); assert.equal(C.playFromPoint(38, .35, 'O'), '3U');
   assert.equal(C.playFromPoint(-38, .35, 'E'), 'E5'); assert.equal(C.playFromPoint(0, .2, 'O'), '1-3'); assert.equal(C.sprayCat('BO'), 'O');
+});
+
+test('juego en vivo: entrada, outs, corredores y quién sigue', () => {
+  const slots = Array.from({ length: 9 }, (_, i) => ({ pid: 'p' + i })), oslots = Array.from({ length: 9 }, () => ({ num: '', name: '' }));
+  const base = { ha: 'L', inns: 7, mode: 'trad', us: { slots, cells: {} }, them: { slots: oslots, cells: {}, runs: Array(7).fill('') } };
+  let s = C.liveState(base);
+  assert.equal(s.started, false); assert.equal(s.inn, 1); assert.equal(s.half, 'top'); assert.equal(s.side, 'them');
+  // El rival anotó 1 en la alta de la 1a (escrito a mano): ahora batea el local
+  s = C.liveState({ ...base, them: { ...base.them, runs: ['1', '', '', '', '', '', ''] } });
+  assert.equal(s.half, 'bot'); assert.equal(s.side, 'us'); assert.equal(s.outs, 0); assert.equal(s.next.us, 0);
+  assert.equal(s.plays.length, 1); assert.equal(s.plays[0].manual, true); assert.equal(s.plays[0].runs, 1);
+  // Sencillo, ponche y doble que impulsa: corredor en 2a, 1 out, sigue el 4o
+  const cells = { '0_1': [{ res: 'H1', reach: 4 }], '1_1': [{ res: 'K', out: 1 }], '2_1': [{ res: 'H2', reach: 2, rbi: 1 }] };
+  s = C.liveState({ ...base, us: { slots, cells }, them: { ...base.them, runs: ['1'] } });
+  assert.equal(s.inn, 1); assert.equal(s.half, 'bot'); assert.equal(s.outs, 1);
+  assert.deepEqual([...s.bases], [null, 2, null]); assert.equal(s.next.us, 3);
+  assert.deepEqual([...s.plays.filter(p => !p.manual).map(p => p.si)], [0, 1, 2]);
+  // Dos outs más cierran la entrada: pasa a la alta de la 2a sin corredores
+  const c3 = { ...cells, '3_1': [{ res: 'O', out: 2 }], '4_1': [{ res: 'O', out: 3 }] };
+  s = C.liveState({ ...base, us: { slots, cells: c3 }, them: { ...base.them, runs: ['1'] } });
+  assert.equal(s.inn, 2); assert.equal(s.half, 'top'); assert.equal(s.side, 'them'); assert.deepEqual([...s.bases], [null, null, null]); assert.equal(s.next.us, 5);
+  // Como visitantes batean en la alta; la hoja del rival manda sobre lo escrito a mano
+  s = C.liveState({ ...base, ha: 'V', us: { slots, cells: c3 }, them: { slots: oslots, cells: { '0_1': [{ res: 'BB', reach: 1 }] }, runs: ['5'] } });
+  assert.equal(s.inn, 1); assert.equal(s.half, 'bot'); assert.equal(s.side, 'them'); assert.deepEqual([...s.bases], [0, null, null]); assert.equal(s.next.them, 1);
+  // Chupón: la entrada se cierra al batear los N del turno, no por outs
+  s = C.liveState({ ...base, ha: 'V', mode: 'chupon', bpi: 2, us: { slots, cells: { '0_1': [{ res: 'O', out: 1 }], '1_1': [{ res: 'H1', reach: 1 }] } } });
+  assert.equal(s.half, 'bot'); assert.equal(s.side, 'them');
 });

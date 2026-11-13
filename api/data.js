@@ -14,6 +14,7 @@ const DB_URL = process.env.DIABLILLOS_DB_URL || process.env.DATABASE_URL || proc
 const SECRET = process.env.AUTH_SECRET || crypto.createHash('sha256').update('bs-session:' + DB_URL).digest('hex');
 const TABLES = { roster: 'bs_roster', games: 'bs_games' };
 const MAX_DOC = 600 * 1024;
+const MAX_LIVE = 96 * 1024;
 const SESSION_DAYS = 30;
 const COOKIE = 'bs_session';
 
@@ -49,6 +50,8 @@ async function db() {
       create index if not exists bs_shares_team on bs_shares(team_id, pid);
       alter table bs_teams add column if not exists slug text;
       create unique index if not exists bs_teams_slug on bs_teams(slug);
+      create table if not exists bs_live (team_id text primary key references bs_teams(id) on delete cascade, token text not null unique,
+        snap jsonb, updated_at timestamptz not null default now());
     `).then(() => fillSlugs(p)).catch(e => { ready = null; throw e; });
   }
   await ready;
@@ -242,6 +245,14 @@ export default async function handler(req, res) {
     if (op === 'logout') return send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, '', 0) });
     if (op === 'load') {
       const q0 = req.query || Object.fromEntries(new URLSearchParams(String(req.url || '').split('?')[1] || ''));
+      // Juego en vivo: enlace de solo lectura del equipo, sin usuario
+      if (q0.live) {
+        const lv = (await p.query(`select l.team_id, l.snap, extract(epoch from now() - l.updated_at)::int as ago, t.name, t.category, t.data
+                                   from bs_live l join bs_teams t on t.id = l.team_id where l.token = $1`, [String(q0.live).slice(0, 80)])).rows[0];
+        if (!lv) fail(404, 'live_gone', 'Este enlace ya no está disponible. Pide uno nuevo al coach.');
+        if (!hasPlan(lv.data, 'gold')) fail(404, 'live_gone', 'Este enlace ya no está disponible en el paquete del equipo.');
+        return send(res, 200, { live: true, team: { id: lv.team_id, name: lv.name, category: lv.category, ...teamLook(lv.data) }, snap: lv.snap || null, ago: lv.ago });
+      }
       if (q0.share) {
         const sh = (await p.query('select s.team_id, s.pid, t.name, t.category, t.data from bs_shares s join bs_teams t on t.id = s.team_id where s.token = $1 and not s.revoked', [String(q0.share).slice(0, 80)])).rows[0];
         if (!sh) fail(404, 'share_gone', 'Este enlace ya no está disponible. Pide uno nuevo al coach.');
@@ -303,13 +314,16 @@ export default async function handler(req, res) {
           out.ids = { roster: ri.rows.map(x => x.id), games: gi.rows.map(x => x.id) };
         }
         out.canEdit = canWrite(me, teamId);
-        if (out.canEdit) out.shares = Object.fromEntries((await p.query('select pid, token from bs_shares where team_id = $1 and not revoked', [teamId])).rows.map(x => [x.pid, x.token]));
+        if (out.canEdit) {
+          out.shares = Object.fromEntries((await p.query('select pid, token from bs_shares where team_id = $1 and not revoked', [teamId])).rows.map(x => [x.pid, x.token]));
+          out.live = ((await p.query('select token from bs_live where team_id = $1', [teamId])).rows[0] || {}).token || '';
+        }
       }
       return send(res, 200, out);
     }
 
     // ---- escritura de datos de un equipo
-    if (['put', 'del', 'import', 'teamName', 'shareCreate', 'shareRevoke'].includes(op)) {
+    if (['put', 'del', 'import', 'teamName', 'shareCreate', 'shareRevoke', 'liveLink', 'livePut', 'liveRevoke'].includes(op)) {
       const teamId = String(b.team || '');
       if (!canWrite(me, teamId)) fail(403, 'forbidden', 'Tu usuario no puede modificar los datos de este equipo.');
       if (op === 'put' || op === 'del') {
@@ -336,6 +350,25 @@ export default async function handler(req, res) {
       if (op === 'shareRevoke') {
         if (!validId(b.pid)) fail(400, 'bad_request');
         await p.query('update bs_shares set revoked = true where team_id = $1 and pid = $2', [teamId, b.pid]);
+        return send(res, 200, { ok: true });
+      }
+      // Juego en vivo: un enlace por equipo; el teléfono del coach sube el marcador mientras captura
+      if (op === 'liveLink' || op === 'livePut') {
+        const td = (me.teams.find(t => t.id === teamId) || {}).data;
+        if (!hasPlan(td, 'gold')) fail(403, 'plan', 'El juego en vivo es parte del paquete Gold.');
+        if (op === 'liveLink') {
+          await p.query('insert into bs_live (team_id, token) values ($1, $2) on conflict (team_id) do nothing', [teamId, crypto.randomBytes(18).toString('base64url')]);
+          return send(res, 200, { ok: true, token: (await p.query('select token from bs_live where team_id = $1', [teamId])).rows[0].token });
+        }
+        if (b.snap !== null && !isObj(b.snap)) fail(400, 'bad_request');
+        const json = b.snap === null ? null : JSON.stringify(b.snap);
+        if (json && json.length > MAX_LIVE) fail(413, 'too_big', 'El juego en vivo es demasiado grande.');
+        const r = await p.query('update bs_live set snap = $2::jsonb, updated_at = now() where team_id = $1', [teamId, json]);
+        if (!r.rowCount) fail(404, 'live_off', 'Primero crea el enlace del juego en vivo.');
+        return send(res, 200, { ok: true });
+      }
+      if (op === 'liveRevoke') {
+        await p.query('delete from bs_live where team_id = $1', [teamId]);
         return send(res, 200, { ok: true });
       }
       if (op === 'teamName') {

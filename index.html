@@ -564,6 +564,102 @@ body.fs .cap-bar h2{font-size:20px}
 body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
 @media (max-width:1000px){body.fs .sheet-grid{grid-template-columns:1fr}}
 @media (max-width:560px){body.fs .cap-bar h2{font-size:18px;width:100%}body.fs .cap-bar>.row{gap:6px;width:100%}body.fs .cap-bar .btn{padding:6px 10px;font-size:12.5px}body.fs .cap-bar .fs-btn{margin-left:auto}}
+/* Juego en vivo (?v=token) y botón de transmitir */
+body.live .record{display:none!important}
+#btnLive.lv-on{border-color:var(--win);color:var(--win);display:inline-flex;align-items:center;gap:7px}
+.lv-pulse{width:8px;height:8px;border-radius:50%;background:#5ff08f;flex:none;display:inline-block;box-shadow:0 0 0 0 rgba(95,240,143,.6)}
+#btnLive .lv-pulse{background:var(--win)}
+@media (prefers-reduced-motion:no-preference){.lv-pulse{animation:lvp 1.8s infinite}@keyframes lvp{70%{box-shadow:0 0 0 7px rgba(95,240,143,0)}100%{box-shadow:0 0 0 0 rgba(95,240,143,0)}}}
+.lv-toggle{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
+.lv-toggle input{margin-top:3px;width:18px;height:18px;accent-color:var(--win)}
+.lv-toggle span{display:flex;flex-direction:column;gap:2px}
+.lv-toggle small{color:var(--muted);font-size:12.5px}
+#liveBody{display:flex;flex-direction:column;gap:14px}
+.lv-board{background:linear-gradient(180deg,var(--board),var(--board-2));color:var(--board-ink);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;border-bottom:5px solid var(--stripe)}
+.lv-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.lv-top h2{color:var(--board-ink);font-size:clamp(20px,4vw,26px);margin:2px 0 0;line-height:1}
+.lv-eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+.lv-pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 11px}
+.lv-pill.fin{background:var(--bulb);color:var(--board-2);border-color:var(--bulb);font-weight:600}
+.lv-pill.stale .lv-pulse{background:#f0b54a;animation:none}
+.lv-score{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:stretch}
+.lv-lines{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:6px;overflow-x:auto;min-width:0}
+.lv-lines table{border-collapse:collapse;width:100%;font-family:var(--f-display);font-variant-numeric:tabular-nums}
+.lv-lines th,.lv-lines td{padding:6px 7px;text-align:center;font-size:18px;font-weight:600;white-space:nowrap;color:var(--board-ink)}
+.lv-lines thead th{font-size:13px;opacity:.7;letter-spacing:.06em}
+.lv-lines td.team{text-align:left;font-size:17px;letter-spacing:.04em;text-transform:uppercase;padding-left:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.lv-lines .tot{font-weight:800;font-size:22px;color:var(--bulb)}
+.lv-lines .sep{border-left:1px solid rgba(255,255,255,.25)}
+.lv-lines .now{background:rgba(255,255,255,.18)}
+.lv-lines .pend{opacity:.35}
+.lv-lines tbody tr+tr td{border-top:1px solid rgba(255,255,255,.12)}
+.lv-lines .ab{display:none}
+@media (max-width:480px){.lv-lines .full{display:none}.lv-lines .ab{display:inline}.lv-lines th,.lv-lines td{padding:5px 4px;font-size:16px}.lv-lines td.team{padding-left:8px}.lv-lines .tot{font-size:19px}}
+.lv-sit{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:14px}
+.lv-inn{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;text-align:center;text-transform:uppercase}
+.lv-inn small{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;font-weight:500;opacity:.8;margin-bottom:3px}
+.lv-outs{display:flex;gap:5px;justify-content:center;margin-top:6px}
+.lv-outs i{width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,.7)}
+.lv-outs i.on{background:var(--bulb);border-color:var(--bulb)}
+.lv-chup{font-family:var(--f-mono);font-size:11px;margin-top:6px;text-align:center;opacity:.9}
+.lv-mini{width:64px;height:58px}
+.lv-mini rect{stroke:rgba(255,255,255,.75);stroke-width:2;fill:transparent}
+.lv-mini rect.on{fill:#ffd23f;stroke:#ffd23f}
+@media (max-width:620px){.lv-score{grid-template-columns:1fr}.lv-sit{justify-content:space-around}}
+.lv-tabs{display:none;gap:4px;border-bottom:1px solid var(--line)}
+.lv-tabs button{font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;padding:6px 12px 8px;cursor:pointer}
+.lv-tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.lv-cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}
+.lv-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:820px){.lv-tabs{display:flex}.lv-cols{grid-template-columns:1fr}.lv-col[data-off="1"]{display:none}}
+#liveBody .ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#liveBody h3{font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.12em;margin:0 0 6px}
+.lv-batter{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.lv-jersey{width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:26px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+.lv-jersey.rv{background:var(--rival)}
+.lv-bname{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
+.lv-bname.rv{color:var(--rival)}
+.lv-meta{color:var(--muted);font-size:13px}
+.lv-today{display:flex;flex-direction:column;gap:6px}
+.lv-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lv-chip{font-family:var(--f-mono);font-size:12px;border-radius:4px;padding:3px 8px;background:var(--chip);color:var(--ink);border-left:3px solid var(--rout)}
+.lv-chip.h1,.lv-chip.on{border-left-color:var(--r1b)} .lv-chip.h2{border-left-color:var(--r2b)} .lv-chip.h3{border-left-color:var(--r3b)} .lv-chip.hr{border-left-color:var(--rhr)}
+.lv-chip.empty{border-left-color:transparent;color:var(--muted)}
+.lv-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.lv-stats div{display:flex;flex-direction:column;align-items:center;padding:7px 4px;gap:1px}
+.lv-stats div+div{border-left:1px solid var(--line)}
+.lv-stats b{font-family:var(--f-display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.lv-stats span{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--muted)}
+.lv-next{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lv-next>div{border:1px solid var(--line);border-radius:4px;padding:8px 10px;min-width:0}
+.lv-next b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-next small{color:var(--muted);font-size:12px}
+.lv-final{margin:0;font-size:16px}
+.lv-field{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;align-items:center}
+.lv-field svg{width:132px;height:auto}
+.lv-runners{display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.lv-runners .r{display:flex;gap:8px;align-items:baseline}
+.lv-runners .r span{font-family:var(--f-mono);font-size:11px;color:var(--muted);width:28px;flex:none}
+.lv-runners .r.off{color:var(--muted)}
+.lv-np{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.lv-bar{height:10px;border-radius:999px;background:var(--chip);overflow:hidden}
+.lv-bar i{display:block;height:100%;background:var(--win);border-radius:999px}
+.lv-bar i.warn{background:var(--warn)}
+.lv-note{font-size:12.5px;color:var(--muted)}
+.lv-plays{display:flex;flex-direction:column;gap:14px}
+.lv-ihead{font-family:var(--f-display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.lv-ihead b{color:var(--ink);font-weight:600}
+.lv-play{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;padding:8px 0 8px 10px;border-left:3px solid transparent;align-items:start}
+.lv-play+.lv-play{border-top:1px dashed var(--line)}
+.lv-play.score{border-left-color:var(--accent);background:linear-gradient(90deg,var(--accent-soft),transparent 70%)}
+.lv-play.them.score{border-left-color:var(--rival)}
+.lv-play small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.lv-pn{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:2px}
+.lv-runs{font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--accent);white-space:nowrap}
+.lv-play.them .lv-runs{color:var(--rival)}
+.lv-rival{font-size:13px;color:var(--muted);padding:8px 10px;margin-top:8px;border-left:3px solid var(--rival);background:var(--bg);border-radius:0 4px 4px 0}
+.lv-rival b{color:var(--rival)}
+@media (prefers-reduced-motion:no-preference){.lv-play.new,.lv-rival.new{animation:lvnew 1.2s ease-out}@keyframes lvnew{from{background:var(--warn-bg)}}}
 </style>
 <script>try{var t=localStorage.getItem("dugout-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
@@ -617,6 +713,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
         <div class="row">
           <button class="btn" id="btnNewGame">Box score en blanco</button>
           <button class="btn primary" id="btnSave">Guardar juego</button>
+          <button type="button" class="btn edit-only" id="btnLive" hidden>En vivo</button>
           <button type="button" class="btn" id="btnPdfSheet">Reporte PDF</button>
           <button type="button" class="btn fs-btn" id="btnFs" aria-pressed="false"></button>
         </div>
@@ -824,6 +921,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
   <section id="v-share" class="view" hidden>
     <div class="panel" id="shareBody"></div>
   </section>
+  <section id="v-live" class="view" hidden><div id="liveBody"></div></section>
 
   <section id="v-ind" class="view" hidden>
     <div class="panel">
@@ -1118,7 +1216,7 @@ function lsSave() { try { localStorage.setItem(LSK, JSON.stringify({ roster: S.r
 /* API de Postgres (sitio en Vercel): /api/data, con usuarios, equipos y roles */
 let modeFor = null, api = false, apiCanEdit = false, apiTimer = null, me = null, curTeam = null, curTeamObj = null;
 // Versión de cada registro (para avisar si otra persona guardó antes), sincronización por cambios y cola sin conexión
-let VER = { roster: {}, games: {} }, syncSince = '', syncTeam = null, SHARES = {}, netDown = false, onlineTxt = '', storeReady = false;
+let VER = { roster: {}, games: {} }, syncSince = '', syncTeam = null, SHARES = {}, LIVE = '', netDown = false, onlineTxt = '', storeReady = false;
 const OUTK = 'bs-outbox', CACHEK = t => 'bs-cache:' + (t || '');
 const outbox = () => { try { return JSON.parse(localStorage.getItem(OUTK) || '[]'); } catch { return []; } };
 function setOutbox(a) { try { localStorage.setItem(OUTK, JSON.stringify(a)); } catch {} syncBadge(); }
@@ -1193,7 +1291,7 @@ function askConflict(col, info, mine) {
 const TEAMK = 'bs-team';
 // Equipo en la dirección (boxscoremx.vercel.app/aguilas). Sin equipo en la dirección se abre el inicio de la plataforma
 const pathSlug = () => (s => /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(s) ? s : '')((location.pathname.split('/')[1] || '').toLowerCase());
-let slugTried = false, homeMode = !pathSlug() && !new URLSearchParams(location.search).get('p'), homeStats = {};
+let slugTried = false, homeMode = !pathSlug() && !new URLSearchParams(location.search).get('p') && !new URLSearchParams(location.search).get('v'), homeStats = {};
 function syncPath() {
   const path = homeMode ? '/' : curTeamObj && curTeamObj.slug ? '/' + curTeamObj.slug : null;
   if (path && location.pathname !== path) history.replaceState(null, '', path + location.search + location.hash);
@@ -1322,7 +1420,7 @@ async function apiLoad(full) {
     const pend = new Set(outbox().filter(o => o.team === curTeam).map(o => o.col + ':' + o.id));
     ['roster', 'games'].forEach(c => { const keep = new Set((j.ids || {})[c] || []); Object.keys(S[c]).forEach(id => { if (!keep.has(id) && !pend.has(c + ':' + id)) { delete S[c][id]; delete VER[c][id]; } }); });
   } else { S.roster = j.roster || {}; S.games = j.games || {}; VER = j.ver || { roster: {}, games: {} }; }
-  syncSince = j.now ? String(BigInt(j.now) - 5000000n) : ''; syncTeam = curTeam; SHARES = j.shares || {}; storeReady = true;
+  syncSince = j.now ? String(BigInt(j.now) - 5000000n) : ''; syncTeam = curTeam; SHARES = j.shares || {}; LIVE = j.live || ''; renderLiveBtn(); storeReady = true;
   S.team = j.team ? j.team.name : 'Sin equipo';
   applyOutbox(); saveCache();
   const fresh = !draft.id && !draft.opp && !Object.keys(draft.cells).length && !Object.keys(draft.ocells || {}).length;
@@ -1387,14 +1485,15 @@ function checkDraftOffer() {
 }
 $('#draftYes').addEventListener('click', () => { if (!draftOffer) return; draft = draftOffer.draft; draftOffer = null; $('#draftBar').hidden = true; side = 'us'; noTouched = true; syncMetaInputs(); renderSheet(); showView('captura'); toast('Box score recuperado'); });
 $('#draftNo').addEventListener('click', () => { draftOffer = null; $('#draftBar').hidden = true; try { localStorage.removeItem(draftKey()); } catch {} draftSaved = '-'; });
-let draftT; const draftSoon = () => { clearTimeout(draftT); draftT = setTimeout(saveDraftLocal, 500); };
+let draftT; const draftSoon = () => { clearTimeout(draftT); draftT = setTimeout(() => { saveDraftLocal(); livePush(); }, 500); };
 ['input', 'change', 'click'].forEach(ev => document.addEventListener(ev, draftSoon, true));
-setInterval(saveDraftLocal, 4000);
+setInterval(() => { saveDraftLocal(); livePush(); }, 4000);
 addEventListener('pagehide', saveDraftLocal);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveDraftLocal(); });
 function setSync(live, txt) { $('#syncDot').classList.toggle('live', live); $('#syncTxt').textContent = txt; }
 async function initStore() {
   const shareTok = new URLSearchParams(location.search).get('p'); if (shareTok) { await startShare(shareTok); return; }
+  const liveTok = new URLSearchParams(location.search).get('v'); if (liveTok) { await startLive(liveTok); return; }
   try { db = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch { db = null; }
   if (!db && !IN_CLAUDE) {
     try {
@@ -1568,7 +1667,7 @@ function syncMetaInputs() {
   $('#gHA').value = draft.ha; $('#gInns').value = draft.inns; $('#gNotes').value = draft.notes;
   $('#capTitle').textContent = draft.id ? 'Editando box score' : 'Nuevo box score';
   $('#btnSave').textContent = draft.id ? 'Guardar cambios' : 'Guardar juego';
-  renderClubs();
+  renderClubs(); renderLiveBtn();
 }
 const META = { gNo: 'no', gLiga: 'liga', gDate: 'date', gOpp: 'opp', gHA: 'ha', gNotes: 'notes' };
 Object.keys(META).forEach(id => $('#' + id).addEventListener('input', e => { if (id === 'gNo') noTouched = true; draft[META[id]] = e.target.value; renderClubs(); if (id === 'gOpp' || id === 'gHA') { renderLine(); renderChecks(); renderSideTabs(); } }));
@@ -1944,7 +2043,7 @@ $('#btnSave').addEventListener('click', () => {
     pit: effPit(od).filter(p => p.pid).map(p => { const o = { pid: p.pid, from: String(p.from || ''), outs: isNaN(p.outs) ? 0 : p.outs, dec: p.dec }; PITK.forEach(k => o[k] = num(p[k])); return o; }),
     lines: buildLines(der),
   };
-  guarded(async () => { await put('games', id, data); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); syncMetaInputs(); renderSheet(); showView('juegos'); }, 'Juego guardado');
+  guarded(async () => { await put('games', id, data); await liveFinal(); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); syncMetaInputs(); renderSheet(); showView('juegos'); }, 'Juego guardado');
 });
 
 /* ---------- JUEGOS ---------- */
@@ -2674,6 +2773,202 @@ async function startShare(token) {
     S.roster = j.roster || {}; S.games = j.games || {}; S.team = j.team.name; curTeamObj = j.team; curSeason = 'all';
     applyBrand(j.team); renderPlanUI(); $('#teamName').readOnly = true; renderHeader(); renderSeasonSel(); openPlayer(j.pid);
   } catch (e) { showView('share'); $('#shareBody').innerHTML = `<div class="empty">${esc(e.message && e.message !== 'error' ? e.message : 'No se pudo abrir la ficha.')}</div>`; }
+}
+
+/* ---------- Juego en vivo: el coach transmite mientras captura y los papás lo siguen con un enlace ---------- */
+const liveLink = t => location.origin + '/?v=' + t;
+// Nombre corto (Santiago Ortega → Santiago O.): el enlace lo puede abrir cualquiera que lo tenga
+const shortName = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length > 1 ? w[0] + ' ' + w[1][0] + '.' : (w[0] || ''); };
+const LIVE_TXT = { H1: 'sencillo', H2: 'doble', H3: 'triple', HR: 'home run', BB: 'base por bolas', BBI: 'base por bolas intencional', BG: 'golpeado por lanzamiento', E: 'se embasa por error', BO: 'se embasa por bola ocupada', K: 'ponche tirándole', KC: 'ponche cantado', O: 'out', DP: 'doble play', FS: 'fly de sacrificio', TS: 'toque de sacrificio' };
+const LIVE_CLS = { H1: 'h1', H2: 'h2', H3: 'h3', HR: 'hr', BB: 'on', BBI: 'on', BG: 'on', E: 'on', BO: 'on' };
+// Lo que ven los papás: se arma con la hoja que se está capturando. Solo viajan nombres cortos, sin ids ni fechas de nacimiento.
+function liveSnap(status) {
+  const st = liveState({ ha: draft.ha, inns: draft.inns, mode: draft.mode, bpi: bpiOf(), us: { slots: draft.slots, cells: draft.cells }, them: { slots: draft.oslots, cells: draft.ocells, runs: draft.them } });
+  const der = deriveSheet(draft), od = deriveOpp(), pt = pitTotals(od), them = themArr(od);
+  const fldE = Object.entries(draft.fld).filter(([pid]) => draftPids().includes(pid)).reduce((a, [, f]) => a + num(f.e), 0);
+  const usWho = (si, inn) => { const s = draft.slots[si] || {}, pid = slotPidAt(s, inn), sub = !!(s.sub && s.sub.pid && s.sub.pid === pid && pid !== s.pid); return { pid, n: String(pNum(pid)), name: shortName(pName(pid)) || 'Bateador ' + (si + 1), pos: (sub ? s.sub.pos : s.pos) || '' }; };
+  const themWho = (si, inn) => { const s = draft.oslots[si] || {}, p = (oKeyAt(s, inn, si).endsWith('s') ? s.sub : s) || {}; return { key: oKeyAt(s, inn, si), n: String(p.num || ''), name: p.name || 'Bateador ' + (si + 1), pos: p.pos || '' }; };
+  const who = (side, si, inn) => side === 'us' ? usWho(si, inn) : themWho(si, inn);
+  const label = w => (w.n ? '#' + w.n + ' ' : '') + w.name;
+  const prior = aggBat(sortedGames().filter(g => g.id !== draft.id && String(g.date || '').slice(0, 4) === String(draft.date || '').slice(0, 4)));
+  const card = (side, si, inn) => {
+    const w = who(side, si, inn), same = x => !x.manual && x.side === side && (side === 'us' ? usWho(x.si, x.inn).pid === w.pid : themWho(x.si, x.inn).key === w.key);
+    let ab = 0, h = 0, rbi = 0; const res = [];
+    st.plays.filter(same).forEach(x => { const R = RES[x.pa.res]; if (R.ab) ab++; if (R.hit) h++; rbi += num(x.pa.rbi); res.push(x.pa.res); });
+    const o = { side, n: w.n, name: w.name, pos: w.pos, order: si + 1, today: { ab, h, rbi, res } };
+    const b = side === 'us' && w.pid && prior[w.pid];
+    if (b) o.season = { avg: b.avg, obp: b.obp, ops: b.ops, rbi: b.rbi, sb: b.sb };
+    return o;
+  };
+  const sheet = st.side === 'us' || !st.manual, L = lineupLen(st.side === 'us' ? draft.slots : draft.oslots) || 9, nx = st.next[st.side];
+  const ppid = activePitcher(st.inn), pe = draft.pit.find(p => p.pid === ppid);
+  let pitcher = null;
+  if (ppid) {
+    const age = ageOn((S.roster[ppid] || {}).birth, draft.date), np = num(pe && pe.np), op = od.pit[ppid] || {};
+    pitcher = { n: String(pNum(ppid)), name: shortName(pName(ppid)), age, max: pitchMax(age), np, rest: np && age != null ? restDays(np, age) : null, outs: num(op.outs), so: num(op.so), bb: num(op.bb), h: num(op.h) };
+  }
+  return {
+    v: 1, status, at: Date.now(), team: S.team, opp: draft.opp || 'Rival', ha: draft.ha, date: draft.date, inns: draft.inns, mode: draft.mode || 'trad', bpi: bpiOf(),
+    line: { us: der.us.map(String), them: them.map(v => String(v ?? '')), R: [der.runs, sumA(them)], H: [der.hits, od.anyCell ? od.hits : pt.h], E: [fldE, num(draft.themE)] },
+    inn: st.inn, half: st.half, side: st.side, outs: st.outs, pas: st.pas, started: st.started, over: st.over, manual: st.manual,
+    bases: st.bases.map(si => si == null ? null : label(who(st.side, si, st.inn))),
+    batter: sheet ? card(st.side, nx, st.inn) : null,
+    deck: sheet ? [1, 2].map(k => card(st.side, (nx + k) % L, st.inn)) : [],
+    upNext: st.side === 'them' ? card('us', st.next.us, st.half === 'top' ? st.inn : st.inn + 1) : null,
+    pitcher,
+    plays: st.plays.map(x => x.manual ? { i: x.inn, h: x.half, s: 'them', m: 1, r: x.runs }
+      : { i: x.inn, h: x.half, s: x.side, w: label(who(x.side, x.si, x.inn)), res: x.pa.res, p: x.pa.play || '', re: num(x.pa.reach), o: num(x.pa.out), rbi: num(x.pa.rbi), sb: num(x.pa.sb), cs: x.pa.cs ? 1 : 0 }),
+  };
+}
+let liveSent = '', liveLast = 0, liveBusy = false;
+async function livePush() {
+  if (!api || !LIVE || !draft.live || !apiCanEdit || !has('gold') || liveBusy || Date.now() - liveLast < 2500) return;
+  const snap = liveSnap('live'), key = JSON.stringify({ ...snap, at: 0 });
+  if (key === liveSent) return;
+  liveBusy = true; liveLast = Date.now();
+  try { await apiCall({ op: 'livePut', team: curTeam, snap }); liveSent = key; }
+  catch (e) { if (e.code === 'live_off' || e.code === 'plan') { LIVE = e.code === 'live_off' ? '' : LIVE; draft.live = false; renderLiveBtn(); } }
+  finally { liveBusy = false; }
+}
+// Al guardar el juego, los papás lo ven como final
+async function liveFinal() { if (!api || !LIVE || !draft.live) return; try { await apiCall({ op: 'livePut', team: curTeam, snap: liveSnap('final') }); } catch {} liveSent = ''; }
+function renderLiveBtn() {
+  const b = $('#btnLive'); if (!b) return;
+  b.hidden = !api || document.body.classList.contains('share'); b.classList.toggle('lv-on', !!draft.live);
+  b.innerHTML = draft.live ? '<span class="lv-pulse"></span>Transmitiendo' : 'En vivo';
+}
+function openLiveDlg() {
+  if (!has('gold')) { toast('El juego en vivo es parte del paquete Gold.'); return; }
+  const restart = () => { liveLast = 0; liveSent = ''; livePush(); };
+  const paint = () => {
+    const t = LIVE;
+    $('#shareDlgBody').innerHTML = `<div class="row spread"><h2 style="margin:0">Juego en vivo</h2><button class="btn sm" id="lvClose">Cerrar</button></div>
+      <p style="margin:0">Con este enlace, los papás siguen el juego desde su teléfono: el marcador por entrada, quién está al bat y cada jugada. Se actualiza solo con lo que vas anotando en la hoja. No necesitan usuario y no pueden cambiar nada. Los niños aparecen con su nombre y la inicial del apellido.</p>
+      ${t ? `<input id="lvLink" readonly value="${esc(liveLink(t))}" style="width:100%">
+        <label class="lv-toggle"><input type="checkbox" id="lvOn"${draft.live ? ' checked' : ''}><span><b>Transmitir este juego</b><small>Cada cambio en la hoja se ve en el enlace en unos segundos. Al guardar el juego, queda como final.</small></span></label>
+        <div class="row" style="justify-content:flex-end"><button class="btn sm danger" id="lvRevoke">Desactivar enlace</button><button class="btn sm" id="lvWa">Mandar por WhatsApp</button><button class="btn sm primary" id="lvCopy">Copiar enlace</button></div>`
+        : '<div class="row" style="justify-content:flex-end"><button class="btn primary" id="lvCreate">Crear enlace y transmitir</button></div>'}`;
+    $('#lvClose').onclick = () => $('#shareDlg').close();
+    if ($('#lvCreate')) $('#lvCreate').onclick = () => guarded(async () => { const r = await apiCall({ op: 'liveLink', team: curTeam }); LIVE = r.token; draft.live = true; paint(); renderLiveBtn(); restart(); }, 'Transmitiendo: comparte el enlace con los papás');
+    if ($('#lvOn')) $('#lvOn').onchange = e => {
+      draft.live = e.target.checked; renderLiveBtn(); saveDraftLocal();
+      if (draft.live) { restart(); toast('Transmitiendo: los papás ya ven el juego'); }
+      else guarded(async () => { await apiCall({ op: 'livePut', team: curTeam, snap: null }); liveSent = ''; }, 'Se dejó de transmitir');
+    };
+    if ($('#lvCopy')) $('#lvCopy').onclick = async () => { try { await navigator.clipboard.writeText(liveLink(t)); toast('Enlace copiado'); } catch { $('#lvLink').select(); } };
+    if ($('#lvWa')) $('#lvWa').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(`Sigue en vivo a ${S.team}${draft.opp ? ' vs ' + draft.opp : ''}: ${liveLink(t)}`), '_blank', 'noopener');
+    if ($('#lvRevoke')) $('#lvRevoke').onclick = () => guarded(async () => { await apiCall({ op: 'liveRevoke', team: curTeam }); LIVE = ''; draft.live = false; liveSent = ''; paint(); renderLiveBtn(); }, 'Enlace desactivado: el anterior ya no funciona');
+  };
+  paint(); if (!$('#shareDlg').open) $('#shareDlg').showModal();
+}
+$('#btnLive').addEventListener('click', openLiveDlg);
+
+/* Vista de los papás (?v=token): se actualiza sola cada 8 segundos mientras la pantalla está a la vista */
+let liveData = null, liveGot = 0, liveTab = 'now', liveSeen = -1;
+async function startLive(tok) {
+  shareMode = true; document.body.classList.add('share', 'live'); setSync(false, 'Cargando el juego…'); showView('live');
+  let timer = null;
+  const load = async () => {
+    try {
+      const j = await apiCall(null, '?live=' + encodeURIComponent(tok));
+      if (!liveData) { S.team = j.team.name; curTeamObj = j.team; applyBrand(j.team); renderPlanUI(); $('#teamName').readOnly = true; renderHeader(); document.title = j.team.name + ' · En vivo'; }
+      liveData = j; liveGot = Date.now(); renderLive();
+    } catch (e) {
+      if (e.code === 'live_gone') { clearInterval(timer); liveData = null; $('#liveBody').innerHTML = `<div class="panel"><div class="empty">${esc(e.message)}</div></div>`; setSync(false, 'Enlace desactivado'); return; }
+      if (liveData) setSync(false, 'Sin conexión. Reintentando…');
+      else $('#liveBody').innerHTML = '<div class="panel"><div class="empty">No se pudo abrir el juego. Revisa tu conexión; la página reintenta sola.</div></div>';
+    }
+  };
+  await load();
+  timer = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 8000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
+}
+const agoTxt = sec => sec < 10 ? 'ahora' : sec < 60 ? `hace ${Math.round(sec)} s` : sec < 3600 ? `hace ${Math.round(sec / 60)} min` : sec < 86400 ? `hace ${Math.round(sec / 3600)} h` : `hace ${Math.round(sec / 86400)} días`;
+function renderLive() {
+  const j = liveData, s = j.snap, host = $('#liveBody');
+  if (!s) {
+    setSync(true, 'Esperando el próximo juego · se actualiza sola');
+    host.innerHTML = `<div class="panel"><div class="empty"><b>No hay juego en vivo en este momento.</b><span>Cuando el coach empiece a anotar el juego, aquí vas a ver el marcador, quién está al bat y cada jugada. No hace falta recargar la página.</span></div></div>`;
+    return;
+  }
+  const ago = (j.ago || 0) + (Date.now() - liveGot) / 1000, fin = s.status === 'final', stale = !fin && ago > 1800;
+  setSync(!fin && !stale, fin ? 'Juego terminado' : stale ? `Sin cambios desde ${agoTxt(ago)}` : `En vivo · actualizado ${agoTxt(ago)}`);
+  const ix = sd => sd === 'us' ? 0 : 1, nm = sd => sd === 'us' ? s.team : s.opp;
+  const rows = s.ha === 'L' ? ['them', 'us'] : ['us', 'them'];
+  const L = s.line, lead = L.R[0] - L.R[1];
+  // Marcador por entrada
+  let lt = `<table><thead><tr><th></th>${Array.from({ length: s.inns }, (_, i) => `<th>${i + 1}</th>`).join('')}<th class="sep">C</th><th>H</th><th>E</th></tr></thead><tbody>`;
+  rows.forEach(sd => {
+    lt += `<tr><td class="team"><span class="full">${esc(nm(sd))}</span><span class="ab">${esc(String(nm(sd)).slice(0, 3))}</span></td>`;
+    for (let i = 0; i < s.inns; i++) { const v = (sd === 'us' ? L.us : L.them)[i], now = !fin && s.inn === i + 1 && s.side === sd; lt += `<td class="${now ? 'now' : ''}${v === '' || v == null ? ' pend' : ''}">${v === '' || v == null ? '·' : esc(v)}</td>`; }
+    lt += `<td class="sep tot">${L.R[ix(sd)]}</td><td>${L.H[ix(sd)]}</td><td>${L.E[ix(sd)]}</td></tr>`;
+  });
+  lt += '</tbody></table>';
+  const sq = (x, y, on) => `<rect x="${x}" y="${y}" width="14" height="14" transform="rotate(45 ${x + 7} ${y + 7})" class="${on ? 'on' : ''}"/>`;
+  const sit = fin ? `<div class="lv-inn"><small>Final</small>${lead > 0 ? 'Ganamos' : lead < 0 ? 'Perdimos' : 'Empate'}</div>`
+    : `<div><div class="lv-inn"><small>${s.half === 'top' ? 'Alta' : 'Baja'}</small>${s.half === 'top' ? '▲' : '▼'} ${s.inn}ª</div>
+       ${s.mode === 'chupon' ? `<div class="lv-chup">Turno ${Math.min(s.pas + 1, s.bpi)} de ${s.bpi}</div>` : `<div class="lv-outs" aria-label="${s.outs} outs">${[0, 1, 2].map(i => `<i class="${i < s.outs ? 'on' : ''}"></i>`).join('')}</div>`}</div>
+       <svg class="lv-mini" viewBox="0 0 64 58" aria-label="Corredores en base">${sq(43, 22, s.bases[0]) + sq(25, 6, s.bases[1]) + sq(7, 22, s.bases[2])}</svg>`;
+  const board = `<div class="lv-board"><div class="lv-top"><div><div class="lv-eyebrow">${esc(s.date || '')}${s.mode === 'chupon' ? ' · Chupón' : ''}</div><h2>${esc(s.team)} vs ${esc(s.opp)}</h2></div>
+      <span class="lv-pill${fin ? ' fin' : stale ? ' stale' : ''}">${fin ? 'Final' : `<span class="lv-pulse"></span>${stale ? 'Sin cambios ' + agoTxt(ago) : 'En vivo · ' + agoTxt(ago)}`}</span></div>
+    <div class="lv-score"><div class="lv-lines">${lt}</div><div class="lv-sit">${sit}</div></div></div>`;
+
+  // Al bat
+  const f3 = x => x == null || !isFinite(x) ? '—' : fmtRate(x);
+  const chips = r => r.length ? r.map(c => `<span class="lv-chip ${LIVE_CLS[c] || ''}">${esc(LIVE_TXT[c] || c)}</span>`).join('') : '<span class="lv-chip empty">Primer turno del juego</span>';
+  const mini = c => `<div><h3>${c.k}</h3><b>${esc((c.n ? '#' + c.n + ' ' : '') + c.name)}</b><small>Hoy ${c.today.h} de ${c.today.ab}</small></div>`;
+  let bat = `<div class="ph"><h2>Al bat</h2></div>`;
+  if (fin) bat = `<div class="ph"><h2>Final</h2></div><p class="lv-final">${esc(s.team)} ${L.R[0]}, ${esc(s.opp)} ${L.R[1]}. ${lead > 0 ? '¡Ganamos!' : lead < 0 ? 'Perdimos esta vez.' : 'Quedó empatado.'}</p>`;
+  else if (s.batter) {
+    const b = s.batter, rv = b.side === 'them';
+    bat += `<div class="lv-batter"><div class="lv-jersey${rv ? ' rv' : ''}">${esc(b.n || (b.name || '?')[0])}</div><div><div class="lv-bname">${esc(b.name)}</div><div class="lv-meta">${rv ? esc(s.opp) + ' · ' : ''}${b.pos ? esc(b.pos) + ' · ' : ''}${b.order}º en el orden</div></div></div>
+      <div class="lv-today"><div><b>Hoy: ${b.today.h} de ${b.today.ab}</b>${b.today.rbi ? ` · ${b.today.rbi} ${b.today.rbi === 1 ? 'impulsada' : 'impulsadas'}` : ''}</div><div class="lv-chips">${chips(b.today.res)}</div></div>
+      ${b.season ? `<div><h3>Temporada antes de hoy</h3><div class="lv-stats"><div><b>${f3(b.season.avg)}</b><span>AVG</span></div><div><b>${f3(b.season.obp)}</b><span>OBP</span></div><div><b>${f3(b.season.ops)}</b><span>OPS</span></div><div><b>${b.season.rbi}</b><span>CI</span></div><div><b>${b.season.sb}</b><span>BR</span></div></div></div>` : ''}
+      ${s.deck.length ? `<div class="lv-next">${mini({ ...s.deck[0], k: 'En espera' })}${s.deck[1] ? mini({ ...s.deck[1], k: 'Después' }) : ''}</div>` : ''}`;
+  } else bat += `<div class="lv-batter"><div class="lv-jersey rv">${esc((s.opp || 'R')[0])}</div><div><div class="lv-bname rv">Batea ${esc(s.opp)}</div><div class="lv-meta">${s.upNext ? `Abre la siguiente entrada: ${esc((s.upNext.n ? '#' + s.upNext.n + ' ' : '') + s.upNext.name)}` : `${esc(s.team)} a la defensiva`}</div></div></div>`;
+
+  // En base
+  const fld = (() => {
+    const pos = [[96, 64], [66, 34], [36, 64]], base = (x, y, on) => `<rect x="${x - 8}" y="${y - 8}" width="16" height="16" transform="rotate(45 ${x} ${y})" fill="${on ? 'var(--accent)' : 'var(--paper)'}" stroke="${on ? 'var(--accent)' : 'var(--line-strong)'}" stroke-width="2"/>`;
+    return `<svg viewBox="0 0 132 120" aria-hidden="true"><path d="M66 112 L4 50 A88 88 0 0 1 128 50 Z" fill="var(--grass)"/><path d="M66 98 L32 64 L66 30 L100 64 Z" fill="var(--dirt)"/><path d="M66 90 L40 64 L66 38 L92 64 Z" fill="var(--grass)"/>${pos.map(([x, y], i) => base(x, y, !fin && s.bases[i])).join('')}<path d="M60 96 h12 v5 l-6 5 l-6 -5 Z" fill="var(--paper)" stroke="var(--line-strong)" stroke-width="1.5"/></svg>`;
+  })();
+  const runners = fin ? '<div class="r off">Juego terminado.</div>' : s.side === 'them' && s.manual ? `<div class="r off">Batea ${esc(s.opp)}. El coach no está anotando sus turnos uno por uno.</div>`
+    : [2, 1, 0].map(i => `<div class="r${s.bases[i] ? '' : ' off'}"><span>${i + 1}ª</span>${s.bases[i] ? '<b>' + esc(s.bases[i]) + '</b>' : 'Vacía'}</div>`).join('');
+
+  // Nuestro pitcher
+  let pit = '';
+  if (s.pitcher && !fin) {
+    const p = s.pitcher, left = p.max ? p.max - p.np : null, ip = Math.floor(p.outs / 3) + '.' + (p.outs % 3);
+    pit = `<section class="panel lv-pit"><div class="ph"><h2>Nuestro pitcher</h2>${p.np && p.max ? `<span class="lv-np">${p.np} / ${p.max} LZ</span>` : ''}</div>
+      <div><b>${esc((p.n ? '#' + p.n + ' ' : '') + p.name)}</b>${p.age != null ? ` · ${p.age} años` : ''}${p.outs || p.so || p.bb || p.h ? ` · ${ip} IP, ${p.so} K, ${p.bb} BB, ${p.h} H` : ''}</div>
+      ${p.np && p.max ? `<div class="lv-bar"><i class="${left <= 15 ? 'warn' : ''}" style="width:${Math.min(100, p.np / p.max * 100)}%"></i></div>
+        <div class="lv-note">${left > 0 ? `Le quedan ${left} lanzamientos hoy.` : 'Llegó al máximo de lanzamientos para su edad.'} ${p.rest ? `Con ${p.np} necesita ${p.rest} ${p.rest === 1 ? 'día' : 'días'} de descanso.` : 'Todavía no necesita descanso.'}</div>`
+      : `<div class="lv-note">${p.np ? `${p.np} lanzamientos.` : 'El coach todavía no anota el conteo de lanzamientos.'}</div>`}</section>`;
+  }
+
+  // Jugadas, la más reciente arriba
+  const groups = [];
+  s.plays.forEach((p, k) => { const key = p.i + p.h; let g = groups[groups.length - 1]; if (!g || g.key !== key) groups.push(g = { key, i: p.i, h: p.h, s: p.s, items: [] }); g.items.push({ p, k }); });
+  const fresh = k => liveSeen >= 0 && k >= liveSeen;
+  const plays = groups.length ? groups.reverse().map(g => `<div><div class="lv-ihead"><span>${g.h === 'top' ? 'Alta' : 'Baja'} ${g.i}ª</span><b>Batea ${esc(nm(g.s))}</b></div>
+    ${g.items.reverse().map(({ p, k }) => p.m ? `<div class="lv-rival${fresh(k) ? ' new' : ''}"><b>${esc(s.opp)}:</b> ${p.r} ${p.r === 1 ? 'carrera' : 'carreras'} en la entrada.</div>`
+      : `<div class="lv-play${p.rbi ? ' score' : ''}${p.s === 'them' ? ' them' : ''}${fresh(k) ? ' new' : ''}"><span class="lv-pn">${p.o ? (s.mode === 'chupon' ? 'Out' : p.o + 'º out') : ''}</span>
+          <div><b>${esc(p.w)}</b> · ${esc(LIVE_TXT[p.res] || p.res)}${p.p ? ` (${esc(p.p)})` : ''}${(x => x.length ? `<small>${x.join(' · ')}</small>` : '')([p.re === 4 ? 'Anotó' : '', p.rbi ? p.rbi + (p.rbi === 1 ? ' impulsada' : ' impulsadas') : '', p.sb ? 'Robó base' : '', p.cs ? 'Atrapado robando' : ''].filter(Boolean))}</div>
+          <span class="lv-runs">${p.rbi ? '+' + p.rbi : ''}</span></div>`).join('')}</div>`).join('')
+    : '<div class="empty">Todavía no hay jugadas anotadas.</div>';
+  liveSeen = s.plays.length;
+
+  host.innerHTML = `${board}
+    <div class="lv-tabs" role="tablist"><button role="tab" data-t="now" aria-selected="${liveTab === 'now'}">Ahora</button><button role="tab" data-t="plays" aria-selected="${liveTab === 'plays'}">Jugadas · ${s.plays.filter(p => !p.m).length}</button></div>
+    <div class="lv-cols">
+      <div class="lv-col" data-c="now"${liveTab === 'now' ? '' : ' data-off="1"'}>
+        <section class="panel">${bat}</section>
+        ${fin ? '' : `<section class="panel"><div class="ph"><h2>En base</h2></div><div class="lv-field">${fld}<div class="lv-runners">${runners}</div></div></section>`}
+        ${pit}
+      </div>
+      <div class="lv-col" data-c="plays"${liveTab === 'plays' ? '' : ' data-off="1"'}><section class="panel"><div class="ph"><h2>Jugadas</h2></div><div class="lv-plays">${plays}</div></section></div>
+    </div>`;
+  host.querySelectorAll('.lv-tabs button').forEach(b => b.onclick = () => { liveTab = b.dataset.t; host.querySelectorAll('.lv-tabs button').forEach(x => x.setAttribute('aria-selected', x === b)); host.querySelectorAll('.lv-col').forEach(c => c.dataset.off = c.dataset.c === liveTab ? '' : '1'); });
 }
 
 /* ---------- PROYECCIÓN (Marcel simplificado) ---------- */

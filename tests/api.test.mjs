@@ -113,6 +113,42 @@ await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infan
 r = await call(null, { team });
 ok('al quitar el vencimiento vuelve a estar vigente', !r.team.expired && r.team.expires === '' && r.canEdit);
 
+// Juego en vivo
+r = await call({ op: 'livePut', team, snap: { status: 'live' } });
+ok('sin enlace no se puede transmitir', r.code === 404 && r.error === 'live_off');
+r = await call({ op: 'liveLink', team }); const ltok = r.token;
+ok('se crea el enlace en vivo', r.code === 200 && ltok && ltok.length >= 20);
+r = await call({ op: 'liveLink', team });
+ok('pedirlo otra vez devuelve el mismo', r.token === ltok);
+r = await call(null, { team });
+ok('la carga del coach incluye el enlace en vivo', r.live === ltok);
+r = await call(null, { live: ltok }, { noCookie: true });
+ok('antes de transmitir el enlace abre sin juego', r.code === 200 && r.live && r.snap === null && r.team.name === 'Diablillos');
+r = await call({ op: 'livePut', team, snap: { status: 'live', inn: 3, line: { us: ['1', '0', '2'] } } });
+ok('el coach sube el marcador', r.code === 200);
+r = await call(null, { live: ltok }, { noCookie: true });
+ok('los papás ven el marcador sin usuario', r.snap && r.snap.inn === 3 && r.snap.line.us[2] === '2' && r.ago >= 0);
+r = await call({ op: 'livePut', team, snap: { big: 'x'.repeat(100 * 1024) } });
+ok('un marcador demasiado grande se rechaza', r.code === 413);
+r = await call({ op: 'livePut', team, snap: 'texto' });
+ok('un marcador que no es objeto se rechaza', r.code === 400);
+await call({ op: 'adminUserSave', email: 'lectura@x.mx', name: 'Lectura', password: 'temporal123', teams: [{ team, role: 'viewer' }] });
+await call({ op: 'login', email: 'lectura@x.mx', password: 'temporal123' }, {}, { ip: '10.0.2.1' });
+r = await call({ op: 'livePut', team, snap: { status: 'live' } });
+ok('un usuario de solo lectura no puede transmitir', r.code === 403);
+await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.2.2' });
+await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', plan: 'basico' });
+r = await call(null, { live: ltok }, { noCookie: true });
+ok('en Básico el enlace en vivo deja de abrir', r.code === 404 && r.error === 'live_gone');
+r = await call({ op: 'liveLink', team });
+ok('en Básico no se crea enlace en vivo', r.code === 403 && r.error === 'plan');
+await call({ op: 'adminTeamSave', id: team, name: 'Diablillos', category: 'Infantil', plan: 'gold' });
+r = await call({ op: 'liveRevoke', team });
+r = await call(null, { live: ltok }, { noCookie: true });
+ok('al desactivarlo, el enlace anterior ya no abre', r.code === 404);
+r = await call({ op: 'liveLink', team });
+ok('el enlace nuevo es distinto', r.code === 200 && r.token !== ltok);
+
 // R4 límite de intentos
 await call({ op: 'logout' });
 for (let i = 0; i < 5; i++) { r = await call({ op: 'login', email: 'coach@x.mx', password: 'mala' + i }, {}, { ip: '10.0.0.' + (i + 2) }); }
