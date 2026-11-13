@@ -568,6 +568,7 @@ body.fs .sheet-grid{grid-template-columns:minmax(0,1fr) 220px}
 body.live .record{display:none!important}
 #btnLive.lv-on{border-color:var(--win);color:var(--win);display:inline-flex;align-items:center;gap:7px}
 .lv-pulse{width:8px;height:8px;border-radius:50%;background:#5ff08f;flex:none;display:inline-block;box-shadow:0 0 0 0 rgba(95,240,143,.6)}
+.lv-pulse.stale{background:#f0b54a;animation:none!important}
 #btnLive .lv-pulse{background:var(--win)}
 @media (prefers-reduced-motion:no-preference){.lv-pulse{animation:lvp 1.8s infinite}@keyframes lvp{70%{box-shadow:0 0 0 7px rgba(95,240,143,0)}100%{box-shadow:0 0 0 0 rgba(95,240,143,0)}}}
 .lv-toggle{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
@@ -575,14 +576,92 @@ body.live .record{display:none!important}
 .lv-toggle span{display:flex;flex-direction:column;gap:2px}
 .lv-toggle small{color:var(--muted);font-size:12.5px}
 #liveBody{display:flex;flex-direction:column;gap:14px}
-.lv-board{background:linear-gradient(180deg,var(--board),var(--board-2));color:var(--board-ink);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;border-bottom:5px solid var(--stripe)}
-.lv-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.lv-top h2{color:var(--board-ink);font-size:clamp(20px,4vw,26px);margin:2px 0 0;line-height:1}
-.lv-eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
-.lv-pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 11px}
-.lv-pill.fin{background:var(--bulb);color:var(--board-2);border-color:var(--bulb);font-weight:600}
-.lv-pill.stale .lv-pulse{background:#f0b54a;animation:none}
-.lv-score{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:stretch}
+#liveBody .ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#liveBody .ph h2{font-size:20px}
+#liveBody .lab{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+/* A · barra fija con el marcador */
+.lv-bug{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:linear-gradient(180deg,var(--board),var(--board-2));color:var(--board-ink);border-radius:8px;border-bottom:4px solid var(--stripe);padding:10px 14px 8px;display:grid;grid-template-columns:minmax(0,360px) auto auto;justify-content:start;gap:4px 14px;align-items:center;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.lv-bteams{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;font-family:var(--f-display);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.03em;line-height:1.15}
+.lv-bteams .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv-bteams .r{font-size:24px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.lv-bteams .r.lead{color:#ffd23f}
+.lv-binn{font-family:var(--f-display);font-weight:700;font-size:24px;text-align:center;line-height:1;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:6px}
+.lv-binn small{font-family:var(--f-mono);font-size:10px;font-weight:500;letter-spacing:.06em}
+.lv-dots{display:flex;gap:5px}
+.lv-dots i{width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.75)}
+.lv-dots i.on{background:var(--bulb);border-color:var(--bulb)}
+.lv-mini{width:52px;height:47px}
+.lv-mini rect{stroke:rgba(255,255,255,.8);stroke-width:2;fill:transparent}
+.lv-mini rect.on{fill:#ffd23f;stroke:#ffd23f}
+.lv-bst{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.9;border-top:1px solid rgba(255,255,255,.18);padding-top:6px}
+.lv-bst span:last-child{margin-left:auto;opacity:.8}
+/* Columnas: en celular una sola, con las jugadas antes del marcador por entrada y el pitcher */
+.lv-cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}
+.lv-left,.lv-right,.lv-late{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:820px){.lv-cols{display:flex;flex-direction:column;align-items:stretch}.lv-left,.lv-right{display:contents}.lv-right>*{order:1}.lv-late{order:2}}
+/* C · cartel del batazo grande */
+.lv-moment{position:relative;overflow:hidden;border-radius:10px;padding:14px 16px;color:#fff;background:radial-gradient(ellipse 80% 130% at 15% 0%,#ff5a62 0%,var(--board) 45%,var(--board-2) 100%);display:flex;flex-direction:column;gap:4px}
+.lv-moment.sad{background:linear-gradient(180deg,#5a5d63,#33363b)}
+.lv-moment::after{content:"";position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.08) 0deg 4deg,transparent 4deg 14deg);pointer-events:none}
+.lv-moment .k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
+.lv-moment .big{font-family:var(--f-display);font-size:clamp(30px,8vw,40px);font-weight:800;text-transform:uppercase;line-height:.95}
+.lv-moment .sub{font-size:13.5px;position:relative;z-index:1}
+@media (prefers-reduced-motion:no-preference){.lv-moment .big{animation:lvpop 2.6s ease-in-out infinite;transform-origin:left center}@keyframes lvpop{0%,72%,100%{transform:scale(1)}82%{transform:scale(1.05)}}}
+.lv-alert{display:flex;gap:10px;align-items:center;background:var(--warn-bg);border:1px solid var(--line-strong);border-radius:8px;padding:10px 12px;font-size:14px}
+.lv-alert b{color:var(--warn)}
+#liveBody .star{color:#e3a72f}
+/* B · campo */
+.lv-fieldp{padding:12px}
+.lv-fsvg{display:block;width:100%;max-width:520px;margin:0 auto;height:auto;border-radius:6px}
+.lv-bag{fill:var(--paper);stroke:var(--line-strong);stroke-width:1.5}
+.lv-bag.on{fill:#ffd23f;stroke:#b58a00}
+.lv-pin text{font-family:var(--f-body);font-size:11.5px;font-weight:600}
+.lv-pin.def rect{fill:var(--paper);stroke:var(--line-strong)} .lv-pin.def text{fill:var(--ink)}
+.lv-pin.run rect{fill:#ffd23f} .lv-pin.run text{fill:#3a2a00}
+.lv-pin.bat rect{fill:var(--accent)} .lv-pin.bat text{fill:#fff}
+.lv-pin.rival rect{fill:var(--rival)} .lv-pin.rival text{fill:#fff}
+.lv-pin.mine rect{fill:#e3a72f;stroke:#8a5d00;stroke-width:1.5} .lv-pin.mine text{fill:#2a1b00;font-weight:700}
+/* Al bat y mi jugador */
+.lv-batter{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.lv-jersey{width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:24px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+.lv-jersey.rv{background:var(--rival)}
+.lv-jersey.mine{background:#e3a72f;color:#2a1b00}
+.lv-bname{font-family:var(--f-display);font-size:24px;font-weight:700;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
+.lv-bname.rv{color:var(--rival)}
+.lv-meta{color:var(--muted);font-size:13px}
+.lv-st{color:var(--ink)}
+.lv-sigue{text-align:right;font-size:12px;color:var(--muted);display:flex;flex-direction:column}
+.lv-sigue b{color:var(--ink);font-size:13px}
+.lv-season{font-size:12.5px;color:var(--muted)} .lv-season b{color:var(--ink);font-variant-numeric:tabular-nums}
+.lv-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lv-chip{font-family:var(--f-mono);font-size:12px;border-radius:4px;padding:3px 8px;background:var(--chip);color:var(--ink);border-left:3px solid var(--rout)}
+.lv-chip.h1,.lv-chip.on{border-left-color:var(--r1b)} .lv-chip.h2{border-left-color:var(--r2b)} .lv-chip.h3{border-left-color:var(--r3b)} .lv-chip.hr{border-left-color:var(--rhr)}
+.lv-chip.empty{border-left-color:transparent;color:var(--muted)}
+.lv-mine{border:2px solid #e3a72f}
+.lv-mine.pick{border-style:dashed}
+.lv-pickl{display:flex;flex-wrap:wrap;gap:6px}
+/* Jugadas */
+.lv-seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden}
+.lv-seg button{font:inherit;font-size:12.5px;font-weight:600;background:transparent;color:var(--muted);border:0;padding:4px 12px;cursor:pointer}
+.lv-seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.lv-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lv-plays{display:flex;flex-direction:column;gap:14px}
+.lv-ihead{font-family:var(--f-display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.lv-ihead b{color:var(--ink);font-weight:600}
+.lv-play{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;padding:8px 0 8px 10px;border-left:3px solid transparent;align-items:start}
+.lv-play+.lv-play{border-top:1px dashed var(--line)}
+.lv-play.score{border-left-color:var(--accent);background:linear-gradient(90deg,var(--accent-soft),transparent 70%)}
+.lv-play.them.score{border-left-color:var(--rival)}
+.lv-play.mine{border-left-color:#e3a72f}
+.lv-play small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.lv-pn{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:2px}
+.lv-runs{font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--accent);white-space:nowrap}
+.lv-play.them .lv-runs{color:var(--rival)}
+.lv-rival{font-size:13px;color:var(--muted);padding:8px 10px;margin-top:8px;border-left:3px solid var(--rival);background:var(--bg);border-radius:0 4px 4px 0}
+.lv-rival b{color:var(--rival)}
+@media (prefers-reduced-motion:no-preference){.lv-play.new,.lv-rival.new{animation:lvnew 1.2s ease-out}@keyframes lvnew{from{background:var(--warn-bg)}}}
+/* Marcador por entrada */
+.lv-linec{background:linear-gradient(180deg,var(--board),var(--board-2));border-radius:8px;padding:10px}
 .lv-lines{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:6px;overflow-x:auto;min-width:0}
 .lv-lines table{border-collapse:collapse;width:100%;font-family:var(--f-display);font-variant-numeric:tabular-nums}
 .lv-lines th,.lv-lines td{padding:6px 7px;text-align:center;font-size:18px;font-weight:600;white-space:nowrap;color:var(--board-ink)}
@@ -595,71 +674,12 @@ body.live .record{display:none!important}
 .lv-lines tbody tr+tr td{border-top:1px solid rgba(255,255,255,.12)}
 .lv-lines .ab{display:none}
 @media (max-width:480px){.lv-lines .full{display:none}.lv-lines .ab{display:inline}.lv-lines th,.lv-lines td{padding:5px 4px;font-size:16px}.lv-lines td.team{padding-left:8px}.lv-lines .tot{font-size:19px}}
-.lv-sit{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:14px}
-.lv-inn{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;text-align:center;text-transform:uppercase}
-.lv-inn small{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;font-weight:500;opacity:.8;margin-bottom:3px}
-.lv-outs{display:flex;gap:5px;justify-content:center;margin-top:6px}
-.lv-outs i{width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,.7)}
-.lv-outs i.on{background:var(--bulb);border-color:var(--bulb)}
-.lv-chup{font-family:var(--f-mono);font-size:11px;margin-top:6px;text-align:center;opacity:.9}
-.lv-mini{width:64px;height:58px}
-.lv-mini rect{stroke:rgba(255,255,255,.75);stroke-width:2;fill:transparent}
-.lv-mini rect.on{fill:#ffd23f;stroke:#ffd23f}
-@media (max-width:620px){.lv-score{grid-template-columns:1fr}.lv-sit{justify-content:space-around}}
-.lv-tabs{display:none;gap:4px;border-bottom:1px solid var(--line)}
-.lv-tabs button{font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;padding:6px 12px 8px;cursor:pointer}
-.lv-tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
-.lv-cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}
-.lv-col{display:flex;flex-direction:column;gap:14px;min-width:0}
-@media (max-width:820px){.lv-tabs{display:flex}.lv-cols{grid-template-columns:1fr}.lv-col[data-off="1"]{display:none}}
-#liveBody .ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-#liveBody h3{font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.12em;margin:0 0 6px}
-.lv-batter{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
-.lv-jersey{width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:26px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
-.lv-jersey.rv{background:var(--rival)}
-.lv-bname{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
-.lv-bname.rv{color:var(--rival)}
-.lv-meta{color:var(--muted);font-size:13px}
-.lv-today{display:flex;flex-direction:column;gap:6px}
-.lv-chips{display:flex;flex-wrap:wrap;gap:6px}
-.lv-chip{font-family:var(--f-mono);font-size:12px;border-radius:4px;padding:3px 8px;background:var(--chip);color:var(--ink);border-left:3px solid var(--rout)}
-.lv-chip.h1,.lv-chip.on{border-left-color:var(--r1b)} .lv-chip.h2{border-left-color:var(--r2b)} .lv-chip.h3{border-left-color:var(--r3b)} .lv-chip.hr{border-left-color:var(--rhr)}
-.lv-chip.empty{border-left-color:transparent;color:var(--muted)}
-.lv-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.lv-stats div{display:flex;flex-direction:column;align-items:center;padding:7px 4px;gap:1px}
-.lv-stats div+div{border-left:1px solid var(--line)}
-.lv-stats b{font-family:var(--f-display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
-.lv-stats span{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--muted)}
-.lv-next{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.lv-next>div{border:1px solid var(--line);border-radius:4px;padding:8px 10px;min-width:0}
-.lv-next b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lv-next small{color:var(--muted);font-size:12px}
-.lv-final{margin:0;font-size:16px}
-.lv-field{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;align-items:center}
-.lv-field svg{width:132px;height:auto}
-.lv-runners{display:flex;flex-direction:column;gap:6px;font-size:13.5px}
-.lv-runners .r{display:flex;gap:8px;align-items:baseline}
-.lv-runners .r span{font-family:var(--f-mono);font-size:11px;color:var(--muted);width:28px;flex:none}
-.lv-runners .r.off{color:var(--muted)}
+/* Nuestro pitcher */
 .lv-np{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .lv-bar{height:10px;border-radius:999px;background:var(--chip);overflow:hidden}
 .lv-bar i{display:block;height:100%;background:var(--win);border-radius:999px}
 .lv-bar i.warn{background:var(--warn)}
 .lv-note{font-size:12.5px;color:var(--muted)}
-.lv-plays{display:flex;flex-direction:column;gap:14px}
-.lv-ihead{font-family:var(--f-display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:4px}
-.lv-ihead b{color:var(--ink);font-weight:600}
-.lv-play{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;padding:8px 0 8px 10px;border-left:3px solid transparent;align-items:start}
-.lv-play+.lv-play{border-top:1px dashed var(--line)}
-.lv-play.score{border-left-color:var(--accent);background:linear-gradient(90deg,var(--accent-soft),transparent 70%)}
-.lv-play.them.score{border-left-color:var(--rival)}
-.lv-play small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
-.lv-pn{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:2px}
-.lv-runs{font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--accent);white-space:nowrap}
-.lv-play.them .lv-runs{color:var(--rival)}
-.lv-rival{font-size:13px;color:var(--muted);padding:8px 10px;margin-top:8px;border-left:3px solid var(--rival);background:var(--bg);border-radius:0 4px 4px 0}
-.lv-rival b{color:var(--rival)}
-@media (prefers-reduced-motion:no-preference){.lv-play.new,.lv-rival.new{animation:lvnew 1.2s ease-out}@keyframes lvnew{from{background:var(--warn-bg)}}}
 </style>
 <script>try{var t=localStorage.getItem("dugout-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
@@ -2793,9 +2813,9 @@ function liveSnap(status) {
   const prior = aggBat(sortedGames().filter(g => g.id !== draft.id && String(g.date || '').slice(0, 4) === String(draft.date || '').slice(0, 4)));
   const card = (side, si, inn) => {
     const w = who(side, si, inn), same = x => !x.manual && x.side === side && (side === 'us' ? usWho(x.si, x.inn).pid === w.pid : themWho(x.si, x.inn).key === w.key);
-    let ab = 0, h = 0, rbi = 0; const res = [];
-    st.plays.filter(same).forEach(x => { const R = RES[x.pa.res]; if (R.ab) ab++; if (R.hit) h++; rbi += num(x.pa.rbi); res.push(x.pa.res); });
-    const o = { side, n: w.n, name: w.name, pos: w.pos, order: si + 1, today: { ab, h, rbi, res } };
+    let ab = 0, h = 0, rbi = 0, r = 0; const res = [];
+    st.plays.filter(same).forEach(x => { const R = RES[x.pa.res]; if (R.ab) ab++; if (R.hit) h++; rbi += num(x.pa.rbi); if (num(x.pa.reach) === 4) r++; res.push(x.pa.res); });
+    const o = { side, n: w.n, name: w.name, pos: w.pos, order: si + 1, today: { ab, h, rbi, r, res } };
     const b = side === 'us' && w.pid && prior[w.pid];
     if (b) o.season = { avg: b.avg, obp: b.obp, ops: b.ops, rbi: b.rbi, sb: b.sb };
     return o;
@@ -2815,6 +2835,8 @@ function liveSnap(status) {
     batter: sheet ? card(st.side, nx, st.inn) : null,
     deck: sheet ? [1, 2].map(k => card(st.side, (nx + k) % L, st.inn)) : [],
     upNext: st.side === 'them' ? card('us', st.next.us, st.half === 'top' ? st.inn : st.inn + 1) : null,
+    // Nuestro lineup en la entrada actual: el campo con la defensiva y "Mi jugador" en la vista de los papás
+    lineup: Array.from({ length: lineupLen(draft.slots) || 9 }, (_, si) => card('us', si, st.inn)), nx: st.next.us,
     pitcher,
     plays: st.plays.map(x => x.manual ? { i: x.inn, h: x.half, s: 'them', m: 1, r: x.runs }
       : { i: x.inn, h: x.half, s: x.side, w: label(who(x.side, x.si, x.inn)), res: x.pa.res, p: x.pa.play || '', re: num(x.pa.reach), o: num(x.pa.out), rbi: num(x.pa.rbi), sb: num(x.pa.sb), cs: x.pa.cs ? 1 : 0 }),
@@ -2863,10 +2885,14 @@ function openLiveDlg() {
 }
 $('#btnLive').addEventListener('click', openLiveDlg);
 
-/* Vista de los papás (?v=token): se actualiza sola cada 8 segundos mientras la pantalla está a la vista */
-let liveData = null, liveGot = 0, liveTab = 'now', liveSeen = -1;
+/* Vista de los papás (?v=token): se actualiza sola cada 8 segundos mientras la pantalla está a la vista.
+   Barra fija con el marcador, campo con la defensiva y los corredores, "Mi jugador", cartel de los batazos grandes y las jugadas. */
+let liveData = null, liveGot = 0, liveTok = '', liveFilter = 'all', liveSeen = -1, livePick = false;
+const mineKey = () => 'bs-live-mine:' + liveTok;
+const liveMine = () => { try { return localStorage.getItem(mineKey()) || ''; } catch { return ''; } };
+function setLiveMine(v) { try { if (v) localStorage.setItem(mineKey(), v); else localStorage.removeItem(mineKey()); } catch {} }
 async function startLive(tok) {
-  shareMode = true; document.body.classList.add('share', 'live'); setSync(false, 'Cargando el juego…'); showView('live');
+  liveTok = tok; shareMode = true; document.body.classList.add('share', 'live'); setSync(false, 'Cargando el juego…'); showView('live');
   let timer = null;
   const load = async () => {
     try {
@@ -2879,11 +2905,55 @@ async function startLive(tok) {
       else $('#liveBody').innerHTML = '<div class="panel"><div class="empty">No se pudo abrir el juego. Revisa tu conexión; la página reintenta sola.</div></div>';
     }
   };
+  $('#liveBody').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b || !liveData) return;
+    if (b.dataset.act === 'filter') liveFilter = b.dataset.f;
+    if (b.dataset.act === 'pick') livePick = true;
+    if (b.dataset.act === 'mine') { setLiveMine(b.dataset.l); livePick = false; }
+    if (b.dataset.act === 'unpick') { setLiveMine(''); livePick = false; }
+    renderLive();
+  });
   await load();
   timer = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 8000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
 }
 const agoTxt = sec => sec < 10 ? 'ahora' : sec < 60 ? `hace ${Math.round(sec)} s` : sec < 3600 ? `hace ${Math.round(sec / 60)} min` : sec < 86400 ? `hace ${Math.round(sec / 3600)} h` : `hace ${Math.round(sec / 86400)} días`;
+const lvLabel = p => (p.n ? '#' + p.n + ' ' : '') + p.name;
+// El último batazo grande de nuestro equipo: home run, el que nos pone al frente o empata, triple o de 2+ carreras.
+// El marcador se reconstruye con las impulsadas, así que solo se usa para saber si la jugada nos puso al frente.
+function liveMoment(s) {
+  let us = 0, them = 0, best = null;
+  s.plays.forEach((p, k) => {
+    const r = p.m ? num(p.r) : num(p.rbi), before = us - them;
+    if (p.s === 'us') us += r; else them += r;
+    if (p.s !== 'us' || p.m) return;
+    const after = us - them;
+    const t = p.res === 'HR' ? (r >= 4 ? '¡Grand slam!' : '¡Home run!') : r && before <= 0 && after > 0 ? '¡Pasamos al frente!' : r && before < 0 && after === 0 ? '¡Empatamos!' : p.res === 'H3' ? '¡Triple!' : r >= 2 ? `¡${r} carreras!` : null;
+    if (t) best = { k, p, t, ahead: r > 0 && before <= 0 && after > 0 };
+  });
+  return best && s.plays.length - best.k <= 8 ? best : null;
+}
+// Campo: posiciones de la defensiva y bases (viewBox 340 × 260)
+const LV_POS = { P: [170, 170], C: [170, 250], '1B': [266, 168], '2B': [222, 110], SS: [118, 110], '3B': [74, 168], LF: [62, 62], CF: [170, 30], RF: [278, 62], '4J': [232, 42] };
+const LV_BASE = [[236, 148], [170, 82], [104, 148]];
+function lvPill(x, y, txt, cls) {
+  const w = Math.max(30, String(txt).length * 6.7 + 16), cx = Math.min(340 - w / 2 - 2, Math.max(w / 2 + 2, x));
+  return `<g class="lv-pin ${cls || ''}"><rect x="${(cx - w / 2).toFixed(1)}" y="${y - 10}" width="${w.toFixed(1)}" height="20" rx="10"/><text x="${cx.toFixed(1)}" y="${y + 4}" text-anchor="middle">${esc(txt)}</text></g>`;
+}
+function lvField(s, mine) {
+  const parts = [], us = s.side === 'us';
+  if (!us) (s.lineup || []).forEach(p => { const xy = LV_POS[p.pos]; if (xy) { const me = lvLabel(p) === mine; parts.push(lvPill(xy[0], xy[1], `${me ? '★ ' : ''}${p.pos} ${p.name}`, me ? 'mine' : 'def')); } });
+  if (!us && s.pitcher && !(s.lineup || []).some(p => p.pos === 'P')) parts.push(lvPill(LV_POS.P[0], LV_POS.P[1], 'P ' + s.pitcher.name, 'def'));
+  s.bases.forEach((r, i) => { if (r) { const [x, y] = LV_BASE[i], me = r === mine; parts.push(lvPill(x, y - 20, (me ? '★ ' : '') + r, us ? (me ? 'mine' : 'run') : 'rival')); } });
+  if (s.batter) { const me = lvLabel(s.batter) === mine && us; parts.push(lvPill(us ? 170 : 252, us ? 238 : 226, `${me ? '★ ' : ''}Al bat · ${lvLabel(s.batter)}`, me ? 'mine' : us ? 'bat' : 'rival')); }
+  else if (!us) parts.push(lvPill(252, 226, 'Batea ' + s.opp, 'rival'));
+  const base = ([x, y], on) => `<rect x="${x - 7}" y="${y - 7}" width="14" height="14" transform="rotate(45 ${x} ${y})" class="lv-bag${on ? ' on' : ''}"/>`;
+  return `<svg class="lv-fsvg" viewBox="0 0 340 260" role="img" aria-label="${us ? 'Corredores en base' : 'Nuestra defensiva'}">
+    <rect width="340" height="260" fill="var(--grass-2)"/><path d="M170 258 L8 96 A229 229 0 0 1 332 96 Z" fill="var(--grass)"/>
+    <path d="M170 226 L96 148 L170 74 L244 148 Z" fill="var(--dirt)"/><path d="M170 208 L114 148 L170 92 L226 148 Z" fill="var(--grass)"/>
+    <circle cx="170" cy="150" r="9" fill="var(--dirt)"/>${LV_BASE.map((b, i) => base(b, s.bases[i])).join('')}
+    <path d="M164 210 h12 v5 l-6 5 l-6 -5 Z" fill="var(--paper)" stroke="var(--line-strong)"/>${parts.join('')}</svg>`;
+}
 function renderLive() {
   const j = liveData, s = j.snap, host = $('#liveBody');
   if (!s) {
@@ -2893,9 +2963,74 @@ function renderLive() {
   }
   const ago = (j.ago || 0) + (Date.now() - liveGot) / 1000, fin = s.status === 'final', stale = !fin && ago > 1800;
   setSync(!fin && !stale, fin ? 'Juego terminado' : stale ? `Sin cambios desde ${agoTxt(ago)}` : `En vivo · actualizado ${agoTxt(ago)}`);
-  const ix = sd => sd === 'us' ? 0 : 1, nm = sd => sd === 'us' ? s.team : s.opp;
+  const ix = sd => sd === 'us' ? 0 : 1, nm = sd => sd === 'us' ? s.team : s.opp, L = s.line, lead = L.R[0] - L.R[1];
   const rows = s.ha === 'L' ? ['them', 'us'] : ['us', 'them'];
-  const L = s.line, lead = L.R[0] - L.R[1];
+  const mine = liveMine(), lineup = s.lineup || [], mi = lineup.findIndex(p => lvLabel(p) === mine), me = mi >= 0 ? lineup[mi] : null;
+  const dist = me ? (mi - (s.nx || 0) + lineup.length) % lineup.length : -1;
+  const sq = (x, y, on) => `<rect x="${x}" y="${y}" width="14" height="14" transform="rotate(45 ${x + 7} ${y + 7})" class="${on ? 'on' : ''}"/>`;
+
+  // A · barra fija con el marcador
+  const bug = `<div class="lv-bug">
+    <div class="lv-bteams">${rows.map(sd => `<span class="nm">${esc(nm(sd))}</span><span class="r${(sd === 'us' ? lead > 0 : lead < 0) ? ' lead' : ''}">${L.R[ix(sd)]}</span>`).join('')}</div>
+    ${fin ? '<div class="lv-binn">Final</div>' : `<div class="lv-binn">${s.half === 'top' ? '▲' : '▼'} ${s.inn}ª${s.mode === 'chupon' ? `<small>Turno ${Math.min(s.pas + 1, s.bpi)}/${s.bpi}</small>` : `<span class="lv-dots" aria-label="${s.outs} outs">${[0, 1, 2].map(i => `<i class="${i < s.outs ? 'on' : ''}"></i>`).join('')}</span>`}</div>
+    <svg class="lv-mini" viewBox="0 0 64 58" aria-label="Corredores en base">${sq(43, 22, s.bases[0]) + sq(25, 6, s.bases[1]) + sq(7, 22, s.bases[2])}</svg>`}
+    <div class="lv-bst">${fin ? 'Juego terminado' : `<span class="lv-pulse${stale ? ' stale' : ''}"></span>${stale ? 'Sin cambios ' + agoTxt(ago) : 'En vivo · ' + agoTxt(ago)}`}<span>${esc(s.date || '')}</span></div>
+  </div>`;
+
+  // C · cartel del batazo grande (o del final)
+  const mo = fin ? null : liveMoment(s);
+  const moment = fin ? `<div class="lv-moment${lead < 0 ? ' sad' : ''}"><span class="k">Final</span><span class="big">${lead > 0 ? '¡Ganamos!' : lead < 0 ? 'Perdimos' : 'Empate'}</span><span class="sub">${esc(s.team)} ${L.R[0]}, ${esc(s.opp)} ${L.R[1]}</span></div>`
+    : mo ? `<div class="lv-moment"><span class="k">${mo.p.h === 'top' ? 'Alta' : 'Baja'} ${mo.p.i}ª</span><span class="big">${mo.t}</span><span class="sub"><b>${esc(mo.p.w)}</b> · ${esc(LIVE_TXT[mo.p.res] || mo.p.res)}${mo.p.p ? ` (${esc(mo.p.p)})` : ''}${mo.p.rbi ? `, ${mo.p.rbi} ${mo.p.rbi === 1 ? 'impulsada' : 'impulsadas'}` : ''}.${mo.ahead && mo.t !== '¡Pasamos al frente!' ? ` ${esc(s.team)} se pone al frente.` : ''}</span></div>` : '';
+
+  // C · aviso cuando le toca a mi jugador
+  const alert = me && !fin && s.side === 'us' && dist <= 1 ? `<div class="lv-alert"><span class="star">★</span><span><b>${esc(me.name)} ${dist === 0 ? 'está al bat' : 'está en espera'}.</b>${dist === 1 && s.batter ? ` Batea después de ${esc(s.batter.name.replace(/.$/, ''))}.` : ''}</span></div>` : '';
+
+  // B · campo con la defensiva o los corredores
+  const field = fin ? '' : `<section class="panel lv-fieldp"><div class="ph"><h2>${s.side === 'us' ? 'Batea ' + esc(s.team) : esc(s.team) + ' a la defensiva'}</h2></div>${lvField(s, mine)}${s.side === 'them' && s.manual ? `<div class="lv-note">El coach no está anotando los turnos de ${esc(s.opp)} uno por uno; sus carreras salen al cerrar la entrada.</div>` : ''}</section>`;
+
+  // Al bat
+  const f3 = x => x == null || !isFinite(x) ? '—' : fmtRate(x);
+  const chips = r => r.length ? r.map(c => `<span class="lv-chip ${LIVE_CLS[c] || ''}">${esc(LIVE_TXT[c] || c)}</span>`).join('') : '<span class="lv-chip empty">Primer turno del juego</span>';
+  let bat = '';
+  if (!fin && s.batter) {
+    const b = s.batter, rv = b.side === 'them', next = s.deck[0];
+    bat = `<section class="panel"><div class="lv-batter"><div class="lv-jersey${rv ? ' rv' : ''}">${esc(b.n || (b.name || '?')[0])}</div>
+      <div><div class="lab">Al bat${rv ? ' · ' + esc(s.opp) : ''}</div><div class="lv-bname">${esc(b.name)}</div><div class="lv-meta">${b.pos ? esc(b.pos) + ' · ' : ''}Hoy ${b.today.h} de ${b.today.ab}${b.today.rbi ? ` · ${b.today.rbi} CI` : ''}</div></div>
+      ${next ? `<div class="lv-sigue"><span>Sigue</span><b>${esc(next.name)}</b></div>` : ''}</div>
+      <div class="lv-chips">${chips(b.today.res)}</div>
+      ${b.season ? `<div class="lv-season">Temporada: <b>${f3(b.season.avg)}</b> AVG · <b>${f3(b.season.obp)}</b> OBP · <b>${f3(b.season.ops)}</b> OPS</div>` : ''}</section>`;
+  } else if (!fin) bat = `<section class="panel"><div class="lv-batter"><div class="lv-jersey rv">${esc((s.opp || 'R')[0])}</div><div><div class="lv-bname rv">Batea ${esc(s.opp)}</div><div class="lv-meta">${s.upNext ? `Abre la siguiente entrada: ${esc(lvLabel(s.upNext))}` : `${esc(s.team)} a la defensiva`}</div></div></div></section>`;
+
+  // C · mi jugador
+  let mineCard;
+  if (!lineup.length) mineCard = '';
+  else if (!mine || livePick) mineCard = `<section class="panel lv-mine pick"><div class="ph"><h2>¿Quién es tu jugador?</h2>${mine ? '<button class="btn sm" data-act="unpick">Quitar</button>' : ''}</div>
+      <p class="lv-note" style="margin:0">Elígelo una vez: lo vas a ver arriba con su juego de hoy y te avisamos cuando le toque batear. Se guarda solo en este teléfono.</p>
+      <div class="lv-pickl">${lineup.map(p => `<button class="btn sm${lvLabel(p) === mine ? ' primary' : ''}" data-act="mine" data-l="${esc(lvLabel(p))}">${esc(lvLabel(p))}</button>`).join('')}</div></section>`;
+  else if (!me) mineCard = `<section class="panel lv-mine"><div class="ph"><span class="lab">Mi jugador</span><button class="btn sm" data-act="pick">Cambiar</button></div><div><b>${esc(mine)}</b> no aparece en el lineup de hoy.</div></section>`;
+  else {
+    const on = s.side === 'us' ? s.bases.findIndex(r => r === mine) : -1;
+    const st = fin ? 'Juego terminado' : s.side === 'us' ? (on >= 0 ? `En ${on + 1}ª base` : dist === 0 ? 'Al bat ahora' : dist === 1 ? 'En espera' : `Batea en ${dist} turnos`) : `A la defensiva${me.pos ? ' · ' + me.pos : ''}${dist === 0 ? ' · abre la próxima entrada' : ''}`;
+    mineCard = `<section class="panel lv-mine"><div class="ph"><span class="lab"><span class="star">★</span> Mi jugador</span><button class="btn sm" data-act="pick">Cambiar</button></div>
+      <div class="lv-batter"><div class="lv-jersey mine">${esc(me.n || me.name[0])}</div><div><div class="lv-bname">${esc(me.name)}</div><div class="lv-meta">${me.pos ? esc(me.pos) + ' · ' : ''}${me.order}º en el orden · <b class="lv-st">${st}</b></div></div></div>
+      <div><b>Hoy: ${me.today.h} de ${me.today.ab}</b>${me.today.r ? ` · ${me.today.r} ${me.today.r === 1 ? 'carrera' : 'carreras'}` : ''}${me.today.rbi ? ` · ${me.today.rbi} ${me.today.rbi === 1 ? 'impulsada' : 'impulsadas'}` : ''}</div>
+      <div class="lv-chips">${chips(me.today.res)}</div></section>`;
+  }
+
+  // Jugadas, la más reciente arriba; "Carreras" deja solo las que movieron el marcador
+  const runs = p => p.m ? p.r > 0 : p.rbi > 0 || p.re === 4;
+  const groups = [];
+  s.plays.forEach((p, k) => { if (liveFilter === 'runs' && !runs(p)) return; const key = p.i + p.h; let g = groups[groups.length - 1]; if (!g || g.key !== key) groups.push(g = { key, i: p.i, h: p.h, s: p.s, items: [] }); g.items.push({ p, k }); });
+  const fresh = k => liveSeen >= 0 && k >= liveSeen;
+  const plays = groups.length ? groups.reverse().map(g => `<div><div class="lv-ihead"><span>${g.h === 'top' ? 'Alta' : 'Baja'} ${g.i}ª</span><b>Batea ${esc(nm(g.s))}</b></div>
+    ${g.items.reverse().map(({ p, k }) => p.m ? `<div class="lv-rival${fresh(k) ? ' new' : ''}"><b>${esc(s.opp)}:</b> ${p.r} ${p.r === 1 ? 'carrera' : 'carreras'} en la entrada.</div>`
+      : `<div class="lv-play${p.rbi ? ' score' : ''}${p.s === 'them' ? ' them' : ''}${p.w === mine && p.s === 'us' ? ' mine' : ''}${fresh(k) ? ' new' : ''}"><span class="lv-pn">${p.o ? (s.mode === 'chupon' ? 'Out' : p.o + 'º out') : ''}</span>
+          <div><b>${p.w === mine && p.s === 'us' ? '★ ' : ''}${esc(p.w)}</b> · ${esc(LIVE_TXT[p.res] || p.res)}${p.p ? ` (${esc(p.p)})` : ''}${(x => x.length ? `<small>${x.join(' · ')}</small>` : '')([p.re === 4 ? 'Anotó' : '', p.rbi ? p.rbi + (p.rbi === 1 ? ' impulsada' : ' impulsadas') : '', p.sb ? 'Robó base' : '', p.cs ? 'Atrapado robando' : ''].filter(Boolean))}</div>
+          <span class="lv-runs">${p.rbi ? '+' + p.rbi : ''}</span></div>`).join('')}</div>`).join('')
+    : `<div class="empty">${liveFilter === 'runs' ? 'Todavía no hay carreras.' : 'Todavía no hay jugadas anotadas.'}</div>`;
+  liveSeen = s.plays.length;
+  const playsCard = `<section class="panel lv-playsc"><div class="ph"><h2>Jugadas</h2><span class="lv-seg" role="group" aria-label="Filtrar jugadas"><button data-act="filter" data-f="all" aria-pressed="${liveFilter === 'all'}">Todas</button><button data-act="filter" data-f="runs" aria-pressed="${liveFilter === 'runs'}">Carreras</button></span></div><div class="lv-plays">${plays}</div></section>`;
+
   // Marcador por entrada
   let lt = `<table><thead><tr><th></th>${Array.from({ length: s.inns }, (_, i) => `<th>${i + 1}</th>`).join('')}<th class="sep">C</th><th>H</th><th>E</th></tr></thead><tbody>`;
   rows.forEach(sd => {
@@ -2903,72 +3038,20 @@ function renderLive() {
     for (let i = 0; i < s.inns; i++) { const v = (sd === 'us' ? L.us : L.them)[i], now = !fin && s.inn === i + 1 && s.side === sd; lt += `<td class="${now ? 'now' : ''}${v === '' || v == null ? ' pend' : ''}">${v === '' || v == null ? '·' : esc(v)}</td>`; }
     lt += `<td class="sep tot">${L.R[ix(sd)]}</td><td>${L.H[ix(sd)]}</td><td>${L.E[ix(sd)]}</td></tr>`;
   });
-  lt += '</tbody></table>';
-  const sq = (x, y, on) => `<rect x="${x}" y="${y}" width="14" height="14" transform="rotate(45 ${x + 7} ${y + 7})" class="${on ? 'on' : ''}"/>`;
-  const sit = fin ? `<div class="lv-inn"><small>Final</small>${lead > 0 ? 'Ganamos' : lead < 0 ? 'Perdimos' : 'Empate'}</div>`
-    : `<div><div class="lv-inn"><small>${s.half === 'top' ? 'Alta' : 'Baja'}</small>${s.half === 'top' ? '▲' : '▼'} ${s.inn}ª</div>
-       ${s.mode === 'chupon' ? `<div class="lv-chup">Turno ${Math.min(s.pas + 1, s.bpi)} de ${s.bpi}</div>` : `<div class="lv-outs" aria-label="${s.outs} outs">${[0, 1, 2].map(i => `<i class="${i < s.outs ? 'on' : ''}"></i>`).join('')}</div>`}</div>
-       <svg class="lv-mini" viewBox="0 0 64 58" aria-label="Corredores en base">${sq(43, 22, s.bases[0]) + sq(25, 6, s.bases[1]) + sq(7, 22, s.bases[2])}</svg>`;
-  const board = `<div class="lv-board"><div class="lv-top"><div><div class="lv-eyebrow">${esc(s.date || '')}${s.mode === 'chupon' ? ' · Chupón' : ''}</div><h2>${esc(s.team)} vs ${esc(s.opp)}</h2></div>
-      <span class="lv-pill${fin ? ' fin' : stale ? ' stale' : ''}">${fin ? 'Final' : `<span class="lv-pulse"></span>${stale ? 'Sin cambios ' + agoTxt(ago) : 'En vivo · ' + agoTxt(ago)}`}</span></div>
-    <div class="lv-score"><div class="lv-lines">${lt}</div><div class="lv-sit">${sit}</div></div></div>`;
-
-  // Al bat
-  const f3 = x => x == null || !isFinite(x) ? '—' : fmtRate(x);
-  const chips = r => r.length ? r.map(c => `<span class="lv-chip ${LIVE_CLS[c] || ''}">${esc(LIVE_TXT[c] || c)}</span>`).join('') : '<span class="lv-chip empty">Primer turno del juego</span>';
-  const mini = c => `<div><h3>${c.k}</h3><b>${esc((c.n ? '#' + c.n + ' ' : '') + c.name)}</b><small>Hoy ${c.today.h} de ${c.today.ab}</small></div>`;
-  let bat = `<div class="ph"><h2>Al bat</h2></div>`;
-  if (fin) bat = `<div class="ph"><h2>Final</h2></div><p class="lv-final">${esc(s.team)} ${L.R[0]}, ${esc(s.opp)} ${L.R[1]}. ${lead > 0 ? '¡Ganamos!' : lead < 0 ? 'Perdimos esta vez.' : 'Quedó empatado.'}</p>`;
-  else if (s.batter) {
-    const b = s.batter, rv = b.side === 'them';
-    bat += `<div class="lv-batter"><div class="lv-jersey${rv ? ' rv' : ''}">${esc(b.n || (b.name || '?')[0])}</div><div><div class="lv-bname">${esc(b.name)}</div><div class="lv-meta">${rv ? esc(s.opp) + ' · ' : ''}${b.pos ? esc(b.pos) + ' · ' : ''}${b.order}º en el orden</div></div></div>
-      <div class="lv-today"><div><b>Hoy: ${b.today.h} de ${b.today.ab}</b>${b.today.rbi ? ` · ${b.today.rbi} ${b.today.rbi === 1 ? 'impulsada' : 'impulsadas'}` : ''}</div><div class="lv-chips">${chips(b.today.res)}</div></div>
-      ${b.season ? `<div><h3>Temporada antes de hoy</h3><div class="lv-stats"><div><b>${f3(b.season.avg)}</b><span>AVG</span></div><div><b>${f3(b.season.obp)}</b><span>OBP</span></div><div><b>${f3(b.season.ops)}</b><span>OPS</span></div><div><b>${b.season.rbi}</b><span>CI</span></div><div><b>${b.season.sb}</b><span>BR</span></div></div></div>` : ''}
-      ${s.deck.length ? `<div class="lv-next">${mini({ ...s.deck[0], k: 'En espera' })}${s.deck[1] ? mini({ ...s.deck[1], k: 'Después' }) : ''}</div>` : ''}`;
-  } else bat += `<div class="lv-batter"><div class="lv-jersey rv">${esc((s.opp || 'R')[0])}</div><div><div class="lv-bname rv">Batea ${esc(s.opp)}</div><div class="lv-meta">${s.upNext ? `Abre la siguiente entrada: ${esc((s.upNext.n ? '#' + s.upNext.n + ' ' : '') + s.upNext.name)}` : `${esc(s.team)} a la defensiva`}</div></div></div>`;
-
-  // En base
-  const fld = (() => {
-    const pos = [[96, 64], [66, 34], [36, 64]], base = (x, y, on) => `<rect x="${x - 8}" y="${y - 8}" width="16" height="16" transform="rotate(45 ${x} ${y})" fill="${on ? 'var(--accent)' : 'var(--paper)'}" stroke="${on ? 'var(--accent)' : 'var(--line-strong)'}" stroke-width="2"/>`;
-    return `<svg viewBox="0 0 132 120" aria-hidden="true"><path d="M66 112 L4 50 A88 88 0 0 1 128 50 Z" fill="var(--grass)"/><path d="M66 98 L32 64 L66 30 L100 64 Z" fill="var(--dirt)"/><path d="M66 90 L40 64 L66 38 L92 64 Z" fill="var(--grass)"/>${pos.map(([x, y], i) => base(x, y, !fin && s.bases[i])).join('')}<path d="M60 96 h12 v5 l-6 5 l-6 -5 Z" fill="var(--paper)" stroke="var(--line-strong)" stroke-width="1.5"/></svg>`;
-  })();
-  const runners = fin ? '<div class="r off">Juego terminado.</div>' : s.side === 'them' && s.manual ? `<div class="r off">Batea ${esc(s.opp)}. El coach no está anotando sus turnos uno por uno.</div>`
-    : [2, 1, 0].map(i => `<div class="r${s.bases[i] ? '' : ' off'}"><span>${i + 1}ª</span>${s.bases[i] ? '<b>' + esc(s.bases[i]) + '</b>' : 'Vacía'}</div>`).join('');
+  const line = `<section class="lv-linec"><div class="lv-lines">${lt}</tbody></table></div></section>`;
 
   // Nuestro pitcher
   let pit = '';
   if (s.pitcher && !fin) {
     const p = s.pitcher, left = p.max ? p.max - p.np : null, ip = Math.floor(p.outs / 3) + '.' + (p.outs % 3);
     pit = `<section class="panel lv-pit"><div class="ph"><h2>Nuestro pitcher</h2>${p.np && p.max ? `<span class="lv-np">${p.np} / ${p.max} LZ</span>` : ''}</div>
-      <div><b>${esc((p.n ? '#' + p.n + ' ' : '') + p.name)}</b>${p.age != null ? ` · ${p.age} años` : ''}${p.outs || p.so || p.bb || p.h ? ` · ${ip} IP, ${p.so} K, ${p.bb} BB, ${p.h} H` : ''}</div>
+      <div><b>${esc(lvLabel(p))}</b>${p.age != null ? ` · ${p.age} años` : ''}${p.outs || p.so || p.bb || p.h ? ` · ${ip} IP, ${p.so} K, ${p.bb} BB, ${p.h} H` : ''}</div>
       ${p.np && p.max ? `<div class="lv-bar"><i class="${left <= 15 ? 'warn' : ''}" style="width:${Math.min(100, p.np / p.max * 100)}%"></i></div>
         <div class="lv-note">${left > 0 ? `Le quedan ${left} lanzamientos hoy.` : 'Llegó al máximo de lanzamientos para su edad.'} ${p.rest ? `Con ${p.np} necesita ${p.rest} ${p.rest === 1 ? 'día' : 'días'} de descanso.` : 'Todavía no necesita descanso.'}</div>`
       : `<div class="lv-note">${p.np ? `${p.np} lanzamientos.` : 'El coach todavía no anota el conteo de lanzamientos.'}</div>`}</section>`;
   }
 
-  // Jugadas, la más reciente arriba
-  const groups = [];
-  s.plays.forEach((p, k) => { const key = p.i + p.h; let g = groups[groups.length - 1]; if (!g || g.key !== key) groups.push(g = { key, i: p.i, h: p.h, s: p.s, items: [] }); g.items.push({ p, k }); });
-  const fresh = k => liveSeen >= 0 && k >= liveSeen;
-  const plays = groups.length ? groups.reverse().map(g => `<div><div class="lv-ihead"><span>${g.h === 'top' ? 'Alta' : 'Baja'} ${g.i}ª</span><b>Batea ${esc(nm(g.s))}</b></div>
-    ${g.items.reverse().map(({ p, k }) => p.m ? `<div class="lv-rival${fresh(k) ? ' new' : ''}"><b>${esc(s.opp)}:</b> ${p.r} ${p.r === 1 ? 'carrera' : 'carreras'} en la entrada.</div>`
-      : `<div class="lv-play${p.rbi ? ' score' : ''}${p.s === 'them' ? ' them' : ''}${fresh(k) ? ' new' : ''}"><span class="lv-pn">${p.o ? (s.mode === 'chupon' ? 'Out' : p.o + 'º out') : ''}</span>
-          <div><b>${esc(p.w)}</b> · ${esc(LIVE_TXT[p.res] || p.res)}${p.p ? ` (${esc(p.p)})` : ''}${(x => x.length ? `<small>${x.join(' · ')}</small>` : '')([p.re === 4 ? 'Anotó' : '', p.rbi ? p.rbi + (p.rbi === 1 ? ' impulsada' : ' impulsadas') : '', p.sb ? 'Robó base' : '', p.cs ? 'Atrapado robando' : ''].filter(Boolean))}</div>
-          <span class="lv-runs">${p.rbi ? '+' + p.rbi : ''}</span></div>`).join('')}</div>`).join('')
-    : '<div class="empty">Todavía no hay jugadas anotadas.</div>';
-  liveSeen = s.plays.length;
-
-  host.innerHTML = `${board}
-    <div class="lv-tabs" role="tablist"><button role="tab" data-t="now" aria-selected="${liveTab === 'now'}">Ahora</button><button role="tab" data-t="plays" aria-selected="${liveTab === 'plays'}">Jugadas · ${s.plays.filter(p => !p.m).length}</button></div>
-    <div class="lv-cols">
-      <div class="lv-col" data-c="now"${liveTab === 'now' ? '' : ' data-off="1"'}>
-        <section class="panel">${bat}</section>
-        ${fin ? '' : `<section class="panel"><div class="ph"><h2>En base</h2></div><div class="lv-field">${fld}<div class="lv-runners">${runners}</div></div></section>`}
-        ${pit}
-      </div>
-      <div class="lv-col" data-c="plays"${liveTab === 'plays' ? '' : ' data-off="1"'}><section class="panel"><div class="ph"><h2>Jugadas</h2></div><div class="lv-plays">${plays}</div></section></div>
-    </div>`;
-  host.querySelectorAll('.lv-tabs button').forEach(b => b.onclick = () => { liveTab = b.dataset.t; host.querySelectorAll('.lv-tabs button').forEach(x => x.setAttribute('aria-selected', x === b)); host.querySelectorAll('.lv-col').forEach(c => c.dataset.off = c.dataset.c === liveTab ? '' : '1'); });
+  host.innerHTML = `${bug}<div class="lv-cols"><div class="lv-left">${moment}${alert}${field}${bat}${mineCard}<div class="lv-late">${line}${pit}</div></div><div class="lv-right">${playsCard}</div></div>`;
 }
 
 /* ---------- PROYECCIÓN (Marcel simplificado) ---------- */
