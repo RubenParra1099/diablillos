@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState, batOutcomes, bbTypes, batTrends };', ctx);
+vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState, batOutcomes, bbTypes, batTrends, isQab, contactStats };', ctx);
 const C = ctx.C;
 const fx = JSON.parse(fs.readFileSync(new URL('./fixture.json', import.meta.url), 'utf8'));
 const games = Object.entries(fx.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => a.date.localeCompare(b.date));
@@ -150,4 +150,20 @@ test('ficha: en qué terminan los turnos, tipo de batazo y tendencias', () => {
   // La de abrir la entrada sale si no la tapan las buenas
   const tr2 = C.batTrends({ b: mk({ ab: 30, h: 8, bb: 2, so: 6 }), team, pas });
   assert.ok(tr2.some(x => x.k === 'lead' && x.tone === 'warn' && x.v === '20%')); assert.ok(tr2.some(x => x.k === 'spray' && x.title === 'Batea al jardín izquierdo'));
+});
+
+test('calidad del contacto y turno de calidad', () => {
+  assert.equal(C.isQab({ res: 'O', cq: 'hard' }), true); assert.equal(C.isQab({ res: 'O', cq: 'mid' }), false);
+  assert.equal(C.isQab({ res: 'O', rbi: 1 }), true); assert.equal(C.isQab({ res: 'TS' }), true); assert.equal(C.isQab({ res: 'BB' }), true); assert.equal(C.isQab({ res: 'K' }), false); assert.equal(C.isQab({ res: 'K', cq: 'hard' }), false); assert.equal(C.isQab({ res: 'H1', cq: 'soft' }), true);
+  const pas = [
+    ...Array.from({ length: 6 }, (_, i) => ({ res: i < 2 ? 'H1' : 'O', cq: 'hard' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ res: i < 1 ? 'H2' : 'O', cq: 'mid' })),
+    { res: 'O', cq: 'soft' }, { res: 'K', cq: 'hard' }, { res: 'BB' }, { res: 'O' },
+  ];
+  const c = C.contactStats(pas);
+  assert.equal(c.n, 10); assert.equal(c.pa, 13); assert.equal(c.by.hard.n, 6); assert.equal(c.by.hard.h, 2); assert.equal(c.hardOuts, 4);
+  assert.equal(c.qab, 6 + 1 + 1); assert.ok(Math.abs(c.by.hard.avg - 2 / 6) < 1e-9); assert.ok(Math.abs(c.hardp - .6) < 1e-9);
+  const mk = x => C.derive({ ...C.zero(C.BATK), ...x }), team = mk({ ab: 400, h: 100, so: 80, bb: 30 });
+  const tr = C.batTrends({ b: mk({ ab: 30, h: 7, so: 6, bb: 2 }), team, pas: [], contact: c });
+  assert.ok(tr.some(x => x.k === 'luck' && x.v === '4'));
 });

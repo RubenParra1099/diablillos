@@ -178,7 +178,7 @@ function paList(gs) {
       pas.sort((a, b) => a.idx - b.idx || ((a.si - start + L) % L) - ((b.si - start + L) % L));
       let outs = 0;
       pas.forEach((x, j) => {
-        out.push({ gid: g.id, date: g.date, inn, slot: x.si, pid: pidAt(slots[x.si], inn), outs: Math.min(outs, 2), lead: j === 0, on: num(x.pa.reach) > 0, scored: num(x.pa.reach) === 4, res: x.pa.res, play: x.pa.play || '', loc: x.pa.loc || null, key: g.id + '_' + inn + '_' + x.si + '_' + x.idx });
+        out.push({ gid: g.id, date: g.date, inn, slot: x.si, pid: pidAt(slots[x.si], inn), outs: Math.min(outs, 2), lead: j === 0, on: num(x.pa.reach) > 0, scored: num(x.pa.reach) === 4, res: x.pa.res, play: x.pa.play || '', loc: x.pa.loc || null, rbi: num(x.pa.rbi), cq: x.pa.cq || '', key: g.id + '_' + inn + '_' + x.si + '_' + x.idx });
         if (num(x.pa.out)) outs++;
       });
       start = (pas[pas.length - 1].si + 1) % L;
@@ -313,8 +313,25 @@ function batTrends(o) {
     if (A.pct >= B.pct + .2) out.push({ k, tone: 'good', title: good, txt: `Se embasa ${pct(A.pct)} ${good === 'Buen primer bat de la entrada' ? 'cuando es el primero' : 'con 2 outs'}; si no, ${pct(B.pct)}`, v: pct(A.pct) });
     else if (A.pct <= B.pct - .2) out.push({ k, tone: 'warn', title: bad, txt: `Se embasa ${pct(A.pct)} ${bad === 'Le cuesta abrir la entrada' ? 'cuando es el primero' : 'con 2 outs'}; si no, ${pct(B.pct)}`, v: pct(A.pct) });
   };
+  const c = o.contact;
+  if (c && c.n >= 8 && c.by.hard.n >= 5 && c.hardOuts >= 4 && c.hardOuts / c.by.hard.n >= .35) out.push({ k: 'luck', tone: 'info', title: 'Le está pegando bien, sin suerte', txt: `${c.hardOuts} de sus ${c.by.hard.n} batazos fuertes fueron out. Los hits van a llegar`, v: String(c.hardOuts) });
   cmp(x => x.lead, x => !x.lead, 'lead', 'Buen primer bat de la entrada', 'Le cuesta abrir la entrada');
   cmp(x => x.outs === 2, x => x.outs < 2, 'twoout', 'Rinde con 2 outs', 'Le cuesta con 2 outs');
   const order = { hot: 0, good: 1, info: 2, warn: 3 };
   return out.sort((a, c) => order[a.tone] - order[c.tone]).slice(0, 5);
+}
+
+// Calidad del contacto que marca el coach en cada batazo (Fuerte, Regular, Débil) y turno de calidad (QAB):
+// cuenta el hit, la base por bolas o golpe, el sacrificio, la impulsada y el contacto fuerte aunque sea out.
+const CQ_KEYS = ['hard', 'mid', 'soft'];
+const isQab = pa => { const R = RES[pa.res]; return !!R && (!!R.hit || !!R.bb || !!R.hbp || !!R.sf || !!R.sh || num(pa.rbi) > 0 || (pa.cq === 'hard' && !NO_BIP.includes(pa.res))); };
+function contactStats(pas) {
+  const by = Object.fromEntries(CQ_KEYS.map(k => [k, { n: 0, ab: 0, h: 0 }])); let n = 0, pa = 0, qab = 0;
+  pas.forEach(x => {
+    const R = RES[x.res]; if (!R) return; pa++; if (isQab(x)) qab++;
+    const c = by[x.cq]; if (!c || NO_BIP.includes(x.res)) return;
+    n++; c.n++; if (R.ab) { c.ab++; if (R.hit) c.h++; }
+  });
+  CQ_KEYS.forEach(k => by[k].avg = by[k].ab ? by[k].h / by[k].ab : NaN);
+  return { n, by, pa, qab, qabp: pa ? qab / pa : NaN, hardp: n ? by.hard.n / n : NaN, hardOuts: by.hard.n - by.hard.h };
 }

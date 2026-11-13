@@ -718,6 +718,32 @@ body.live .record{display:none!important}
 .sc-teaser canvas{width:100%;height:auto;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.2)}
 @media (max-width:640px){.sc-teaser{grid-template-columns:1fr}.sc-teaser canvas{max-width:340px;justify-self:center}}
 .btn .tab-lock{margin-left:6px;background:#e3a72f;color:#2a1b00}
+/* Calidad del contacto: selector en la ventana del turno, ficha y alertas de Bateo */
+.cq-hard{background:var(--rhr)} .cq-mid{background:#e3a72f;color:#2a1b00} .cq-soft{background:var(--rout)}
+.pa-cq{display:flex;flex-direction:column;gap:6px}
+.pa-cq3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pa-cq3 button{border:2px solid var(--line-strong);background:var(--paper);color:var(--ink);border-radius:8px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font:inherit}
+.pa-cq3 button i{width:24px;height:6px;border-radius:9px;display:block}
+.pa-cq3 button b{font-family:var(--f-display);font-size:17px;text-transform:uppercase;letter-spacing:.03em}
+.pa-cq3 button small{font-size:11px;color:var(--muted);line-height:1.2;text-align:center}
+.pa-cq3 button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.pa-cq3 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pa-qab{font-size:12.5px;border-radius:6px;padding:5px 9px;background:var(--ok-bg);color:var(--win);font-weight:600}
+.pa-qab.no{background:var(--chip);color:var(--muted);font-weight:400}
+.pi-big3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pi-big3 div{border:1px solid var(--line);border-radius:6px;padding:7px 5px;text-align:center;min-width:0}
+.pi-big3 b{display:block;font-family:var(--f-display);font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.pi-big3 b.t-hard{color:var(--rhr)} .pi-big3 b.t-qab{color:var(--win)}
+.pi-big3 span{font-family:var(--f-mono);font-size:9.5px;color:var(--muted);letter-spacing:.05em}
+.pi-big3 small{display:block;font-size:11px;color:var(--muted)}
+.pi-stack i.cq-hard,.pi-stack i.cq-mid,.pi-stack i.cq-soft{display:grid;place-items:center;font-family:var(--f-mono);font-size:11px;font-weight:600;font-style:normal;color:#fff}
+.pi-stack i.cq-mid{color:#2a1b00}
+.pi-qg{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap}
+.pi-qg div{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-mono);font-size:9.5px;color:var(--muted)}
+.pi-qg i{display:block;width:24px;border-radius:4px 4px 1px 1px;background:var(--win)}
+.cq-al{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.cq-al p{margin:0;font-size:13px;border-radius:0 6px 6px 0;padding:8px 10px;border-left:4px solid var(--warn);background:var(--warn-bg)}
+.cq-al p.ok{border-left-color:var(--win);background:var(--ok-bg)}
 </style>
 <script>try{var t=localStorage.getItem("dugout-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
@@ -865,6 +891,7 @@ body.live .record{display:none!important}
       </div>
       <div class="leaders" id="bLeaders"></div>
       <div class="scroll"><table id="bTbl"></table></div>
+      <div id="bCq"></div>
       <p class="hint" id="qualHint"></p>
       <div><h3 style="margin-bottom:8px">Qué significa cada columna</h3>
         <div class="glossary">
@@ -1221,6 +1248,7 @@ body.live .record{display:none!important}
   <div class="check warn" id="paNote" hidden></div>
   <label class="f">Jugada (opcional)<input id="paPlay" placeholder="Ej. 6-3, F8, L4, 5-4-3" maxlength="10"></label>
   <div class="pa-loc" id="paLocWrap"><div class="row spread" style="align-items:center"><span class="sub">Dónde cayó la bola (opcional): toca el campo</span><button type="button" class="btn sm" id="paLocClr" hidden>Quitar punto</button></div><div id="paLoc"></div></div>
+  <div class="pa-cq" id="paCqWrap" hidden><span class="sub">Contacto (opcional)</span><div class="pa-cq3" id="paCq"></div><div class="pa-qab" id="paQab" hidden></div></div>
   <div class="row">
     <div style="display:flex;flex-direction:column;gap:4px"><span class="sub">Llegó hasta</span><div class="seg" id="paReach"></div></div>
     <div style="display:flex;flex-direction:column;gap:4px"><span class="sub" id="paOutLab">Out número</span><div class="seg" id="paOut"></div></div>
@@ -1882,7 +1910,7 @@ function paRender() {
   $('#paDesc').textContent = pa.res ? RES[pa.res].lab : 'Elige el resultado del turno.';
   $('#paReach').innerHTML = [['0', '—'], ['1', '1a'], ['2', '2a'], ['3', '3a'], ['4', 'Anotó']].map(([v, l]) => `<button type="button" data-reach="${v}" aria-pressed="${num(pa.reach) === +v}">${l}</button>`).join('');
   $('#paOutLab').textContent = isCh() ? 'Out' : 'Out número';
-  renderPaLoc();
+  renderPaLoc(); renderPaCq();
   $('#paOut').innerHTML = (isCh() ? [['0', 'No'], ['1', 'Sí']] : [['0', 'No'], ['1', '1'], ['2', '2'], ['3', '3']]).map(([v, l]) => `<button type="button" data-out="${v}" aria-pressed="${num(pa.out) === +v}">${l}</button>`).join('');
 }
 $('#paRes').addEventListener('click', e => {
@@ -1909,6 +1937,7 @@ function commitPA() {
   const c = cur(), key = paCtx.si + '_' + paCtx.inn, arr = c.cells[key] ||= [];
   const rec = { res: pa.res, play: $('#paPlay').value.trim().toUpperCase(), reach: num(pa.reach), out: num(pa.out), rbi: num($('#paRbi').value), sb: num($('#paSb').value), cs: $('#paCs').checked };
   if (pa.loc && !NO_BIP.includes(pa.res)) rec.loc = pa.loc;
+  if (pa.cq && !NO_BIP.includes(pa.res) && side === 'us') rec.cq = pa.cq;
   if (side === 'them') rec.p = $('#paPit').value;
   arr[paCtx.idx] = rec;
   return true;
@@ -2258,9 +2287,12 @@ const bCols = [['name', 'Jugador', 's'], ['g', 'G'], ['pa', 'PA'], ['ab', 'AB'],
   ['avg', 'AVG', 'r'], ['obp', 'OBP', 'r'], ['slg', 'SLG', 'r'], ['ops', 'OPS', 'r'], ['iso', 'ISO', 'r'], ['babip', 'BABIP', 'r'], ['woba', 'wOBA', 'r'], ['kp', 'K%', 'p'], ['bbp', 'BB%', 'p'], ['sbp', 'SB%', 'p']];
 let bSort = { k: 'ops', dir: -1 }, fSort = { k: 'tc', dir: -1 }, pSort = { k: 'outs', dir: -1 };
 function renderBat() {
-  syncModeSel(); const chM = curStatMode() === 'chupon', cols = chM ? bColsCh : bCols;
+  syncModeSel(); const chM = curStatMode() === 'chupon';
   const gs = rangeGames($('#bRange').value), teamG = gs.length, minPA = Math.ceil(3.1 * teamG), m = aggBat(gs);
   const all = Object.values(m).map(p => ({ ...p, name: pName(p.pid), num: pNum(p.pid) }));
+  const PLb = paList(gs), anyCq = has('gold') && PLb.some(x => x.cq), byP = {}; PLb.forEach(x => (byP[x.pid] ||= []).push(x));
+  all.forEach(p => { const c = contactStats(byP[p.pid] || []); p._c = c; p.qabp = c.n ? c.qabp : NaN; p.hardp = c.n ? c.hardp : NaN; });
+  const cols = (chM ? bColsCh : bCols).concat(anyCq ? [['qabp', 'QAB%', 'p'], ['hardp', 'Fuerte%', 'p']] : []);
   const rows = $('#bQual').checked ? all.filter(p => p.pa >= minPA) : all.slice();
   $('#qualHint').textContent = teamG ? `Calificado = ${minPA} PA o más (3.1 por cada uno de los ${teamG} juegos del rango). Haz clic en un encabezado para ordenar.` : '';
   const qual = all.filter(p => p.pa >= minPA), pool = qual.length ? qual : all;
@@ -2274,8 +2306,21 @@ function renderBat() {
   let h = '<thead><tr><th class="l">#</th>' + thSort(cols, bSort) + '</tr></thead><tbody>';
   rows.forEach(p => h += `<tr><td class="num l">${esc(p.num)}</td>` + cols.map(c => c[0] === 'name' ? `<td class="l name">${plink(p.pid, p.name)}</td>` : `<td>${fmtCell(p, c)}</td>`).join('') + '</tr>');
   const T = { g: teamG, ...zero(BATK) }; Object.values(m).forEach(p => BATK.forEach(k => T[k] += p[k])); derive(T);
+  if (anyCq) { const tc = contactStats(PLb); T.qabp = tc.qabp; T.hardp = tc.hardp; }
   h += '</tbody><tfoot><tr class="tot"><td></td>' + cols.map(c => c[0] === 'name' ? '<td class="l">Equipo</td>' : `<td>${fmtCell(T, c)}</td>`).join('') + '</tr></tfoot>';
   $('#bTbl').innerHTML = h;
+  $('#bCq').innerHTML = anyCq ? cqAlertsHTML(all, PLb, gs) : '';
+}
+// Alertas de calidad del contacto: batea mejor de lo que dice su AVG, o sus turnos de calidad van a la alza
+function cqAlertsHTML(all, PL, gs) {
+  const tc = contactStats(PL), T = teamBatLine(gs), pc = v => Math.round(100 * v) + '%', A = [];
+  all.forEach(p => {
+    const c = p._c; if (!c || c.n < 8 || !S.roster[p.pid]) return;
+    if (c.hardp >= tc.hardp + .08 && isFinite(p.avg) && p.avg <= T.avg - .03) A.push(['', `<b>${esc(p.name)} batea mejor de lo que dice su AVG.</b> Le pega fuerte al ${pc(c.hardp)} de sus batazos (el equipo, ${pc(tc.hardp)}) pero batea ${fmtRate(p.avg)}. Antes de bajarlo en el orden, dale unos juegos más.`]);
+    const mine = PL.filter(x => x.pid === p.pid), gids = [...new Set(mine.map(x => x.gid))], last = new Set(gids.slice(-3)), r = mine.filter(x => last.has(x.gid)), o = mine.filter(x => !last.has(x.gid));
+    if (gids.length >= 5 && r.length >= 5 && o.length >= 8) { const rq = r.filter(isQab).length, oq = o.filter(isQab).length / o.length; if (rq / r.length >= oq + .2) A.push(['ok', `<b>${esc(p.name)} va a la alza.</b> En sus últimos 3 juegos, ${rq} de ${r.length} turnos de calidad (antes, ${pc(oq)}).`]); }
+  });
+  return `<div class="cq-al"><h3>Turnos de calidad</h3>${A.length ? A.map(([k, t]) => `<p class="${k}">${t}</p>`).join('') : '<p class="hint" style="margin:0;border:0;background:none;padding:0">Sin alertas por ahora. Aparecen cuando un niño le pega fuerte pero no le caen los hits, o cuando sus turnos de calidad van a la alza.</p>'}</div>`;
 }
 $('#bTbl').addEventListener('click', e => { const th = e.target.closest('th[data-k]'); if (!th) return; const k = th.dataset.k; bSort = bSort.k === k ? { k, dir: -bSort.dir } : { k, dir: k === 'name' ? 1 : -1 }; renderBat(); });
 $('#bRange').addEventListener('change', renderBat); $('#bQual').addEventListener('change', renderBat);
@@ -2649,6 +2694,19 @@ $('#paLoc').addEventListener('click', e => {
   renderPaLoc();
 });
 $('#paPlay').addEventListener('input', () => { if (paCtx) paCtx.autoPlay = false; });
+// Calidad del contacto (Gold y Pro, solo los turnos de nuestro equipo): un toque opcional por batazo
+const CQ_LAB = { hard: ['Fuerte', 'Salió con fuerza'], mid: ['Regular', 'Normal'], soft: ['Débil', 'Rodado lento, pop'] };
+function renderPaCq() {
+  const pa = paCtx && paCtx.pa, wrap = $('#paCqWrap'); if (!pa || !wrap) return;
+  wrap.hidden = !has('gold') || paCtx.side !== 'us'; if (wrap.hidden) return;
+  const bip = !pa.res || !NO_BIP.includes(pa.res);
+  $('#paCq').hidden = !bip; wrap.querySelector('.sub').hidden = !bip;
+  $('#paCq').innerHTML = CQ_KEYS.map(k => `<button type="button" data-cq="${k}" aria-pressed="${pa.cq === k}"><i class="cq-${k}"></i><b>${CQ_LAB[k][0]}</b><small>${CQ_LAB[k][1]}</small></button>`).join('');
+  const q = pa.res ? isQab({ res: pa.res, rbi: $('#paRbi').value, cq: pa.cq }) : null, el = $('#paQab');
+  el.hidden = q == null; el.className = 'pa-qab' + (q ? '' : ' no'); el.textContent = q ? '✓ Cuenta como turno de calidad' : 'No cuenta como turno de calidad';
+}
+$('#paCq').addEventListener('click', e => { const b = e.target.closest('button[data-cq]'); if (!b || !paCtx) return; paCtx.pa.cq = paCtx.pa.cq === b.dataset.cq ? '' : b.dataset.cq; renderPaCq(); });
+$('#paRbi').addEventListener('input', () => { if (paCtx) renderPaCq(); });
 $('#paLocClr').addEventListener('click', () => { if (!paCtx) return; delete paCtx.pa.loc; if (paCtx.autoPlay) { $('#paPlay').value = ''; paCtx.autoPlay = false; } renderPaLoc(); });
 
 /* ---------- D2 mapa de batazos ---------- */
@@ -3660,7 +3718,10 @@ function playerInsightData(pid, d) {
   // Tendencias (en el enlace para papás no salen las de "atención")
   const pl = paList(gs).filter(x => x.pid === pid), last3 = d.log.filter(x => x.pa && x.l).slice(-3);
   const recent = { ab: last3.reduce((a, x) => a + num(x.l.ab), 0), h: last3.reduce((a, x) => a + num(x.l.h), 0) };
-  let trends = batTrends({ b, team: teamBatLine(gs), recent, pas: pl }); if (shareMode) trends = trends.filter(x => x.tone !== 'warn');
+  // Calidad del contacto y turnos de calidad por juego (sus últimos 8 juegos con turnos)
+  const c = contactStats(pl), tc = contactStats(paList(gs));
+  const qg = d.log.filter(x => x.pa).slice(-8).map(x => { const ps = pl.filter(p => p.gid === x.g.id); return { date: x.g.date, n: ps.length, q: ps.filter(isQab).length }; }).filter(g => g.n);
+  let trends = batTrends({ b, team: teamBatLine(gs), recent, pas: pl, contact: c }); if (shareMode) trends = trends.filter(x => x.tone !== 'warn');
   // Tipo de batazo, de la jugada anotada, contra el equipo
   const bt = bbTypes(pl), tt = bbTypes(paList(gs)), P = (k, t) => t.n ? t[k] / t.n : 0, f = x => Math.round(100 * x) + '%';
   const bb = BB_ROWS.map(([k, lab]) => ({ k, lab, me: P(k, bt), tm: P(k, tt) }));
@@ -3669,7 +3730,7 @@ function playerInsightData(pid, d) {
     const x = [...bb].sort((a, c) => (c.me - c.tm) - (a.me - a.tm))[0], vs = `(${f(x.me)} contra ${f(x.tm)})`;
     if (x.me - x.tm >= .05) bbRead = { line: `Pega más líneas que el equipo ${vs}. La línea es el batazo que más seguido cae de hit.`, fly: `Eleva la bola más que el equipo ${vs}.`, ground: `Pega más rodados que el equipo ${vs}. Con piernas rápidas, el rodado obliga a la defensa a tirar bien.` }[x.k];
   }
-  return { o, outcomes, hits, outRead, trends, pa: b.pa, bt, tt, bb, bbRead };
+  return { o, outcomes, hits, outRead, trends, pa: b.pa, bt, tt, bb, bbRead, c, tc, qg };
 }
 function playerInsightsHTML(pid, d) {
   const x = playerInsightData(pid, d); if (!x) return '';
@@ -3684,6 +3745,17 @@ function playerInsightsHTML(pid, d) {
     ${x.pa < 15 ? `<p class="hint" style="margin:0">Las tendencias aparecen cuando tenga al menos 15 turnos (lleva ${x.pa}).</p>`
       : x.trends.length ? `<div class="pi-tends">${x.trends.map(t => `<div class="pi-tend ${t.tone}"><span class="ico">${icon(t)}</span><div><b>${esc(t.title)}</b><small>${esc(t.txt)}</small></div><span class="v">${esc(t.v)}</span></div>`).join('')}</div>`
       : '<p class="hint" style="margin:0">Sin tendencias claras todavía: sus números van parejos con los del equipo.</p>'}</div>`);
+  if (has('gold')) {
+    const c = x.c, tc = x.tc, r3 = v => fmtRate(v);
+    out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Calidad del contacto</h3><span class="sub">${c.n} batazo${c.n === 1 ? '' : 's'} marcado${c.n === 1 ? '' : 's'}</span></div>
+      ${c.n < 8 ? `<p class="hint" style="margin:0">Aparece cuando tenga al menos 8 batazos con el contacto marcado (Fuerte, Regular o Débil) al anotar el turno. Lleva ${c.n}.</p>`
+        : `<div class="pi-big3"><div><b class="t-hard">${f(c.hardp)}</b><span>FUERTE</span><small>equipo ${f(tc.hardp)}</small></div><div><b class="t-qab">${f(c.qabp)}</b><span>TURNOS DE CALIDAD</span><small>equipo ${f(tc.qabp)}</small></div><div><b>${r3(c.by.hard.avg)}</b><span>AVG FUERTE</span><small>débil ${r3(c.by.soft.avg)}</small></div></div>
+          <div class="pi-stack" role="img" aria-label="${CQ_KEYS.map(k => CQ_LAB[k][0] + ' ' + c.by[k].n).join(', ')}">${CQ_KEYS.filter(k => c.by[k].n).map(k => `<i class="cq-${k}" style="flex:${c.by[k].n}">${c.by[k].n}</i>`).join('')}</div>
+          <h3 style="margin:2px 0 0">Su AVG según el contacto</h3>
+          <div class="pi-bb">${CQ_KEYS.map(k => `<div class="pi-bbrow"><span>${CQ_LAB[k][0]}</span><div class="pi-bbbar"><i class="cq-${k}" style="width:${isFinite(c.by[k].avg) ? Math.round(100 * c.by[k].avg) : 0}%"></i></div><b>${r3(c.by[k].avg)}</b></div>`).join('')}</div>
+          ${x.qg.length >= 2 ? `<h3 style="margin:2px 0 0">Turnos de calidad por juego</h3><div class="pi-qg" role="img" aria-label="Turnos de calidad en sus últimos juegos">${x.qg.map(g => `<div title="${esc(g.date)}"><i style="height:${Math.max(4, Math.round(48 * g.q / g.n))}px"></i>${g.q}/${g.n}</div>`).join('')}</div>` : ''}`}
+      <p class="hint" style="margin:0">Turno de calidad: hit, base por bolas o golpe, sacrificio, impulsada, o contacto fuerte aunque sea out.</p></div>`);
+  }
   const col = { ground: 'o-gb', fly: 'r2b', line: 'r1b' };
   out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tipo de batazo</h3><span class="sub">${x.bt.n} batazo${x.bt.n === 1 ? '' : 's'} con jugada</span></div>
     ${x.bt.n < 5 ? `<p class="hint" style="margin:0">Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${x.bt.n}.</p>`
@@ -3727,6 +3799,31 @@ function pdfInsights(doc, x, y, section, room) {
     text(t.v, L + CW - 10, y + 21, 15, c, true, { align: 'right' });
     y += 38;
   });
+  // Calidad del contacto
+  if (has('gold')) {
+    const c = x.c, tc = x.tc, CQC = { hard: RED, mid: [227, 167, 47], soft: [141, 138, 140] }, r3 = v => fmtRate(v);
+    y = section('Calidad del contacto', 150, y);
+    if (c.n < 8) wrap(`Aparece cuando tenga al menos 8 batazos con el contacto marcado (Fuerte, Regular o Débil) al anotar el turno. Lleva ${c.n}.`, 9, 90);
+    else {
+      const bw3 = (CW - 16) / 3;
+      [[f(c.hardp), 'FUERTE', `equipo ${f(tc.hardp)}`, RED], [f(c.qabp), 'TURNOS DE CALIDAD', `equipo ${f(tc.qabp)}`, [47, 111, 79]], [r3(c.by.hard.avg), 'AVG FUERTE', `débil ${r3(c.by.soft.avg)}`, [30, 31, 34]]].forEach(([v, k, sub, cc], i) => {
+        const bx = L + i * (bw3 + 8); doc.setDrawColor(234, 214, 215); doc.setLineWidth(.8); doc.rect(bx, y, bw3, 48);
+        text(v, bx + bw3 / 2, y + 20, 17, cc, true, { align: 'center' }); text(k, bx + bw3 / 2, y + 32, 7, 110, false, { align: 'center' }); text(sub, bx + bw3 / 2, y + 42, 7.5, 110, false, { align: 'center' }); });
+      y += 60;
+      let sx = L; const tot = c.n || 1, segs = CQ_KEYS.filter(k => c.by[k].n), g2 = 1.5, sw = CW - g2 * (segs.length - 1);
+      segs.forEach(k => { const w = sw * c.by[k].n / tot; doc.setFillColor(...CQC[k]); doc.rect(sx, y, w, 14, 'F'); text(String(c.by[k].n), sx + w / 2, y + 10, 8, k === 'mid' ? 40 : 255, true, { align: 'center' }); sx += w + g2; });
+      y += 26;
+      const bx = L + 70, bwid = CW - 70 - 50;
+      CQ_KEYS.forEach(k => { const v = c.by[k].avg; text(CQ_LAB[k][0], L, y + 9, 9.5, 50); doc.setFillColor(...ROSE); doc.rect(bx, y, bwid, 11, 'F'); if (isFinite(v) && v > 0) { doc.setFillColor(...CQC[k]); doc.rect(bx, y, bwid * v, 11, 'F'); } text(r3(v), L + CW, y + 10, 11, 30, true, { align: 'right' }); y += 20; });
+      text('AVG según el contacto', L, y + 2, 8, 110); y += 14;
+      if (x.qg.length >= 2) {
+        y = room(y, 80); text('Turnos de calidad por juego', L, y, 8.5, 100, true); y += 8;
+        const base = y + 52; x.qg.forEach((g, i) => { const cx = L + i * 40, h = Math.max(2, 48 * g.q / g.n); doc.setFillColor(47, 111, 79); doc.rect(cx + 6, base - h, 22, h, 'F'); text(`${g.q}/${g.n}`, cx + 17, base + 10, 7.5, 100, false, { align: 'center' }); });
+        y = base + 20;
+      }
+    }
+    wrap('Turno de calidad: hit, base por bolas o golpe, sacrificio, impulsada, o contacto fuerte aunque sea out.', 7.5, 120);
+  }
   // Tipo de batazo
   y = section('Tipo de batazo', 120, y);
   if (x.bt.n < 5) wrap(`Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${x.bt.n}.`, 9, 90);
