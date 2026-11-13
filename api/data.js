@@ -135,11 +135,14 @@ async function upsertDoc(c, table, id, teamId, data, base) {
                  on conflict (id) do update set data = excluded.data, team_id = excluded.team_id, updated_at = now() returning ${VER} as v`, [id, teamId, json])).rows[0];
   return row.v;
 }
+const TEAM_BAT = ['ab', 'h', 'd', 't', 'hr', 'bb', 'so', 'hbp', 'sf', 'sh', 'sb', 'cs'];
 // Vista para papás: solo el jugador compartido; de los demás no viajan nombres ni líneas
 function shareGame(g, pid) {
   const keep = ['date', 'no', 'liga', 'opp', 'ha', 'inns', 'us', 'them', 'themH', 'themE', 'mode', 'bpi'];
   const o = Object.fromEntries(keep.filter(k => g[k] !== undefined).map(k => [k, g[k]]));
   o.lines = (g.lines || []).filter(l => l.pid === pid);
+  // Totales de bateo del equipo en el juego (solo sumas): las tendencias de la ficha se comparan contra el equipo
+  o.tl = Object.fromEntries(TEAM_BAT.map(k => [k, (g.lines || []).reduce((a, l) => a + (Number(l[k]) > 0 ? Math.floor(Number(l[k])) : 0), 0)]));
   o.pit = (g.pit || []).filter(p => p.pid === pid);
   if (g.sheet && Array.isArray(g.sheet.slots)) {
     const mask = v => v === pid ? pid : (v ? 'x' : '');

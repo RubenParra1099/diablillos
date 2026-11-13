@@ -275,3 +275,46 @@ function liveState(g) {
   });
   return { inn: H.inn, half: H.half, side: H.side, outs: hi.outs, pas: hi.pas.length, manual: !!hi.manual, bases, next: { us: nextOf('us'), them: nextOf('them') }, over, started: last >= 0, plays };
 }
+
+// Ficha: en qué terminan los turnos de un bateador (línea ya sumada) y cómo se reparten sus hits
+function batOutcomes(b) {
+  const pa = num(b.ab) + num(b.bb) + num(b.hbp) + num(b.sf) + num(b.sh), h = num(b.h), onb = num(b.bb) + num(b.hbp), sac = num(b.sf) + num(b.sh), so = num(b.so);
+  const d = num(b.d), t = num(b.t), hr = num(b.hr);
+  return { pa, h, onb, sac, so, inplay: Math.max(0, pa - h - onb - sac - so), s1: Math.max(0, h - d - t - hr), d, t, hr };
+}
+// Tipo de batazo según la jugada anotada (6-3 rodado, F8 elevado, L7 línea). Los elevados incluyen los de foul/pop (P).
+function bbTypes(pas) { const t = sprayOf(pas).types; return { n: t.ground + t.fly + t.pop + t.line, ground: t.ground, fly: t.fly + t.pop, line: t.line }; }
+// Tendencias del bateador comparado con el equipo. Solo salen cuando el dato es claro y tiene al menos minPA turnos.
+// o: { b: línea de temporada (derive), team: línea del equipo (derive), recent: { ab, h } de sus últimos 3 juegos, pas: sus turnos (paList), minPA }
+// Devuelve hasta 5, en orden: racha, buenas, informativas y de atención.
+function batTrends(o) {
+  const b = o.b, T = o.team, out = [], minPA = o.minPA || 15;
+  if (!b || b.pa < minPA) return out;
+  const pct = x => Math.round(100 * x) + '%', r3 = x => fmtRate(x), pas = o.pas || [];
+  const rc = o.recent;
+  if (rc && rc.ab >= 6 && isFinite(b.avg)) {
+    const a3 = rc.h / rc.ab;
+    if (a3 >= b.avg + .1) out.push({ k: 'hot', tone: 'hot', title: 'Viene en racha', txt: `${rc.h} de ${rc.ab} en sus últimos 3 juegos. Su temporada: ${r3(b.avg)}`, v: r3(a3) });
+    else if (rc.ab >= 8 && a3 <= b.avg - .15) out.push({ k: 'cold', tone: 'warn', title: 'En bache', txt: `${rc.h} de ${rc.ab} en sus últimos 3 juegos. Su temporada: ${r3(b.avg)}`, v: r3(a3) });
+  }
+  const xbh = b.d + b.t + b.hr;
+  if (isFinite(b.iso) && xbh >= 3 && b.iso >= Math.max(.15, (T.iso || 0) * 1.5)) out.push({ k: 'power', tone: 'good', title: 'Bateador de poder', txt: `${xbh} extrabases. Su ISO es ${r3(b.iso)}; el del equipo, ${r3(T.iso)}`, v: r3(b.iso) });
+  if (isFinite(T.kp) && b.kp <= T.kp * .7) out.push({ k: 'contact', tone: 'good', title: 'Se poncha poco', txt: `${pct(b.kp)} de sus turnos. El equipo: ${pct(T.kp)}`, v: pct(b.kp) });
+  else if (isFinite(T.kp) && b.kp >= .25 && b.kp >= T.kp * 1.4) out.push({ k: 'strikeouts', tone: 'warn', title: 'Se poncha seguido', txt: `${pct(b.kp)} de sus turnos. El equipo: ${pct(T.kp)}`, v: pct(b.kp) });
+  if (isFinite(T.bbp) && b.bbp >= .12 && b.bbp >= T.bbp * 1.5) out.push({ k: 'eye', tone: 'good', title: 'Buen ojo', txt: `Recibe base por bolas en ${pct(b.bbp)} de sus turnos. El equipo: ${pct(T.bbp)}`, v: pct(b.bbp) });
+  if (b.sb >= 4 && b.sbp >= .75) out.push({ k: 'speed', tone: 'good', title: 'Peligro en las bases', txt: `${b.sb} bases robadas en ${b.sb + b.cs} intentos`, v: String(b.sb) });
+  const sp = sprayOf(pas.filter(x => x.play));
+  if (sp.n >= 10) {
+    const [f, n] = Object.entries(sp.fields).sort((a, c) => c[1] - a[1])[0];
+    if (n / sp.n >= .45) out.push({ k: 'spray', tone: 'info', title: `Batea al jardín ${{ L: 'izquierdo', C: 'central', R: 'derecho' }[f]}`, txt: `${pct(n / sp.n)} de sus batazos van ${{ L: 'a la izquierda', C: 'al centro', R: 'a la derecha' }[f]}`, v: pct(n / sp.n) });
+  }
+  const cmp = (fa, fb, k, good, bad) => {
+    const A = splitOf(pas, fa), B = splitOf(pas, fb); if (A.n < 6 || B.n < 6) return;
+    if (A.pct >= B.pct + .2) out.push({ k, tone: 'good', title: good, txt: `Se embasa ${pct(A.pct)} ${good === 'Buen primer bat de la entrada' ? 'cuando es el primero' : 'con 2 outs'}; si no, ${pct(B.pct)}`, v: pct(A.pct) });
+    else if (A.pct <= B.pct - .2) out.push({ k, tone: 'warn', title: bad, txt: `Se embasa ${pct(A.pct)} ${bad === 'Le cuesta abrir la entrada' ? 'cuando es el primero' : 'con 2 outs'}; si no, ${pct(B.pct)}`, v: pct(A.pct) });
+  };
+  cmp(x => x.lead, x => !x.lead, 'lead', 'Buen primer bat de la entrada', 'Le cuesta abrir la entrada');
+  cmp(x => x.outs === 2, x => x.outs < 2, 'twoout', 'Rinde con 2 outs', 'Le cuesta con 2 outs');
+  const order = { hot: 0, good: 1, info: 2, warn: 3 };
+  return out.sort((a, c) => order[a.tone] - order[c.tone]).slice(0, 5);
+}

@@ -60,6 +60,7 @@ r = await call(null, { share: tok }, { noCookie: true });
 const g = r.games && r.games.g1;
 ok('el papá ve la ficha sin iniciar sesión', r.code === 200 && r.share && r.pid === 'p1' && Object.keys(r.roster).join() === 'p1');
 ok('no viajan datos de otros niños', g.lines.length === 1 && g.lines[0].pid === 'p1' && g.pit.length === 0 && g.sheet.slots[1].pid === 'x' && !JSON.stringify(r).includes('Beto'));
+ok('viajan solo los totales de bateo del equipo', g.tl && g.tl.ab === 6 && g.tl.h === 2 && Object.keys(g.tl).length === 12, JSON.stringify(g.tl));
 r = await call({ op: 'shareRevoke', team, pid: 'p1' });
 r = await call(null, { share: tok }, { noCookie: true });
 ok('al desactivarlo deja de funcionar', r.code === 404 && r.error === 'share_gone');

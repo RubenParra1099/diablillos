@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState };', ctx);
+vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState, batOutcomes, bbTypes, batTrends };', ctx);
 const C = ctx.C;
 const fx = JSON.parse(fs.readFileSync(new URL('./fixture.json', import.meta.url), 'utf8'));
 const games = Object.entries(fx.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => a.date.localeCompare(b.date));
@@ -128,4 +128,26 @@ test('juego en vivo: entrada, outs, corredores y quién sigue', () => {
   // Chupón: la entrada se cierra al batear los N del turno, no por outs
   s = C.liveState({ ...base, ha: 'V', mode: 'chupon', bpi: 2, us: { slots, cells: { '0_1': [{ res: 'O', out: 1 }], '1_1': [{ res: 'H1', reach: 1 }] } } });
   assert.equal(s.half, 'bot'); assert.equal(s.side, 'them');
+});
+
+test('ficha: en qué terminan los turnos, tipo de batazo y tendencias', () => {
+  const o = C.batOutcomes({ ab: 52, h: 19, d: 5, t: 1, hr: 2, bb: 7, hbp: 1, sf: 1, sh: 1, so: 9 });
+  assert.deepEqual({ ...o }, { pa: 62, h: 19, onb: 8, sac: 2, so: 9, inplay: 24, s1: 11, d: 5, t: 1, hr: 2 });
+  const bt = C.bbTypes([{ play: '6-3' }, { play: 'F8' }, { play: 'P4' }, { play: 'L7' }, { play: 'E6' }, { play: '' }]);
+  assert.deepEqual({ ...bt }, { n: 4, ground: 1, fly: 2, line: 1 });
+  const mk = x => C.derive({ ...C.zero(C.BATK), ...x });
+  const team = mk({ ab: 400, h: 100, d: 15, t: 3, hr: 4, bb: 40, so: 100, sb: 30, cs: 10 });
+  const b = mk({ ab: 52, h: 19, d: 5, t: 1, hr: 2, bb: 7, hbp: 1, sf: 1, sh: 1, so: 5, sb: 5, cs: 1 });
+  // 10 turnos abriendo entrada (2 en base) y 10 sin abrir (8 en base); 12 batazos, 7 al izquierdo
+  const pas = [...Array.from({ length: 10 }, (_, i) => ({ lead: true, outs: 0, on: i < 2, play: i < 7 ? 'L7' : '' })), ...Array.from({ length: 10 }, (_, i) => ({ lead: false, outs: 1, on: i < 8, play: i < 5 ? 'F8' : '' }))];
+  const tr = C.batTrends({ b, team, recent: { ab: 10, h: 6 }, pas });
+  const ks = tr.map(x => x.k);
+  assert.equal(ks[0], 'hot'); assert.ok(ks.includes('power') && ks.includes('contact') && ks.includes('speed'));
+  assert.ok(tr.length <= 5); assert.equal(tr[tr.length - 1].tone === 'warn' || !tr.some(x => x.tone === 'warn'), true);
+  assert.equal(tr.find(x => x.k === 'hot').v, '.600');
+  // Sin turnos suficientes no sale nada
+  assert.equal(C.batTrends({ b: mk({ ab: 8, h: 4 }), team, pas: [] }).length, 0);
+  // La de abrir la entrada sale si no la tapan las buenas
+  const tr2 = C.batTrends({ b: mk({ ab: 30, h: 8, bb: 2, so: 6 }), team, pas });
+  assert.ok(tr2.some(x => x.k === 'lead' && x.tone === 'warn' && x.v === '20%')); assert.ok(tr2.some(x => x.k === 'spray' && x.title === 'Batea al jardín izquierdo'));
 });

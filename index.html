@@ -680,6 +680,44 @@ body.live .record{display:none!important}
 .lv-bar i{display:block;height:100%;background:var(--win);border-radius:999px}
 .lv-bar i.warn{background:var(--warn)}
 .lv-note{font-size:12.5px;color:var(--muted)}
+/* Ficha: en qué terminan sus turnos, tendencias, tipo de batazo; muestra de la tarjeta de temporada en Básico */
+:root{--o-bb:#7b5cc4;--o-sac:#c48a5c;--o-out:#c9bfc0;--o-gb:#a0703c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--o-bb:#9b80e0;--o-sac:#c9946a;--o-out:#5d5052;--o-gb:#c08a52}}
+:root[data-theme="dark"]{--o-bb:#9b80e0;--o-sac:#c9946a;--o-out:#5d5052;--o-gb:#c08a52}
+.pi-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.pi{border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pi-stack{display:flex;height:20px;border-radius:5px;overflow:hidden;gap:2px}
+.pi-stack i{display:block;height:100%}
+.pi-leg{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.pi-leg div{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.pi-leg i{width:10px;height:10px;border-radius:2px}
+.pi-leg b{font-family:var(--f-display);font-size:18px;font-variant-numeric:tabular-nums}
+.pi-leg small{color:var(--muted);font-family:var(--f-mono);font-size:10.5px;margin-left:4px;font-weight:400}
+.pi-hits{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:130px}
+.pi-hits div{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
+.pi-hits i{display:block;width:64%;border-radius:5px 5px 2px 2px}
+.pi-hits b{font-family:var(--f-display);font-size:19px;line-height:1}
+.pi-hits span{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.pi-tends{display:flex;flex-direction:column;gap:8px}
+.pi-tend{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.pi-tend .ico{width:32px;height:32px;border-radius:7px;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:15px;color:#fff}
+.pi-tend b{display:block;font-size:13.5px}
+.pi-tend small{color:var(--muted);font-size:12px}
+.pi-tend .v{font-family:var(--f-display);font-weight:800;font-size:21px;font-variant-numeric:tabular-nums}
+.pi-tend.hot .ico{background:var(--accent)} .pi-tend.good .ico{background:var(--win)} .pi-tend.info .ico{background:var(--r2b)} .pi-tend.warn .ico{background:var(--warn)}
+.pi-tend.warn{background:var(--warn-bg)}
+.pi-bb{display:flex;flex-direction:column;gap:9px}
+.pi-bbrow{display:grid;grid-template-columns:70px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px}
+.pi-bbbar{height:14px;background:var(--chip);border-radius:999px;position:relative}
+.pi-bbbar i{display:block;height:100%;border-radius:999px}
+.pi-bbbar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55;text-decoration:none}
+.pi-bbrow b{font-family:var(--f-display);font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
+.pi-bbleg{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.pi-bbleg u{display:inline-block;width:2px;height:12px;background:var(--ink);opacity:.55}
+.sc-teaser{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:18px;align-items:start}
+.sc-teaser canvas{width:100%;height:auto;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.2)}
+@media (max-width:640px){.sc-teaser{grid-template-columns:1fr}.sc-teaser canvas{max-width:340px;justify-self:center}}
+.btn .tab-lock{margin-left:6px;background:#e3a72f;color:#2a1b00}
 </style>
 <script>try{var t=localStorage.getItem("dugout-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
@@ -3197,12 +3235,13 @@ function renderRoster() {
   if (!ps.length) { $('#rTbl').innerHTML = '<tbody><tr><td class="l" style="padding:22px;font-family:var(--f-body);color:var(--muted)">Agrega a tus jugadores con el formulario de arriba. Después podrás elegirlos en cada box score.</td></tr></tbody>'; return; }
   $('#rTbl').innerHTML = '<thead><tr><th class="l">#</th><th class="l">Nombre</th><th class="l">Pos</th><th class="l">B/T</th><th>Edad</th><th>Juegos</th><th></th></tr></thead><tbody>' +
     ps.map(p => `<tr><td class="num l">${esc(p.num ?? '')}</td><td class="l name"><span class="rname">${avatarHTML(p.id, 34)}${plink(p.id, p.name)}</span></td><td class="l">${esc(p.pos)}</td><td class="l">${esc(p.bats || 'D')}/${esc(p.throws || 'D')}</td><td>${ageOn(p.birth, today()) ?? '—'}</td><td>${cnt[p.id] || 0}</td>
-    <td class="l">${pendingDelete === 'r:' + p.id ? `<span class="confirm" style="display:inline-flex">${cnt[p.id] ? 'Sus juegos quedarán como "Jugador eliminado".' : '¿Eliminar?'} <button class="btn sm danger" data-act="rdel-yes" data-id="${p.id}">Eliminar</button><button class="btn sm" data-act="rdel-no">Cancelar</button></span>` : `${has('gold') ? '' : `<button class="btn sm" data-act="rbday" data-id="${p.id}">Cumpleaños</button> `}<span class="edit-only"><button class="btn sm" data-act="redit" data-id="${p.id}">Editar</button> <button class="btn sm danger" data-act="rdel" data-id="${p.id}">Eliminar</button></span>`}</td></tr>`).join('') + '</tbody>';
+    <td class="l">${pendingDelete === 'r:' + p.id ? `<span class="confirm" style="display:inline-flex">${cnt[p.id] ? 'Sus juegos quedarán como "Jugador eliminado".' : '¿Eliminar?'} <button class="btn sm danger" data-act="rdel-yes" data-id="${p.id}">Eliminar</button><button class="btn sm" data-act="rdel-no">Cancelar</button></span>` : `<button class="btn sm" data-act="rcard" data-id="${p.id}">Tarjeta${has('gold') ? '' : '<span class="tab-lock">GOLD</span>'}</button> ${has('gold') ? '' : `<button class="btn sm" data-act="rbday" data-id="${p.id}">Cumpleaños</button> `}<span class="edit-only"><button class="btn sm" data-act="redit" data-id="${p.id}">Editar</button> <button class="btn sm danger" data-act="rdel" data-id="${p.id}">Eliminar</button></span>`}</td></tr>`).join('') + '</tbody>';
 }
 $('#rTbl').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.dataset.id;
   if (b.dataset.act === 'redit') { const p = S.roster[id]; editingRoster = id; $('#rNum').value = p.num ?? ''; $('#rName').value = p.name; $('#rPos').value = p.pos; $('#rBats').value = p.bats || 'D'; $('#rThrows').value = p.throws || 'D'; $('#rBirth').value = p.birth || ''; pendingPhoto = undefined; $('#rPhoto').value = ''; showPhotoPrev(p.photo || ''); $('#rSubmit').textContent = 'Guardar cambios'; $('#rCancel').hidden = false; $('#rName').focus(); }
   if (b.dataset.act === 'rbday') openBday(id);
+  if (b.dataset.act === 'rcard') openSeasonCard(id);
   if (b.dataset.act === 'rdel') { pendingDelete = 'r:' + id; renderRoster(); }
   if (b.dataset.act === 'rdel-no') { pendingDelete = null; renderRoster(); }
   if (b.dataset.act === 'rdel-yes') { pendingDelete = null; guarded(() => del('roster', id), 'Jugador eliminado'); }
@@ -3315,10 +3354,11 @@ function openPlayer(pid) {
         <div class="pf-meta"><span class="chip">${esc(p.pos || '-')}</span><span>Batea: ${esc(p.bats || 'D')}</span><span>Tira: ${esc(p.throws || 'D')}</span><span>${d.log.length} juego${d.log.length === 1 ? '' : 's'}</span></div>
         ${rk}
       </div>
-      <div class="pf-acts"><button class="btn sm" id="pfProj">Proyección</button><button class="btn sm" id="pfBday">Tarjeta de cumpleaños</button><button class="btn sm edit-only" id="pfShare">Enlace para papás</button><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
+      <div class="pf-acts"><button class="btn sm" id="pfProj">Proyección</button><button class="btn sm" id="pfCard">Tarjeta de temporada</button><button class="btn sm" id="pfBday">Tarjeta de cumpleaños</button><button class="btn sm edit-only" id="pfShare">Enlace para papás</button><button class="btn sm primary" id="pfPdf">Guardar PDF</button><button class="btn sm" id="pfClose">Cerrar</button></div>
     </div>
     ${tiles ? `<div class="ptiles">${tiles}</div>` : '<div class="empty">Todavía no tiene juegos registrados.</div>'}
     ${sparkAvg(d.log) ? `<div><h3 style="margin-bottom:6px">Promedio acumulado</h3>${sparkAvg(d.log)}</div>` : ''}
+    ${playerInsightsHTML(pid, d)}
     ${playerExtrasHTML(pid, d)}
     ${batT ? `<div><h3 style="margin-bottom:6px">Bateo · temporada</h3><div class="scroll">${batT}</div></div>` : ''}
     ${pitT ? `<div><h3 style="margin-bottom:6px">Pitcheo · temporada</h3><div class="scroll">${pitT}</div></div>` : ''}
@@ -3328,6 +3368,7 @@ function openPlayer(pid) {
   $('#pfPdf').onclick = () => pdfPlayer(pid);
   $('#pfProj').onclick = () => { pjPid = pid; $('#playerDlg').close(); showView('proy'); renderProj(); };
   $('#pfBday').onclick = () => { $('#playerDlg').close(); openBday(pid); };
+  $('#pfCard').onclick = () => { if (!shareMode) $('#playerDlg').close(); openSeasonCard(pid); };
   $('#pfShare').hidden = !api || !apiCanEdit; $('#pfShare').onclick = () => openShareDlg(pid);
   bindGoals(pid);
   const pfs = (shareMode ? $('#shareBody') : $('#playerBody')).querySelector('#pfSpray'); if (pfs) mountSpray(pfs, pid, seasonGames(), 'pf');
@@ -3453,7 +3494,7 @@ async function openCards(cfg) {
   $('#bdayBody').innerHTML = `<div class="row spread"><h2 style="margin:0">${esc(cfg.title)}</h2><button class="btn sm" id="bdClose">Cerrar</button></div>
     ${cfg.hint ? `<p class="hint">${esc(cfg.hint)}</p>` : ''}
     <div class="bd-fields">${cfg.fields.map(fld).join('')}</div>
-    <p class="hint">Marca las tarjetas que quieres mandar: una, dos o las tres.</p>
+    <p class="hint">Marca las tarjetas que quieres mandar.</p>
     <div class="bd-grid">${cfg.designs.map(x => `<div class="bd-opt on" data-k="${x.k}"><label class="inline-check"><input type="checkbox" data-sel="${x.k}" checked> <b>${x.use}</b><span class="sub">· ${x.name}</span></label><canvas width="${BD_W}" height="${BD_H}" data-c="${x.k}" aria-label="Vista previa: ${x.name}"></canvas>${x.msg ? `<label class="f">Mensaje<textarea data-msg="${x.k}">${esc(bd.d.msgs[x.k])}</textarea></label>` : ''}</div>`).join('')}</div>
     <div class="row" style="justify-content:flex-end"><button class="btn" id="bdPng">Descargar imágenes</button><button class="btn" id="bdPdf">Descargar PDF</button><button class="btn primary" id="bdShare">Compartir por WhatsApp</button></div>`;
   if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
@@ -3506,6 +3547,129 @@ $('#bdayBody').addEventListener('click', async e => {
   } else { await bdDownloadPngs(list); toast('Imágenes descargadas. Adjúntalas en el chat de WhatsApp.'); }
 });
 $('#bdayDlg').addEventListener('click', e => { if (e.target === $('#bdayDlg')) $('#bdayDlg').close(); });
+
+/* ---------- Tarjeta de temporada del jugador (Gold; en Básico se ve una muestra borrosa para invitar a subir de paquete) ---------- */
+const SC_DESIGNS = [{ k: 'season', name: 'Temporada', use: 'Toda la temporada' }, { k: 'last5', name: 'Últimos 5', use: 'Sus últimos 5 juegos' }];
+// Temporada elegida en el encabezado; con "Carrera completa" (y en el enlace para papás) se usa el año de su último juego
+function seasonCardStats(pid) {
+  const played = sortedGames().filter(g => (g.lines || []).some(l => l.pid === pid && num(l.ab) + num(l.bb) + num(l.hbp) + num(l.sf) + num(l.sh) > 0));
+  const sy = seasonNow(), y = sy === 'all' ? String((played[played.length - 1] || {}).date || today()).slice(0, 4) : sy;
+  const ys = played.filter(g => String(g.date || '').slice(0, 4) === y);
+  const mk = (gs, lab) => { const b = gs.length && aggBat(gs)[pid]; return b ? { b, g: gs.length, lab } : null; };
+  return { y, season: mk(ys, `Reporte de bateo · temporada ${y}`), last5: ys.length > 5 ? mk(ys.slice(-5), 'Reporte de bateo · últimos 5 juegos') : null };
+}
+function scBest(b) {
+  const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`, parts = [pl(b.h, 'hit', 'hits')];
+  if (b.rbi) parts.push(pl(b.rbi, 'impulsada', 'impulsadas')); if (b.hr) parts.push(`${b.hr} HR`); if (b.r) parts.push(pl(b.r, 'carrera', 'carreras'));
+  if (parts.length < 4 && b.sb) parts.push(pl(b.sb, 'base robada', 'bases robadas'));
+  return parts.join(' · ');
+}
+function scDraw(ctx, d) {
+  const s = d.s, b = s.b, W = BD_W, H = BD_H, m = 72, Y = '#ffd23f', light = d.red.map(v => Math.min(255, Math.round(v * 1.25 + 45)));
+  const g = ctx.createRadialGradient(W * .85, H * .08, 30, W * .7, H * .3, H * 1.05);
+  g.addColorStop(0, rgb(light)); g.addColorStop(.35, rgb(d.red)); g.addColorStop(.75, rgb(d.red2)); g.addColorStop(1, rgb(d.red2.map(v => Math.round(v * .5))));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W * .82, H * .14); ctx.fillStyle = 'rgba(255,255,255,.06)';
+  for (let a = 0; a < 360; a += 12) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, H * 1.7, a * Math.PI / 180, (a + 4) * Math.PI / 180); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+  const hasNum = d.num !== '';
+  if (hasNum) { ctx.fillStyle = Y; ctx.textAlign = 'left'; ctx.font = '800 200px "Barlow Condensed", sans-serif'; ctx.fillText(d.num, m - 6, m + 150); }
+  const name = String(d.full || '').toUpperCase();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; bdFit(ctx, name, '800 #px "Barlow Condensed", sans-serif', 108, W - 2 * m - (hasNum ? 250 : 0)); ctx.fillText(name, W - m, m + 92);
+  ctx.globalAlpha = .85; ctx.font = '600 28px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText(`${d.pos ? d.pos + ' · ' : ''}${d.team}`.toUpperCase(), W - m, m + 146); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
+  ctx.textAlign = 'left'; ctx.globalAlpha = .85; ctx.font = '600 30px "IBM Plex Mono", monospace'; bdSpacing(ctx, 7); ctx.fillText(s.lab.toUpperCase(), m, 560); bdSpacing(ctx, 0); ctx.globalAlpha = 1;
+  const avg = isFinite(b.avg) ? fmtRate(b.avg) : '—';
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetY = 14; ctx.font = '800 380px "Barlow Condensed", sans-serif'; ctx.fillText(avg, m - 10, 900); const aw = ctx.measureText(avg).width; ctx.restore();
+  ctx.globalAlpha = .85; ctx.font = '700 92px "Barlow Condensed", sans-serif'; ctx.fillText('AVG', Math.min(W - m - 150, m + aw + 6), 670); ctx.globalAlpha = 1;
+  const tw = (W - 2 * m - 2 * 28) / 3, tile = { fill: 'rgba(0,0,0,.28)', stroke: 'rgba(255,255,255,.22)', ink: '#ffffff', lab: 'rgba(255,255,255,.82)', size: 104 };
+  [[b.obp, 'OBP'], [b.slg, 'SLG'], [b.ops, 'OPS']].forEach(([v, k], i) => mvpTile(ctx, m + i * (tw + 28), 950, tw, 176, isFinite(v) ? fmtRate(v) : '—', k, tile));
+  ctx.fillStyle = Y; ctx.fillRect(m, 1166, 8, 84);
+  ctx.textAlign = 'left'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 6); ctx.fillText('DESTACADO', m + 30, 1194); bdSpacing(ctx, 0);
+  ctx.fillStyle = '#fff'; const best = scBest(b); bdFit(ctx, best, '500 #px "IBM Plex Sans", sans-serif', 42, W - 2 * m - 30); ctx.fillText(best, m + 30, 1244);
+  ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(m, 1272, W - 2 * m, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = '600 26px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3);
+  ctx.fillText(`${s.g} ${s.g === 1 ? 'juego' : 'juegos'} · ${b.pa} turnos`, m, 1314); ctx.textAlign = 'right'; ctx.fillText(`BOXSCORE MX · ${shortDate(today()).toUpperCase()}`, W - m, 1314); bdSpacing(ctx, 0);
+}
+function scCardData(p, st) {
+  const full = String(p.name).replace(/\(.*?\)/g, '').trim();
+  return { first: full.split(/\s+/)[0] || full, full, num: p.num != null && p.num !== '' ? String(p.num) : '', team: S.team || 'Mi equipo', pos: p.pos || '', season: st.season, last5: st.last5, msgs: {} };
+}
+async function openSeasonCard(pid) {
+  const p = S.roster[pid]; if (!p) return;
+  const st = seasonCardStats(pid);
+  if (!st.season) { toast(`${p.name} todavía no tiene turnos al bat en la temporada.`); return; }
+  if (!has('gold')) { teaserSeasonCard(p, st); return; }
+  await openCards({ title: `Tarjeta de temporada · ${p.name}`, d: scCardData(p, st), designs: SC_DESIGNS.filter(x => st[x.k]),
+    draw: { season: (ctx, d) => scDraw(ctx, { ...d, s: d.season }), last5: (ctx, d) => scDraw(ctx, { ...d, s: d.last5 }) },
+    photo: p.photo, file: () => `temporada_${String(bd.d.full).replace(/\s+/g, '_')}`, share: () => `Temporada de ${bd.d.first}`,
+    fields: [{ id: 'scFull', key: 'full', lab: 'Nombre en la tarjeta' }] });
+}
+// Básico: la tarjeta con su nombre de verdad y los números borrosos, y cómo activarla
+async function teaserSeasonCard(p, st) {
+  bd = null;
+  $('#bdayBody').innerHTML = `<div class="row spread"><h2 style="margin:0">Tarjeta de temporada</h2><button class="btn sm" id="tzClose">Cerrar</button></div>
+    <div class="sc-teaser"><canvas width="${BD_W}" height="${BD_H}" id="tzCanvas" aria-label="Muestra de la tarjeta de temporada de ${esc(p.name)}"></canvas>
+    <div class="locked">${planChip('gold')}<h2>Convierte sus números en una tarjeta</h2><p>Con el paquete Gold, cada jugador tiene su tarjeta de temporada con su AVG, OBP, SLG y OPS y lo más destacado de su año, lista para mandar por WhatsApp o guardar en PDF. Los papás también la pueden bajar desde su enlace.</p>
+    <p>Gold también incluye ${esc(PLAN_SELL.gold[1].charAt(0).toLowerCase() + PLAN_SELL.gold[1].slice(1))}</p>
+    <p class="hint">Este equipo tiene el paquete <b>${PLAN_LAB[curPlan()]}</b>. Para activarlo, pide a tu administrador que lo cambie a Gold. Tus juegos capturados ya cuentan: al activarlo, la tarjeta sale con toda la temporada.</p></div></div>`;
+  $('#tzClose').onclick = () => $('#bdayDlg').close();
+  if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
+  try { await Promise.all(['800 40px "Barlow Condensed"', '700 40px "Barlow Condensed"', '500 20px "IBM Plex Sans"', '600 20px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch {}
+  const cv = $('#tzCanvas'); if (!cv) return;
+  const ctx = cv.getContext('2d'), d = scCardData(p, st);
+  scDraw(ctx, { ...d, red: RED, red2: RED.map(v => Math.round(v * .62)), s: d.season });
+  // Números borrosos: desenfoque donde el navegador lo permite; si no, la zona se achica y se vuelve a estirar. Encima, un velo del color del equipo.
+  const y0 = 500, hh = 790, tmp = document.createElement('canvas'), tc = tmp.getContext('2d');
+  if ('filter' in ctx) { tmp.width = BD_W; tmp.height = hh; tc.filter = 'blur(38px)'; tc.drawImage(cv, 0, y0, BD_W, hh, 0, 0, BD_W, hh); }
+  else { tmp.width = 18; tmp.height = 14; tc.imageSmoothingEnabled = true; tc.drawImage(cv, 0, y0, BD_W, hh, 0, 0, 18, 14); }
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, y0, BD_W, hh);
+  ctx.fillStyle = rgb(RED.map(v => Math.round(v * .62)), .35); ctx.fillRect(0, y0, BD_W, hh);
+  const pw = 560, ph = 120, px = (BD_W - pw) / 2, py = y0 + hh / 2 - ph / 2;
+  ctx.fillStyle = '#e3a72f'; bdRound(ctx, px, py, pw, ph, 60); ctx.fill();
+  ctx.fillStyle = '#2a1b00'; ctx.textAlign = 'center'; ctx.font = '800 64px "Barlow Condensed", sans-serif'; bdSpacing(ctx, 4); ctx.fillText('DISPONIBLE EN GOLD', BD_W / 2, py + 82); bdSpacing(ctx, 0);
+}
+
+/* ---------- Ficha: en qué terminan sus turnos, tendencias y tipo de batazo ---------- */
+// En el enlace para papás no viajan las líneas de los demás: se usan los totales del equipo de cada juego (g.tl)
+function teamBatLine(gs) { const t = zero(BATK); if (shareMode) gs.forEach(g => BATK.forEach(k => t[k] += num((g.tl || {})[k]))); else Object.values(aggBat(gs)).forEach(p => BATK.forEach(k => t[k] += num(p[k]))); return derive(t); }
+const TREND_ICON = { hot: '↑', cold: '↓', power: 'P', contact: 'K', strikeouts: 'K', eye: 'BB', speed: 'BR', lead: '1º', twoout: '2' };
+function playerInsightsHTML(pid, d) {
+  const b = d.b; if (!b || !b.pa) return '';
+  const gs = seasonGames(), o = batOutcomes(b), pc = n => Math.round(100 * n / o.pa) + '%', out = [];
+  // En qué terminan sus turnos
+  const segs = [['Hits', o.h, 'var(--r1b)'], ['BB y golpes', o.onb, 'var(--o-bb)'], ['Sacrificios', o.sac, 'var(--o-sac)'], ['Outs y errores', o.inplay, 'var(--o-out)'], ['Ponches', o.so, 'var(--rout)']];
+  const hits = [['Sencillo', o.s1, 'var(--r1b)'], ['Doble', o.d, 'var(--r2b)'], ['Triple', o.t, 'var(--r3b)'], ['HR', o.hr, 'var(--rhr)']], hmax = Math.max(1, ...hits.map(x => x[1])), xbh = o.d + o.t + o.hr;
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">En qué terminan sus turnos</h3><span class="sub">${o.pa} turnos</span></div>
+    <div class="pi-stack" role="img" aria-label="${esc(segs.map(s => `${s[0]} ${s[1]}`).join(', '))}">${segs.filter(s => s[1]).map(s => `<i style="flex:${s[1]};background:${s[2]}"></i>`).join('')}</div>
+    <div class="pi-leg">${segs.map(s => `<div><i style="background:${s[2]}"></i><span>${s[0]}</span><b>${s[1]}<small>${pc(s[1])}</small></b></div>`).join('')}</div>
+    ${o.h ? `<h3 style="margin:6px 0 0">Cómo se reparten sus ${o.h} hit${o.h === 1 ? '' : 's'}</h3><div class="pi-hits">${hits.map(([l, v, c]) => `<div><b>${v}</b><i style="height:${Math.max(3, Math.round(100 * v / hmax))}%;background:${c}"></i><span>${l}</span></div>`).join('')}</div>` : ''}
+    <p class="ind-read" style="margin:0">Se embasa por hit, base por bolas o golpe en ${pc(o.h + o.onb)} de sus turnos.${o.h ? ` ${xbh} de sus ${o.h} hits ${xbh === 1 ? 'es' : 'son'} de extrabase.` : ''}</p></div>`);
+  // Tendencias (en el enlace para papás no salen las de "atención")
+  const pl = paList(gs).filter(x => x.pid === pid), last3 = d.log.filter(x => x.pa && x.l).slice(-3);
+  const recent = { ab: last3.reduce((a, x) => a + num(x.l.ab), 0), h: last3.reduce((a, x) => a + num(x.l.h), 0) };
+  let tr = batTrends({ b, team: teamBatLine(gs), recent, pas: pl }); if (shareMode) tr = tr.filter(x => x.tone !== 'warn');
+  const icon = x => x.k === 'spray' ? ({ izquierdo: '←', central: '↑', derecho: '→' })[x.title.split(' ').pop()] : (TREND_ICON[x.k] || '•');
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tendencias</h3><span class="sub">comparado con el equipo</span></div>
+    ${b.pa < 15 ? `<p class="hint" style="margin:0">Las tendencias aparecen cuando tenga al menos 15 turnos (lleva ${b.pa}).</p>`
+      : tr.length ? `<div class="pi-tends">${tr.map(x => `<div class="pi-tend ${x.tone}"><span class="ico">${icon(x)}</span><div><b>${esc(x.title)}</b><small>${esc(x.txt)}</small></div><span class="v">${esc(x.v)}</span></div>`).join('')}</div>`
+      : '<p class="hint" style="margin:0">Sin tendencias claras todavía: sus números van parejos con los del equipo.</p>'}</div>`);
+  // Tipo de batazo, de la jugada anotada
+  const bt = bbTypes(pl), tt = bbTypes(paList(gs)), P = (x, t) => t.n ? x / t.n : 0, f = x => Math.round(100 * x) + '%';
+  const rows = [['ground', 'Rodados', 'var(--o-gb)'], ['fly', 'Elevados', 'var(--r2b)'], ['line', 'Líneas', 'var(--r1b)']];
+  let read = 'Su reparto es parecido al del equipo.';
+  if (bt.n >= 5) {
+    // El tipo en que más se separa del equipo (hacia arriba)
+    const x = rows.map(([k]) => ({ k, me: P(bt[k], bt), tm: P(tt[k], tt) })).sort((a, c) => (c.me - c.tm) - (a.me - a.tm))[0], vs = `(${f(x.me)} contra ${f(x.tm)})`;
+    if (tt.n && x.me - x.tm >= .05) read = { line: `Pega más líneas que el equipo ${vs}. La línea es el batazo que más seguido cae de hit.`, fly: `Eleva la bola más que el equipo ${vs}.`, ground: `Pega más rodados que el equipo ${vs}. Con piernas rápidas, el rodado obliga a la defensa a tirar bien.` }[x.k];
+  }
+  out.push(`<div class="pi"><div class="row spread" style="align-items:baseline"><h3 style="margin:0">Tipo de batazo</h3><span class="sub">${bt.n} batazo${bt.n === 1 ? '' : 's'} con jugada</span></div>
+    ${bt.n < 5 ? `<p class="hint" style="margin:0">Aparece cuando tenga al menos 5 batazos con la jugada anotada (6-3, F8, L7…). Lleva ${bt.n}.</p>`
+      : `<div class="pi-bb">${rows.map(([k, l, c]) => `<div class="pi-bbrow"><span>${l}</span><div class="pi-bbbar"><i style="width:${f(P(bt[k], bt))};background:${c}"></i>${tt.n ? `<u style="left:${f(P(tt[k], tt))}" title="Equipo: ${f(P(tt[k], tt))}"></u>` : ''}</div><b>${f(P(bt[k], bt))}</b></div>`).join('')}
+        <div class="pi-bbleg"><u></u> Promedio del equipo</div></div><p class="ind-read" style="margin:0">${read}</p>`}
+    <p class="hint" style="margin:0">Sale de la jugada que anota el coach: 6-3 es rodado, F8 elevado, L7 línea. Los batazos sin jugada no cuentan.</p></div>`);
+  return `<div class="pi-wrap">${out.join('')}</div>`;
+}
 
 /* ---------- MVP del juego ---------- */
 // Puntos: bateo (bases del hit, C, CI, BB, HBP, BR, −AR, −0.5 K), pitcheo (0.5 por out, K, G/S +2, −0.5 H/BB/HBP, −1 sucia, −2 limpia), defensa (DP, −E)

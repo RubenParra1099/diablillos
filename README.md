@@ -31,8 +31,8 @@ El selector **Temporada** del encabezado filtra todos los módulos por año (o "
 - **Juegos**: lista con MVP, resumen del juego, **Compartir resumen** (texto listo para WhatsApp), tarjeta MVP y reporte por rival.
 - **Indicadores**: récord esperado, valor del primer turno de la entrada, OBP por outs, eficiencia para anotar, carreras por entrada, wOBA/wRAA, alertas de BABIP, ERA contra FIP, DER, **hacia dónde batean**, **producción por lugar en el orden**, lineup sugerido y alertas para el coach. Cada indicador tiene su botón **?** con qué mide, cómo se mide y cómo leerlo.
 - **Proyección**: al elegir un jugador, su rendimiento más probable y su **mapa de batazos** (un punto por batazo, color y forma por resultado) con la **distribución por jardín** sobre el campo y en barras. También va en el PDF de proyección.
-- **Ficha del jugador**: números, **evolución** (últimos 3 juegos), **metas**, **por situación**, **mapa de batazos**, juego por juego, tarjetas y **enlace para papás**.
-- **Tarjetas**: cumpleaños (jugador, papás, redes) y MVP (portada, marcador, medalla), en imagen o PDF.
+- **Ficha del jugador**: números, **en qué terminan sus turnos** (hits, bases por bolas, sacrificios, outs y ponches, y cómo se reparten sus hits), **tendencias** comparadas con el equipo (racha, poder, ponches, ojo, velocidad, dirección y situación; en el enlace para papás no salen las de "atención"), **tipo de batazo** (rodados, elevados y líneas, sacado de la jugada anotada), **evolución** (últimos 3 juegos), **metas**, **por situación**, **mapa de batazos**, juego por juego, tarjetas y **enlace para papás**.
+- **Tarjetas**: cumpleaños (jugador, papás, redes), MVP (portada, marcador, medalla) y **tarjeta de temporada** del jugador (AVG, OBP, SLG, OPS y lo destacado; temporada y últimos 5 juegos), en imagen o PDF. La de temporada sale desde la ficha, el Roster y el enlace para papás.
 
 ## Reglas de lanzamientos (Little League / Pitch Smart)
 
@@ -51,11 +51,13 @@ Cada equipo tiene un paquete y una vigencia, según el análisis de pricing de D
 | Roster y tarjetas de cumpleaños | Sí | Sí | Sí |
 | Bateo, Pitcheo (¿quién puede lanzar hoy?), Fildeo | — | Sí | Sí |
 | Ficha del jugador, metas y enlace para papás | — | Sí | Sí |
+| Tarjeta de temporada, tendencias, en qué terminan sus turnos y tipo de batazo | Muestra | Sí | Sí |
 | Juego en vivo para papás | — | Sí | Sí |
 | Contra cada rival y reporte de temporada PDF | — | Sí | Sí |
 | Indicadores, mapa de batazos, wOBA/FIP en la ficha, Proyección | — | — | Sí |
 
 - Un equipo nuevo empieza en **Gold** con seis meses de vigencia. Los equipos que ya existían antes de los paquetes quedaron en **Pro** y sin vencimiento.
+- En Básico, el botón **Tarjeta** del Roster enseña la tarjeta de temporada del jugador con los números borrosos y cómo activar Gold.
 - Los módulos fuera del paquete se ven en las pestañas con su etiqueta (GOLD o PRO) y muestran qué incluyen y cómo activarlos. Los juegos capturados siempre cuentan: al subir de paquete aparecen las estadísticas de toda la temporada.
 - **Vigencia**: la licencia vale hasta la fecha indicada. Desde 15 días antes se avisa en el equipo. Al vencer, el equipo queda en solo lectura (Captura y Supervisor ya no guardan; el administrador sí) y los datos se conservan. El botón **+6 meses** renueva desde el vencimiento actual, o desde hoy si ya venció.
 - El servidor bloquea el enlace para papás y el juego en vivo en Básico, y las escrituras con la licencia vencida.
@@ -79,7 +81,7 @@ Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno.
 - **Sin señal**: la app abre con la última copia descargada; lo que se guarda queda en cola en el teléfono y se sube solo al volver la conexión.
 - **Sincronización ligera**: después de la primera carga, cada 45 segundos solo se descargan los registros que cambiaron.
 - **Inicio de sesión**: 5 intentos fallidos por correo (o 20 por dirección IP) en 15 minutos bloquean 15 minutos.
-- **Enlace para papás**: solo viajan los datos de ese niño; de los demás no van nombres ni líneas.
+- **Enlace para papás**: solo viajan los datos de ese niño; de los demás no van nombres ni líneas. Sí viajan los totales de bateo del equipo por juego (solo sumas), para comparar sus tendencias contra el equipo.
 - **Juego en vivo**: el teléfono del coach sube un resumen del juego (máximo 96 KB) unos segundos después de cada cambio en la hoja. Solo viajan nombres cortos y números; no van ids, fechas de nacimiento ni datos de otros juegos. Desactivar el enlace lo borra y el siguiente es distinto.
 
 ## Pestaña Admin
