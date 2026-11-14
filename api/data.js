@@ -292,10 +292,21 @@ export default async function handler(req, res) {
         const ids = me.teams.map(t => t.id);
         const [r, g] = await Promise.all([
           p.query('select team_id, count(*)::int as n from bs_roster where team_id = any($1) group by team_id', [ids]),
-          p.query(`select team_id, count(*)::int as n, max(data->>'date') as last from bs_games where team_id = any($1) group by team_id`, [ids]),
+          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->'us' as us, data->'them' as them from bs_games where team_id = any($1)`, [ids]),
         ]);
         const stats = Object.fromEntries(ids.map(id => [id, { players: 0, games: 0, last: null }]));
-        r.rows.forEach(x => stats[x.team_id].players = x.n); g.rows.forEach(x => Object.assign(stats[x.team_id], { games: x.n, last: x.last }));
+        r.rows.forEach(x => stats[x.team_id].players = x.n);
+        // Récord de la temporada más reciente (año del último juego), último marcador y racha de los últimos 5
+        const runs = a => (Array.isArray(a) ? a : []).reduce((s, v) => { const n = parseInt(v, 10); return s + (n > 0 ? n : 0); }, 0);
+        const byTeam = {}; g.rows.forEach(x => (byTeam[x.team_id] = byTeam[x.team_id] || []).push(x));
+        Object.entries(byTeam).forEach(([id, list]) => {
+          list.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+          const res = x => { const u = runs(x.us), t = runs(x.them); return { us: u, them: t, res: u > t ? 'G' : u < t ? 'P' : 'E' }; };
+          const season = String(list[0].date || '').slice(0, 4), rec = { w: 0, l: 0, t: 0 };
+          list.filter(x => String(x.date || '').slice(0, 4) === season).forEach(x => { const s = res(x).res; s === 'G' ? rec.w++ : s === 'P' ? rec.l++ : rec.t++; });
+          Object.assign(stats[id], { games: list.length, last: list[0].date || null, season, ...rec,
+            lastGame: { date: list[0].date || null, opp: list[0].opp || '', ...res(list[0]) }, form: list.slice(0, 5).map(x => res(x).res) });
+        });
         return send(res, 200, { me: publicMe(me), home: true, stats });
       }
       if (!canRead(me, teamId)) teamId = me.teams[0] ? me.teams[0].id : '';

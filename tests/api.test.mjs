@@ -90,6 +90,8 @@ r = await call(null, { team: team3 });
 ok('renombrar el equipo no cambia su dirección', r.team.slug === 'las-aguilas', r.team.slug);
 r = await call(null, { home: '1' });
 ok('el inicio trae los equipos con sus totales y sin datos de juegos', r.home && r.me.teams.length === 3 && r.stats[team].players === 2 && r.stats[team].games === 1 && r.stats[team].last === "2026-11-01" && r.stats[team3].games === 0 && !r.games && !r.roster, JSON.stringify(r.stats));
+const hs = r.stats[team];
+ok('el inicio trae récord, último marcador y racha', hs.season === '2026' && hs.w === 1 && hs.l === 0 && hs.lastGame.opp === 'Toros' && hs.lastGame.us === 1 && hs.lastGame.them === 0 && hs.form.join() === 'G', JSON.stringify(hs));
 
 // Paquetes (Básico, Gold, Pro) y vigencia de la licencia
 r = await call(null, { team });

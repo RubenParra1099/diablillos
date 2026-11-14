@@ -255,6 +255,35 @@ a.home-card:hover{box-shadow:0 8px 22px -12px rgba(12,35,64,.55);transform:trans
 a.home-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .home-card .home-url{font:600 12.5px var(--f-mono);color:var(--accent)}
 @media (prefers-reduced-motion:reduce){a.home-card{transition:none}a.home-card:hover{transform:none}}
+#v-inicio:not([hidden]){display:flex;flex-direction:column;gap:16px}
+.home-hi{display:flex;flex-direction:column;gap:4px;padding-top:4px}
+.home-hi h2{font-size:clamp(26px,4.4vw,36px);line-height:1.05}
+.home-date{font:600 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.home-kpis .adm-kpi .s{margin-top:2px}
+@media (max-width:700px){.home-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.home-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:4px}
+.home-bar h3{margin:0;flex:1 1 auto;font:600 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.home-bar input{flex:0 1 280px;min-width:0;font-family:var(--f-body);font-size:14px}
+@media (max-width:560px){.home-bar input{flex:1 1 100%;order:3}}
+.home-rec{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.home-rec .wl{font:700 30px var(--f-display);line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.home-rec .wl small{font-size:1em;color:var(--muted)}
+.home-rec .sub{font:600 10.5px var(--f-mono);letter-spacing:.1em;text-transform:uppercase}
+.home-form{display:inline-flex;gap:3px;margin-left:auto}
+.home-form i{width:18px;height:18px;border-radius:4px;display:grid;place-items:center;font:700 10px var(--f-mono);font-style:normal;color:#fff;background:#7d8590}
+.home-form i.G,.home-last .r.G{background:#2f7d55}.home-form i.P,.home-last .r.P{background:#b3262e}
+.home-last{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0;padding:7px 10px;border-radius:6px;background:var(--chip)}
+.home-last .r{font:700 11px var(--f-mono);padding:1px 6px;border-radius:4px;color:#fff;background:#7d8590;flex:none}
+.home-last .sc{font:700 13px var(--f-mono);flex:none}
+.home-last .op{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.home-last .dt{color:var(--muted);font-size:12px;flex:none}
+.home-foot{border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.home-go{font:600 12.5px var(--f-body);color:var(--accent);white-space:nowrap}
+.home-empty{border:2px dashed var(--line-strong);border-radius:10px;padding:28px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted)}
+.home-empty svg{width:56px;height:auto;opacity:.85}
+.home-empty b{color:var(--ink);font-size:15px}
+.home-skel{height:250px;border-radius:10px;border:1px solid var(--line);background:linear-gradient(90deg,var(--paper) 0%,var(--chip) 50%,var(--paper) 100%);background-size:200% 100%}
+@media (prefers-reduced-motion:no-preference){.home-skel{animation:homeSk 1.3s ease-in-out infinite}@keyframes homeSk{0%{background-position:100% 0}100%{background-position:-100% 0}}}
 .auth-card h2{text-align:center}
 .auth-form{display:flex;flex-direction:column;gap:12px}
 /* ---- Admin ---- */
@@ -1071,12 +1100,18 @@ body.live .record{display:none!important}
     </div>
   </section>
   <section id="v-inicio" class="view" hidden>
-    <div class="row spread" style="align-items:flex-end">
-      <div><h2>Tus equipos</h2><p class="hint" id="homeHint" style="margin:4px 0 0">Cargando tus equipos…</p></div>
-      <button class="btn sm" id="homeAdmin" type="button" hidden>Administración</button>
+    <div class="home-hi">
+      <div class="home-date" id="homeDate"></div>
+      <h2 id="homeTitle">Tus equipos</h2>
+      <p class="hint" id="homeHint" style="margin:0">Cargando tus equipos…</p>
     </div>
     <div class="home-kpis" id="homeKpis"></div>
-    <div id="homeTeams" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div class="home-bar">
+      <h3>Tus equipos</h3>
+      <input type="search" id="homeQ" placeholder="Buscar equipo o categoría…" aria-label="Buscar equipo" hidden>
+      <button class="btn sm" id="homeAdmin" type="button" hidden>Administración</button>
+    </div>
+    <div id="homeTeams" style="display:flex;flex-direction:column;gap:12px"><div class="adm-cards"><div class="home-skel"></div><div class="home-skel"></div><div class="home-skel"></div></div></div>
   </section>
 
   <section id="v-admin" class="view" hidden>
@@ -1444,23 +1479,48 @@ async function loadHome() {
 }
 function renderHome() {
   if (!me) return;
-  const teams = me.teams, st = id => homeStats[id] || { players: 0, games: 0, last: null };
+  const st = id => homeStats[id] || { players: 0, games: 0, last: null };
+  // Primero los equipos con actividad más reciente
+  const teams = me.teams.slice().sort((a, b) => String(st(b.id).last || '').localeCompare(String(st(a.id).last || '')) || a.name.localeCompare(b.name, 'es'));
+  const hr = new Date().getHours(), first = String(me.name || '').trim().split(/\s+/)[0];
+  $('#homeDate').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('#homeTitle').textContent = (hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches') + (first ? ', ' + first : '');
   $('#homeAdmin').hidden = !me.isAdmin;
-  $('#homeHint').textContent = teams.length ? 'Elige un equipo para ver su box score y sus estadísticas. Cada uno tiene su propia dirección.'
-    : me.isAdmin ? 'Todavía no hay equipos. Créalos en Administración.' : 'Tu usuario no tiene equipos asignados. Pide acceso a un administrador.';
+  $('#homeQ').hidden = teams.length < 5;
+  $('#homeHint').textContent = teams.length ? (teams.length === 1 ? 'Entra a tu equipo para capturar el juego o revisar sus estadísticas.' : 'Elige un equipo para capturar el juego o revisar sus estadísticas. Cada uno tiene su propia dirección.')
+    : me.isAdmin ? 'Todavía no hay equipos en la plataforma.' : 'Tu usuario aún no tiene equipos asignados.';
   const sum = k => teams.reduce((a, t) => a + (st(t.id)[k] || 0), 0);
-  $('#homeKpis').innerHTML = teams.length ? [['Equipos', teams.length], ['Jugadores', sum('players')], ['Juegos capturados', sum('games')]]
-    .map(([k, v]) => `<div class="adm-kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('') : '';
-  const card = t => { const x = st(t.id); return `<a class="adm-card home-card" href="/${esc(t.slug)}" data-slug="${esc(t.slug)}">
+  const ago = d => { const n = Math.round((new Date(today() + 'T12:00:00') - new Date(String(d).slice(0, 10) + 'T12:00:00')) / 864e5); return n <= 0 ? 'hoy' : n === 1 ? 'ayer' : n < 30 ? `hace ${n} días` : fmtDay(d); };
+  const lastAll = teams.map(t => st(t.id).last).filter(Boolean).sort().pop();
+  const kpi = (k, v, s) => `<div class="adm-kpi"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+  $('#homeKpis').innerHTML = teams.length ? kpi('Equipos', teams.length, teams.length === 1 ? esc(teams[0].category || '') : '')
+    + kpi('Jugadores', sum('players'), 'en el roster') + kpi('Juegos capturados', sum('games'), 'todas las temporadas')
+    + kpi('Último juego', lastAll ? esc(fmtDay(lastAll)) : '—', lastAll ? ago(lastAll) : 'sin capturas todavía') : '';
+  const RES_LAB = { G: 'Ganado', P: 'Perdido', E: 'Empate' };
+  const card = t => { const x = st(t.id), lg = x.lastGame;
+    const rec = x.games ? `<div class="home-rec"><span class="wl">${x.w || 0}-${x.l || 0}${x.t ? `<small>-${x.t}</small>` : ''}</span><span class="sub">Récord ${esc(x.season || '')}</span>
+      ${(x.form || []).length ? `<span class="home-form" title="Últimos ${x.form.length} juegos, el más reciente a la izquierda">${x.form.map(r => `<i class="${r}" aria-label="${RES_LAB[r]}">${r}</i>`).join('')}</span>` : ''}</div>
+      ${lg ? `<div class="home-last"><span class="r ${lg.res}" title="${RES_LAB[lg.res]}">${lg.res}</span><span class="sc">${lg.us}-${lg.them}</span><span class="op">vs ${esc(lg.opp || 'Rival')}</span><span class="dt">${esc(fmtDay(lg.date))}</span></div>` : ''}`
+      : '<div class="home-last"><span class="op sub">Sin juegos capturados todavía</span></div>';
+    return `<a class="adm-card home-card" href="/${esc(t.slug)}" data-slug="${esc(t.slug)}" data-q="${esc((t.name + ' ' + (t.category || '') + ' ' + t.slug).toLowerCase())}">
     <div class="adm-band" data-plate="${esc(t.id)}">${t.logo ? `<img class="lg" src="${esc(t.logo)}" alt="">` : `<span class="ini">${esc((t.name[0] || '?').toUpperCase())}</span>`}${t.wordmark ? `<img class="wm" src="${esc(t.wordmark)}" alt="${esc(t.name)}">` : '<span class="tp-name"></span>'}</div>
-    <div class="adm-cbody"><div><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : ''}</div>
-    <div class="adm-meta"><span><b>${x.players}</b> jugadores</span><span><b>${x.games}</b> juegos</span><span>Último: <b style="font-size:12px">${x.last ? fmtDay(x.last) : '—'}</b></span></div>
-    <div class="row spread" style="gap:8px"><span class="home-url">/${esc(t.slug)}</span><span class="chip">${esc(ROLE_LAB[t.role] || '')}</span></div><div class="row" style="gap:8px">${planChip(t.plan)}${expTxt(t)}</div></div></a>`; };
+    <div class="adm-cbody"><div class="row spread" style="gap:8px;align-items:baseline"><div style="min-width:0"><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : ''}</div><span class="chip">${esc(ROLE_LAB[t.role] || '')}</span></div>
+    ${rec}
+    <div class="adm-meta"><span><b>${x.players}</b> jugadores</span><span><b>${x.games}</b> juegos</span></div>
+    <div class="row spread home-foot" style="gap:8px"><div class="row" style="gap:8px">${planChip(t.plan)}${expTxt(t)}</div><span class="home-go">Abrir /${esc(t.slug)} →</span></div></div></a>`; };
   const grid = list => `<div class="adm-cards">${list.map(card).join('')}</div>`;
   const mine = teams.filter(t => t.own), rest = teams.filter(t => !t.own);
+  const empty = `<div class="home-empty">${bsmxMark('var(--line-strong)', 'var(--paper)')}<b>${me.isAdmin ? 'Crea el primer equipo' : 'Aún no tienes equipos'}</b><span>${me.isAdmin ? 'Da de alta un equipo en Administración y tendrá su propia dirección, como ' + esc(location.host) + '/aguilas.' : 'Pide a un administrador que te dé acceso a tu equipo. Cuando lo haga, aparecerá aquí.'}</span>${me.isAdmin ? '<button class="btn primary" type="button" data-home-admin>Ir a Administración</button>' : ''}</div>`;
   $('#homeTeams').innerHTML = (me.isAdmin || me.isSupervisor) && mine.length && rest.length
-    ? `<div class="home-grp">Mis equipos</div>${grid(mine)}<div class="home-grp">Todos los demás</div>${grid(rest)}` : teams.length ? grid(teams) : '';
+    ? `<div class="home-grp">Mis equipos</div>${grid(mine)}<div class="home-grp">Todos los demás</div>${grid(rest)}` : teams.length ? grid(teams) : empty;
   $$('#homeTeams [data-plate]').forEach(b => { const t = teams.find(t => t.id === b.dataset.plate), nm = b.querySelector('.tp-name'); paintPlate(b, nm || document.createElement('span'), t); });
+  filterHome();
+}
+// Buscador del inicio: oculta las tarjetas que no coinciden (y el grupo si se queda vacío)
+function filterHome() {
+  const q = $('#homeQ').hidden ? '' : $('#homeQ').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  $$('#homeTeams .home-card').forEach(c => c.hidden = !!q && !c.dataset.q.normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q));
+  $$('#homeTeams .adm-cards').forEach(g => { const none = !g.querySelector('.home-card:not([hidden])'); g.hidden = none && !!q; const h = g.previousElementSibling; if (h && h.classList.contains('home-grp')) h.hidden = none && !!q; });
 }
 // Cambiar entre el inicio (/) y un equipo (/aguilas) sin recargar la página
 async function enterRoute() {
@@ -4991,7 +5051,8 @@ $('#platLogo').innerHTML = bsmxMark('#ffffff', '#0c2340');
 $('#homeBtn').addEventListener('click', () => goPath('/'));
 $('#admHome').addEventListener('click', () => { showView('inicio'); renderHome(); });
 $('#homeAdmin').addEventListener('click', () => showView('admin'));
-$('#homeTeams').addEventListener('click', e => { const a = e.target.closest('a[data-slug]'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); goPath('/' + a.dataset.slug); });
+$('#homeQ').addEventListener('input', filterHome);
+$('#homeTeams').addEventListener('click', e => { if (e.target.closest('[data-home-admin]')) { showView('admin'); return; } const a = e.target.closest('a[data-slug]'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); goPath('/' + a.dataset.slug); });
 initStore();
 // App instalable y disponible sin señal (solo en https o en la computadora local)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('/sw.js').catch(() => {});
