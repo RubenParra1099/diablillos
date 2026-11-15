@@ -228,16 +228,16 @@ export default async function handler(req, res) {
 
     if (op === 'login') {
       const email = normEmail(b.email), keys = ['e:' + email, 'ip:' + clientIp(req)];
-      // 5 intentos fallidos por correo (20 por dirección IP) en 15 minutos bloquean 15 minutos
+      // 10 intentos fallidos por correo (40 por dirección IP) en 15 minutos bloquean 5 minutos
       const locked = (await p.query('select 1 from bs_login_fail where k = any($1) and locked_until > now()', [keys])).rows[0];
-      if (locked) fail(429, 'locked', 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.');
+      if (locked) fail(429, 'locked', 'Demasiados intentos fallidos. Espera 5 minutos e intenta de nuevo.');
       const u = (await p.query('select id, pass_hash, active from bs_users where email = $1', [email])).rows[0];
       if (!u || !u.active || !checkPass(b.password, u.pass_hash)) {
         for (const k of keys) await p.query(`insert into bs_login_fail (k, n, first_at) values ($1, 1, now())
           on conflict (k) do update set n = case when bs_login_fail.first_at < now() - interval '15 minutes' then 1 else bs_login_fail.n + 1 end,
             first_at = case when bs_login_fail.first_at < now() - interval '15 minutes' then now() else bs_login_fail.first_at end,
-            locked_until = case when (case when bs_login_fail.first_at < now() - interval '15 minutes' then 1 else bs_login_fail.n + 1 end) >= $2 then now() + interval '15 minutes' else null end`,
-          [k, k.startsWith('e:') ? 5 : 20]);
+            locked_until = case when (case when bs_login_fail.first_at < now() - interval '15 minutes' then 1 else bs_login_fail.n + 1 end) >= $2 then now() + interval '5 minutes' else null end`,
+          [k, k.startsWith('e:') ? 10 : 40]);
         await new Promise(r => setTimeout(r, 600)); fail(401, 'bad_login', 'Correo o contraseña incorrectos.');
       }
       await p.query('delete from bs_login_fail where k = $1', ['e:' + email]);

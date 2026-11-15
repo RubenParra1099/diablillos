@@ -154,10 +154,10 @@ ok('el enlace nuevo es distinto', r.code === 200 && r.token !== ltok);
 
 // R4 límite de intentos
 await call({ op: 'logout' });
-for (let i = 0; i < 5; i++) { r = await call({ op: 'login', email: 'coach@x.mx', password: 'mala' + i }, {}, { ip: '10.0.0.' + (i + 2) }); }
-ok('5 intentos fallidos responden "incorrectos"', r.code === 401);
-r = await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.0.9' });
-ok('el 6º intento queda bloqueado aunque la contraseña sea buena', r.code === 429 && r.error === 'locked', r.message);
+for (let i = 0; i < 10; i++) { r = await call({ op: 'login', email: 'coach@x.mx', password: 'mala' + i }, {}, { ip: '10.0.0.' + (i + 2) }); }
+ok('10 intentos fallidos responden "incorrectos"', r.code === 401);
+r = await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.0.99' });
+ok('el 11º intento queda bloqueado aunque la contraseña sea buena', r.code === 429 && r.error === 'locked', r.message);
 r = await call({ op: 'login', email: 'otro@x.mx', password: 'x' }, {}, { ip: '10.0.0.9' });
 ok('otro correo desde otra IP no se bloquea', r.code === 401);
 console.log('\nTodas las pruebas de la API pasaron.');
