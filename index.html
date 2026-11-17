@@ -1409,7 +1409,16 @@ function askConflict(col, info, mine) {
     dlg.showModal();
   });
 }
-const TEAMK = 'bs-team';
+const TEAMK = 'bs-team', OWNK = 'bs-owner';
+// Datos de la sesión guardados en el teléfono: copias de equipos, cambios sin subir y borradores.
+// Se borran al cerrar sesión o al entrar otro usuario, para que el siguiente no vea ni suba lo del anterior.
+function clearUserData() { try { Object.keys(localStorage).filter(k => k === TEAMK || k === OUTK || k === OWNK || k.startsWith('bs-cache:') || k.startsWith('bs-draft:')).forEach(k => localStorage.removeItem(k)); } catch {} }
+function markOwner() {
+  if (!me || !me.id) return; let o = ''; try { o = localStorage.getItem(OWNK) || ''; } catch {}
+  if (o === me.id) return false;
+  if (o) { clearUserData(); syncBadge(); } try { localStorage.setItem(OWNK, me.id); } catch {}
+  return !!o;
+}
 // Equipo en la dirección (boxscoremx.vercel.app/aguilas). Sin equipo en la dirección se abre el inicio de la plataforma
 const pathSlug = () => (s => /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(s) ? s : '')((location.pathname.split('/')[1] || '').toLowerCase());
 let slugTried = false, homeMode = !pathSlug() && !new URLSearchParams(location.search).get('p') && !new URLSearchParams(location.search).get('v'), homeStats = {};
@@ -1472,7 +1481,7 @@ async function loadHome() {
     if (e.code === 'network' && !me) { let want = ''; try { want = localStorage.getItem(TEAMK) || ''; } catch {} if (loadCache(want)) { homeMode = false; setPlat(false); return; } }
     throw e;
   }
-  me = j.me; homeStats = j.stats || {}; curTeam = null; curTeamObj = null; apiCanEdit = false; SHARES = {};
+  me = j.me; markOwner(); homeStats = j.stats || {}; curTeam = null; curTeamObj = null; apiCanEdit = false; SHARES = {};
   setPlat(true); renderAuthUI(); renderHome(); syncPath();
   if (curView !== 'admin') showView('inicio');
   if (me.mustChange && !$('#pwDlg').open) openPwDlg(true);
@@ -1556,6 +1565,8 @@ async function apiLoad(full) {
   catch (e) { if (e.code === 'network' && !me && loadCache(want)) return; throw e; }
   const changed = curTeam && j.team && j.team.id !== curTeam;
   me = j.me; curTeamObj = j.team; curTeam = j.team ? j.team.id : null; apiCanEdit = !!j.canEdit;
+  // Entró otro usuario en este teléfono: no se mezcla lo del anterior con una descarga parcial
+  if (markOwner() && j.partial) { syncSince = ''; syncTeam = null; return apiLoad(true); }
   try { if (curTeam) localStorage.setItem(TEAMK, curTeam); } catch {}
   if (slug) slugTried = true;
   // Sin acceso al equipo de la dirección: se avisa y se abre el inicio con los equipos que sí tiene
@@ -4698,7 +4709,12 @@ $('#userBtn').addEventListener('click', () => {
 });
 $('#udClose').addEventListener('click', () => $('#userDlg').close());
 $('#udPw').addEventListener('click', () => { $('#userDlg').close(); openPwDlg(false); });
-$('#udLogout').addEventListener('click', async () => { try { await apiCall({ op: 'logout' }); } catch {} try { localStorage.removeItem(TEAMK); } catch {} location.reload(); });
+$('#udLogout').addEventListener('click', async () => {
+  // Antes de salir se intenta subir lo pendiente; lo que no suba se pierde al borrar los datos del teléfono
+  await flushOutbox(); const n = outbox().length;
+  if (n && !confirm(`Hay ${n} cambio${n === 1 ? '' : 's'} sin subir (sin conexión). Si cierras sesión se pierde${n === 1 ? '' : 'n'}. ¿Cerrar sesión de todos modos?`)) return;
+  try { await apiCall({ op: 'logout' }); } catch {} clearUserData(); location.reload();
+});
 
 const $$ = q => [...document.querySelectorAll(q)];
 /* ---------- Administración ---------- */
