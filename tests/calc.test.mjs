@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState, batOutcomes, bbTypes, batTrends, isQab, contactStats };', ctx);
+vm.runInContext(fs.readFileSync(new URL('../js/calc.js', import.meta.url), 'utf8') + '\n;this.C = { BATK, FLDK, PITK, num, zero, derive, applyPA, indPA, paList, splitOf, rollingBat, mvpScores, pythag, pitchMax, restDays, pitchStatus, parsePlay, sprayOf, rivalKey, ageOn, bdayInfo, ipToOuts, outsToIp, fmtRate, sprayPoint, playFromPoint, sprayCat, liveState, batOutcomes, bbTypes, batTrends, isQab, contactStats, MZT, mztTiebreak };', ctx);
 const C = ctx.C;
 const fx = JSON.parse(fs.readFileSync(new URL('./fixture.json', import.meta.url), 'utf8'));
 const games = Object.entries(fx.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => a.date.localeCompare(b.date));
@@ -128,6 +128,35 @@ test('juego en vivo: entrada, outs, corredores y quién sigue', () => {
   // Chupón: la entrada se cierra al batear los N del turno, no por outs
   s = C.liveState({ ...base, ha: 'V', mode: 'chupon', bpi: 2, us: { slots, cells: { '0_1': [{ res: 'O', out: 1 }], '1_1': [{ res: 'H1', reach: 1 }] } } });
   assert.equal(s.half, 'bot'); assert.equal(s.side, 'them');
+});
+
+test('Torneo Mazatlán: la entrada se cierra con 10 bateadores o 3 outs y sigue el orden', () => {
+  const slots = Array.from({ length: 12 }, (_, i) => ({ pid: 'p' + i })), oslots = Array.from({ length: 12 }, () => ({ num: '', name: '' }));
+  const base = { ha: 'V', inns: 5, mode: 'mzt', bpi: 10, them: { slots: oslots, cells: {}, runs: Array(5).fill('') } };
+  // 3 outs con 4 bateadores: se cierra la alta aunque no batearon los 10, y la 2a la abre el 5o
+  const c3 = { '0_1': [{ res: 'K', out: 1 }], '1_1': [{ res: 'H1', reach: 1 }], '2_1': [{ res: 'O', out: 2 }], '3_1': [{ res: 'DP', out: 3 }] };
+  let s = C.liveState({ ...base, us: { slots, cells: c3 } });
+  assert.equal(s.half, 'bot'); assert.equal(s.side, 'them'); assert.equal(s.next.us, 4);
+  // 10 bateadores con 1 out: también se cierra
+  const c10 = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + '_1', [i === 0 ? { res: 'O', out: 1 } : { res: 'H1', reach: 4 }]]));
+  s = C.liveState({ ...base, us: { slots, cells: c10 } });
+  assert.equal(s.half, 'bot'); assert.equal(s.next.us, 10);
+  // 9 bateadores y 2 outs: sigue la alta
+  const c9 = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + '_1', [i < 2 ? { res: 'O', out: i + 1 } : { res: 'H1', reach: 4 }]]));
+  s = C.liveState({ ...base, us: { slots, cells: c9 } });
+  assert.equal(s.half, 'top'); assert.equal(s.outs, 2); assert.equal(s.pas, 9);
+  assert.equal(C.MZT.inns, 5); assert.ok(!C.MZT.res.includes('BB') && !C.MZT.res.includes('TS') && !C.MZT.res.includes('FS'));
+});
+
+test('Torneo Mazatlán: criterios de desempate en orden', () => {
+  const t = (a, b) => { const r = C.mztTiebreak(a, b); return r.w + r.k; };
+  assert.equal(t({ outs: 15, so: 5 }, { outs: 13, so: 1 }), 'aA');
+  assert.equal(t({ outs: 15, so: 5 }, { outs: 15, so: 3 }), 'bB');
+  assert.equal(t({ outs: 15, so: 3, h: 6 }, { outs: 15, so: 3, h: 8 }), 'bC');
+  assert.equal(t({ outs: 15, so: 3, h: 8, lob: 4 }, { outs: 15, so: 3, h: 8, lob: 2 }), 'aD');
+  assert.equal(t({ outs: 15, so: 3, h: 8, lob: 2, hr: 0 }, { outs: 15, so: 3, h: 8, lob: 2, hr: 1 }), 'bE');
+  const v = C.mztTiebreak({ outs: 15, so: 3, h: 8, lob: 2, hr: 1 }, { outs: 15, so: 3, h: 8, lob: 2, hr: 1 });
+  assert.equal(v.w, null); assert.equal(v.k, 'F');
 });
 
 test('ficha: en qué terminan los turnos, tipo de batazo y tendencias', () => {

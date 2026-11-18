@@ -138,7 +138,7 @@ async function upsertDoc(c, table, id, teamId, data, base) {
 const TEAM_BAT = ['ab', 'h', 'd', 't', 'hr', 'bb', 'so', 'hbp', 'sf', 'sh', 'sb', 'cs'];
 // Vista para papás: solo el jugador compartido; de los demás no viajan nombres ni líneas
 function shareGame(g, pid) {
-  const keep = ['date', 'no', 'liga', 'opp', 'ha', 'inns', 'us', 'them', 'themH', 'themE', 'mode', 'bpi'];
+  const keep = ['date', 'no', 'liga', 'opp', 'ha', 'inns', 'us', 'them', 'themH', 'themE', 'mode', 'bpi', 'tb'];
   const o = Object.fromEntries(keep.filter(k => g[k] !== undefined).map(k => [k, g[k]]));
   o.lines = (g.lines || []).filter(l => l.pid === pid);
   // Totales de bateo del equipo en el juego (solo sumas): las tendencias de la ficha se comparan contra el equipo
@@ -179,7 +179,7 @@ const canRead = (u, teamId) => !!roleIn(u, teamId);
 // Con la licencia vencida el equipo queda en solo lectura; el administrador puede seguir corrigiendo
 const canWrite = (u, teamId) => { const t = u.teams.find(t => t.id === teamId); if (!t) return false; return t.role === 'admin' || (['supervisor', 'editor'].includes(t.role) && !isExpired(t.data)); };
 const teamColors = d => (d && d.colors && typeof d.colors === 'object') ? d.colors : null;
-const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && d.mode === 'chupon') ? 'chupon' : 'trad',
+const teamLook = d => ({ logo: (d && d.logo) || '', colors: teamColors(d), wordmark: (d && d.wordmark) || '', font: (d && d.font) || 'default', lettering: (d && d.lettering) || null, mode: (d && ['chupon', 'mzt'].includes(d.mode)) ? d.mode : 'trad',
   plan: planOf(d), expires: (d && d.expires) || '', expired: isExpired(d) });
 const publicTeam = t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), role: t.role, own: t.own !== false });
 const publicMe = u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin, isSupervisor: u.isSupervisor, mustChange: u.mustChange, teams: u.teams.map(publicTeam) });
@@ -292,7 +292,7 @@ export default async function handler(req, res) {
         const ids = me.teams.map(t => t.id);
         const [r, g] = await Promise.all([
           p.query('select team_id, count(*)::int as n from bs_roster where team_id = any($1) group by team_id', [ids]),
-          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->'us' as us, data->'them' as them from bs_games where team_id = any($1)`, [ids]),
+          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->'us' as us, data->'them' as them, data->'tb'->>'w' as tbw from bs_games where team_id = any($1)`, [ids]),
         ]);
         const stats = Object.fromEntries(ids.map(id => [id, { players: 0, games: 0, last: null }]));
         r.rows.forEach(x => stats[x.team_id].players = x.n);
@@ -301,7 +301,7 @@ export default async function handler(req, res) {
         const byTeam = {}; g.rows.forEach(x => (byTeam[x.team_id] = byTeam[x.team_id] || []).push(x));
         Object.entries(byTeam).forEach(([id, list]) => {
           list.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-          const res = x => { const u = runs(x.us), t = runs(x.them); return { us: u, them: t, res: u > t ? 'G' : u < t ? 'P' : 'E' }; };
+          const res = x => { const u = runs(x.us), t = runs(x.them); return { us: u, them: t, res: u > t ? 'G' : u < t ? 'P' : x.tbw === 'us' ? 'G' : x.tbw === 'them' ? 'P' : 'E' }; };
           const season = String(list[0].date || '').slice(0, 4), rec = { w: 0, l: 0, t: 0 };
           list.filter(x => String(x.date || '').slice(0, 4) === season).forEach(x => { const s = res(x).res; s === 'G' ? rec.w++ : s === 'P' ? rec.l++ : rec.t++; });
           Object.assign(stats[id], { games: list.length, last: list[0].date || null, season, ...rec,
@@ -416,7 +416,7 @@ export default async function handler(req, res) {
                    from bs_teams t order by t.name`),
           p.query('select id, email, name, is_admin, is_supervisor, active, must_change, last_login, created_at from bs_users order by name, email'),
           p.query('select user_id, team_id, role from bs_members'),
-          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->>'ha' as ha, data->'us' as us, data->'them' as them, data->>'_by' as by
+          p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->>'ha' as ha, data->'us' as us, data->'them' as them, data->'tb'->>'w' as tbw, data->>'_by' as by
                    from bs_games order by data->>'date' desc nulls last, updated_at desc limit 8`),
           p.query(`select count(*)::int as n from bs_games where data->>'date' >= to_char(current_date - 7, 'YYYY-MM-DD')`),
         ]);
@@ -424,7 +424,7 @@ export default async function handler(req, res) {
           teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
           users: users.rows.map(u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, active: u.active, mustChange: u.must_change, lastLogin: u.last_login,
             teams: members.rows.filter(m => m.user_id === u.id).map(m => ({ team: m.team_id, role: m.role })) })),
-          recent: recent.rows.map(g => ({ team: g.team_id, date: g.date, opp: g.opp, ha: g.ha, us: Array.isArray(g.us) ? g.us : [], them: Array.isArray(g.them) ? g.them : [], by: g.by || '' })),
+          recent: recent.rows.map(g => ({ team: g.team_id, date: g.date, opp: g.opp, ha: g.ha, us: Array.isArray(g.us) ? g.us : [], them: Array.isArray(g.them) ? g.them : [], tb: g.tbw ? { w: g.tbw } : null, by: g.by || '' })),
           gamesWeek: week.rows[0].n,
         });
       }
@@ -435,7 +435,7 @@ export default async function handler(req, res) {
         const wordmark = typeof b.wordmark === 'string' && b.wordmark.startsWith('data:image/') && b.wordmark.length < 420 * 1024 ? b.wordmark : (b.wordmark === '' ? '' : undefined);
         const font = ['default','script','brush','college','slab','gothic','western','modern','lobster','damion','grandhotel','leckerli','sansita','bevan','dafoe'].includes(b.font) ? b.font : undefined;
         const lettering = isObj(b.lettering) ? { tail: b.lettering.tail === 'thick' ? 'thick' : !!b.lettering.tail, fill: ['team', 'solid', 'varsity'].includes(b.lettering.fill) ? b.lettering.fill : 'white', tilt: !!b.lettering.tilt } : undefined;
-        const mode = ['trad', 'chupon'].includes(b.mode) ? b.mode : undefined;
+        const mode = ['trad', 'chupon', 'mzt'].includes(b.mode) ? b.mode : undefined;
         const plan = PLANS.includes(b.plan) ? b.plan : undefined;
         // Vigencia: fecha AAAA-MM-DD; vacía = sin vencimiento
         if (b.expires !== undefined && b.expires !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(String(b.expires))) fail(400, 'bad_date', 'La fecha de vencimiento no es válida.');

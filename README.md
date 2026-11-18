@@ -35,6 +35,18 @@ El selector **Temporada** del encabezado filtra todos los módulos por año (o "
 - **Ficha del jugador**: números, **en qué terminan sus turnos** (hits, bases por bolas, sacrificios, outs y ponches, y cómo se reparten sus hits), **tendencias** comparadas con el equipo (racha, poder, ponches, ojo, velocidad, dirección y situación; en el enlace para papás no salen las de "atención"), **tipo de batazo** (rodados, elevados y líneas, sacado de la jugada anotada), **calidad del contacto** (% de contacto fuerte, turnos de calidad, AVG según el contacto y turnos de calidad por juego; desde 8 batazos marcados), **evolución** (últimos 3 juegos), **metas**, **por situación**, **mapa de batazos**, juego por juego, tarjetas y **enlace para papás**.
 - **Tarjetas**: cumpleaños (jugador, papás, redes), MVP (portada, marcador, medalla) y **tarjeta de temporada** del jugador (AVG, OBP, SLG, OPS y lo destacado; temporada y últimos 5 juegos), en imagen o PDF. La de temporada sale desde la ficha, el Roster y el enlace para papás.
 
+## Torneo Mazatlán (Pre-iniciación 5-6 años)
+
+Modalidad **Torneo Mazatlán** en el Box score (y como modalidad por defecto del equipo en Admin). Sigue las reglas y los criterios de desempate del torneo:
+
+- **5 entradas**; el juego es legal a partir de la 3a. La liga se llena sola con *Mazatlán Baseball Tournament*.
+- **La media entrada se cierra con 10 bateadores o 3 outs**, lo que pase primero, y la siguiente la abre el que quedó en turno. La hoja marca qué turno abre cada entrada, raya las celdas fuera de orden y avisa del 10° bateador (debe anunciarse).
+- Resultados permitidos: hit, error, bola ocupada, ponche (tirándole o cantado, por los 5 lanzamientos), out y doble play. No hay base por bolas, golpe, toque, pisa y corre ni robo de base. No hay lanzadores en la hoja.
+- Cuadre: entradas sin cerrar, más de 10 bateadores o 3 outs, orden corrido, jugadas que no existen en el torneo y **mínimo 2 entradas a la defensiva por niño** (columna EC de Defensiva).
+- **Desempate** si terminan empatados: A más outs a la defensiva, B menos ponches, C más hits, D más dejados en base, E más HR, F volado. Se calcula solo con las dos hojas; si no se lleva la hoja del rival o se va a volado, se elige en **Desempate** quién lo ganó y por qué criterio. El juego cuenta como ganado o perdido en récords, listas, resumen, en vivo y PDF (`g.tb`).
+- El **logo del torneo** (`img/torneo-mazatlan.png`) sale en la captura, la lista de juegos, el resumen, los PDF del box score y de la hoja, las tarjetas MVP, el resumen para WhatsApp y la vista en vivo. Las estadísticas tienen el filtro **Torneo Mazatlán** y usan las columnas de categorías chicas (EB, BT, Contacto).
+- Las reglas están en `js/calc.js` (`MZT`, `MZT_TB`, `mztTiebreak`).
+
 ## Reglas de lanzamientos (Little League / Pitch Smart)
 
 Máximo por día: 7-8 años 50 · 9-10 años 75 · 11-12 años 85 · 13-16 años 95 · 17-18 años 105.

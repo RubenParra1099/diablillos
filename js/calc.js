@@ -249,7 +249,7 @@ function sidePAs(slots, cells, inns) {
   return { list, L };
 }
 function liveState(g) {
-  const inns = g.inns || 9, ch = g.mode === 'chupon', bpi = Math.max(1, num(g.bpi) || 10);
+  const inns = g.inns || 9, ch = g.mode === 'chupon', mz = g.mode === 'mzt', bpi = Math.max(1, num(g.bpi) || 10);
   const first = g.ha === 'L' ? 'them' : 'us', second = first === 'us' ? 'them' : 'us';
   const S = { us: sidePAs(g.us.slots, g.us.cells, inns), them: sidePAs(g.them.slots, g.them.cells, inns) };
   const manual = !S.them.list.length, runs = (g.them && g.them.runs) || [];
@@ -257,7 +257,7 @@ function liveState(g) {
   const info = (side, inn) => {
     const pas = S[side].list.filter(x => x.inn === inn), outs = Math.min(3, pas.filter(x => num(x.pa.out)).length);
     if (side === 'them' && manual) return { pas, outs: 0, active: typed(inn), done: typed(inn), manual: true };
-    return { pas, outs, active: pas.length > 0, done: ch ? pas.length >= bpi : outs >= 3 };
+    return { pas, outs, active: pas.length > 0, done: ch ? pas.length >= bpi : mz ? pas.length >= bpi || outs >= 3 : outs >= 3 };
   };
   const halves = [];
   for (let inn = 1; inn <= inns; inn++) halves.push({ inn, half: 'top', side: first }, { inn, half: 'bot', side: second });
@@ -274,6 +274,18 @@ function liveState(g) {
     x.pas.forEach(p => plays.push({ inn: h.inn, half: h.half, side: h.side, si: p.si, pa: p.pa }));
   });
   return { inn: H.inn, half: H.half, side: H.side, outs: hi.outs, pas: hi.pas.length, manual: !!hi.manual, bases, next: { us: nextOf('us'), them: nextOf('them') }, over, started: last >= 0, plays };
+}
+
+/* ---------- Torneo Mazatlán (Pre-iniciación 5-6 años) ---------- */
+// La entrada se cierra con 10 bateadores o 3 outs, lo que pase primero, y la siguiente sigue con el que quedó en turno.
+// 5 entradas, juego legal desde la 3a, sin base por bolas, toque, robo ni pisa y corre (cada bateador tiene 5 lanzamientos).
+const MZT = { name: 'Mazatlán Baseball Tournament', inns: 5, bpi: 10, legal: 3, minDef: 2, res: ['H1', 'H2', 'H3', 'HR', 'E', 'BO', 'K', 'KC', 'O', 'DP'] };
+// Criterios de desempate si al terminar las entradas siguen empatados, en orden. dir 1 = gana el mayor, -1 = gana el menor.
+const MZT_TB = [['outs', 'A', 'más outs a la defensiva', 1], ['so', 'B', 'menos ponches', -1], ['h', 'C', 'más hits', 1], ['lob', 'D', 'más corredores dejados en base', 1], ['hr', 'E', 'más home runs', 1]];
+// a y b: { outs (outs que hizo a la defensiva), so, h, lob, hr } de cada equipo. Si todo empata se decide por volado (F, sin ganador).
+function mztTiebreak(a, b) {
+  for (const [k, c, lab, dir] of MZT_TB) { const x = num(a[k]), y = num(b[k]); if (x !== y) return { w: (x - y) * dir > 0 ? 'a' : 'b', k: c, lab, a: x, b: y }; }
+  return { w: null, k: 'F', lab: 'volado' };
 }
 
 // Ficha: en qué terminan los turnos de un bateador (línea ya sumada) y cómo se reparten sus hits

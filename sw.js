@@ -1,8 +1,8 @@
 // Service worker: deja abrir la app sin señal en el campo.
 // La app (index.html, js/calc.js, íconos) se pide primero a la red para tener siempre la última versión y, si no hay señal, sale de la copia.
 // Las librerías (PDF) y tipografías se sirven de la copia. Los datos (/api/) nunca se guardan aquí: de eso se encarga la app.
-const CACHE = 'bs-app-v1';
-const SHELL = ['/', '/index.html', '/js/calc.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'bs-app-v2';
+const SHELL = ['/', '/index.html', '/js/calc.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/img/torneo-mazatlan.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

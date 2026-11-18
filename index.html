@@ -574,6 +574,15 @@ dialog.narrow{width:min(560px,calc(100vw - 32px))}
 dialog::backdrop{background:rgba(5,15,10,.55)}
 .dlg{padding:18px;display:flex;flex-direction:column;gap:14px;margin:0}
 .boxhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:baseline}
+/* Torneo Mazatlán: logo del torneo en la captura, el resumen, la lista de juegos y la vista en vivo */
+.tour-bar{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #f4b324;border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--paper)}
+.tour-bar img{width:76px;height:auto;flex:none}
+.tour-bar b{display:block;font-size:14px}.tour-bar span{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
+.tour-head{display:flex;gap:12px;align-items:center;min-width:0}.tour-head img{width:84px;height:auto;flex:none}
+.tour-ico{width:30px;height:auto;vertical-align:middle;margin-right:4px}
+.tb-note{font-size:13px;border-left:4px solid #f4b324;padding:6px 10px;background:var(--paper);border-radius:4px}
+.lv-tour{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;margin-bottom:6px}.lv-tour img{width:58px;height:auto}
+@media (max-width:560px){.tour-bar img{width:56px}.tour-head img{width:60px}}
 .notes{font-size:13px;display:flex;flex-direction:column;gap:3px}
 .notes b{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;background:var(--bad-bg);padding:8px 10px;border-radius:4px}
@@ -831,6 +840,7 @@ body.live .record{display:none!important}
           <button type="button" class="btn fs-btn" id="btnFs" aria-pressed="false"></button>
         </div>
       </div>
+      <div class="tour-bar" id="tourBar" hidden><img src="/img/torneo-mazatlan.png" alt="Mazatlán Baseball Tournament"><div><b>Mazatlán Baseball Tournament · Pre-iniciación (5-6 años)</b><span>5 entradas (juego legal desde la 3a) · la entrada se cierra con 10 bateadores o 3 outs y la siguiente sigue con el que quedó en turno · 10 a la defensiva y cada niño mínimo 2 entradas en el campo · 5 lanzamientos por bateador, sin base por bolas, toque, robo ni pisa y corre · si terminan empatados gana: A más outs a la defensiva, B menos ponches, C más hits, D más dejados en base, E más HR, F volado.</span></div></div>
       <div class="confirm" id="draftBar" hidden style="background:var(--warn-bg)"><span id="draftTxt" style="flex:1;min-width:200px"></span><button class="btn sm primary" id="draftYes">Continuar ese juego</button><button class="btn sm" id="draftNo">Descartarlo</button></div>
 
       <div class="sheet-head">
@@ -839,10 +849,12 @@ body.live .record{display:none!important}
         <label class="f">Fecha<input type="date" id="gDate"></label>
         <label class="f">Rival<input id="gOpp" placeholder="Nombre del rival" list="oppList" autocomplete="off"></label><datalist id="oppList"></datalist>
         <label class="f">Nosotros somos<select id="gHA"><option value="L">Club local</option><option value="V">Club visitante</option></select></label>
-        <label class="f">Modalidad<select id="gMode"><option value="trad">Tradicional</option><option value="chupon">Chupón (10 bateadores por entrada)</option></select></label>
+        <label class="f">Modalidad<select id="gMode"><option value="trad">Tradicional</option><option value="chupon">Chupón (10 bateadores por entrada)</option><option value="mzt">Torneo Mazatlán · Pre-iniciación (10 bateadores o 3 outs)</option></select></label>
         <label class="f" id="gBpiWrap" hidden>Bateadores por entrada<input type="number" id="gBpi" min="1" max="15" value="10"></label>
         <label class="f">Entradas<input type="number" id="gInns" min="1" max="15" value="9"></label>
         <label class="f">Estadio / notas<input id="gNotes" placeholder="Opcional"></label>
+        <label class="f" id="gTbWrap" hidden>Desempate<select id="gTb"><option value="">Automático: criterios A–E con las dos hojas</option><option value="us">Lo ganamos nosotros</option><option value="them">Lo ganó el rival</option></select></label>
+        <label class="f" id="gTbKWrap" hidden>Criterio<select id="gTbK"><option value="A">A · Más outs a la defensiva</option><option value="B">B · Menos ponches</option><option value="C">C · Más hits</option><option value="D">D · Más dejados en base</option><option value="E">E · Más home runs</option><option value="F" selected>F · Volado</option></select></label>
         <div class="clubs"><span>Club local: <b id="clubLocal">—</b></span><span>Club visitante: <b id="clubVis">—</b></span></div>
       </div>
 
@@ -912,7 +924,7 @@ body.live .record{display:none!important}
         <h2>Estadísticas de bateo</h2>
         <div class="row">
           <label class="f">Juegos<select id="bRange"><option value="all">Temporada completa</option><option value="5">Últimos 5</option><option value="10">Últimos 10</option></select></label>
-          <label class="f">Modalidad<select class="modeSel" id="mSelB"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Modalidad<select class="modeSel" id="mSelB"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label>
           <label class="inline-check"><input type="checkbox" id="bQual"> Solo calificados</label>
           <button class="btn sm" id="btnCsvB">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfB">Reporte PDF</button>
@@ -966,7 +978,7 @@ body.live .record{display:none!important}
       <div class="row spread">
         <h2>Estadísticas de pitcheo</h2>
         <div class="row">
-          <label class="f">Modalidad<select class="modeSel" id="mSelP"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Modalidad<select class="modeSel" id="mSelP"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label>
           <label class="f">Entradas por juego (ERA)<select id="pInnBase"><option value="9">9 (MLB)</option><option value="7">7 (sóftbol / ligas de 7)</option></select></label>
           <button class="btn sm" id="btnCsvP">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfP">Reporte PDF</button>
@@ -1007,7 +1019,7 @@ body.live .record{display:none!important}
       <div class="row spread">
         <h2>Estadísticas de fildeo</h2>
         <div class="row">
-          <label class="f">Modalidad<select class="modeSel" id="mSelF"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Modalidad<select class="modeSel" id="mSelF"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label>
           <label class="f">Agrupar<select id="fGroup"><option value="player">Por jugador</option><option value="pos">Por posición</option></select></label>
           <button class="btn sm" id="btnCsvF">Exportar CSV</button>
           <button class="btn sm primary" id="btnPdfF">Reporte PDF</button>
@@ -1043,7 +1055,7 @@ body.live .record{display:none!important}
         <h2>Indicadores sabermétricos</h2>
         <div class="row">
           <label class="f">Juegos<select id="iRange"><option value="all">Temporada completa</option><option value="5">Últimos 5</option><option value="10">Últimos 10</option></select></label>
-          <label class="f">Modalidad<select id="iMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Modalidad<select id="iMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label>
           <button class="btn sm primary" id="btnPdfInd">Reporte PDF</button>
         </div>
       </div>
@@ -1058,7 +1070,7 @@ body.live .record{display:none!important}
         <h2>Proyección del jugador</h2>
         <div class="row">
           <label class="f">Jugador<select id="pjPlayer"></select></label>
-          <label class="f">Modalidad<select id="pjMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="all">Todas</option></select></label>
+          <label class="f">Modalidad<select id="pjMode"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label>
           <label class="f">Horizonte<select id="pjHor"><option value="game">Próximo juego</option><option value="season">Próxima temporada</option></select></label>
           <button class="btn sm primary" id="btnPdfProj">Reporte PDF</button>
         </div>
@@ -1197,7 +1209,7 @@ body.live .record{display:none!important}
     <div data-p="dat" class="adm-grid">
       <label class="f">Nombre del equipo<input id="atName" required maxlength="60" placeholder="Ej. Diablillos" autocomplete="off"></label>
       <label class="f">Categoría<input id="atCat" maxlength="60" list="atCatList" placeholder="Elige o escribe una" autocomplete="off"><datalist id="atCatList"></datalist></label>
-      <label class="f">Modalidad por defecto<select id="atMode"><option value="trad">Tradicional (9 entradas)</option><option value="chupon">Chupón (10 bateadores por entrada, 4 entradas)</option></select></label>
+      <label class="f">Modalidad por defecto<select id="atMode"><option value="trad">Tradicional (9 entradas)</option><option value="chupon">Chupón (10 bateadores por entrada, 4 entradas)</option><option value="mzt">Torneo Mazatlán · Pre-iniciación (5 entradas, 10 bateadores o 3 outs)</option></select></label>
       <label class="f">Paquete<select id="atPlan"><option value="basico">Básico · $1,500 por semestre</option><option value="gold">Gold · $3,000 por semestre</option><option value="pro">Pro · $7,500 por semestre</option></select></label>
       <label class="f">Vigencia hasta<span class="row" style="gap:6px;flex-wrap:nowrap"><input type="date" id="atExpires" style="flex:1;min-width:0"><button type="button" class="btn sm" id="atRenew" title="Seis meses a partir de hoy o del vencimiento actual">+6 meses</button></span></label>
       <label class="f">Dirección del equipo<input id="atSlug" maxlength="40" placeholder="Se genera del nombre" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
@@ -1290,8 +1302,8 @@ body.live .record{display:none!important}
   </div>
   <div class="row">
     <label class="f">CI (impulsadas)<input id="paRbi" type="number" min="0" max="4" style="width:80px"></label>
-    <label class="f">BR (robadas)<input id="paSb" type="number" min="0" max="3" style="width:80px"></label>
-    <label class="inline-check" style="padding-bottom:8px"><input type="checkbox" id="paCs"> Atrapado robando</label>
+    <label class="f" id="paSbWrap">BR (robadas)<input id="paSb" type="number" min="0" max="3" style="width:80px"></label>
+    <label class="inline-check" id="paCsWrap" style="padding-bottom:8px"><input type="checkbox" id="paCs"> Atrapado robando</label>
   </div>
   <label class="f" id="paPitWrap" hidden>Lanzador que enfrentó el turno<select id="paPit"></select></label>
   <div class="row spread">
@@ -1322,6 +1334,10 @@ function blankDraft() {
   if (tm === 'chupon') return { id: null, no: '', liga: '', date: today(), opp: '', ha: 'L', inns: 4, notes: '',
     slots: Array.from({ length: 12 }, () => ({ pid: '', pos: '', sub: null })), cells: {},
     them: Array(4).fill(''), themE: '', pit: [], fld: {}, legacy: null, mode: 'chupon', bpi: 10,
+    oslots: Array.from({ length: 12 }, () => ({ num: '', name: '', pos: '', sub: null })), ocells: {} };
+  if (tm === 'mzt') return { id: null, no: '', liga: MZT.name, date: today(), opp: '', ha: 'L', inns: MZT.inns, notes: '',
+    slots: Array.from({ length: 12 }, () => ({ pid: '', pos: '', sub: null })), cells: {},
+    them: Array(MZT.inns).fill(''), themE: '', pit: [], fld: {}, legacy: null, mode: 'mzt', bpi: MZT.bpi, tbw: '', tbk: 'F',
     oslots: Array.from({ length: 12 }, () => ({ num: '', name: '', pos: '', sub: null })), ocells: {} };
   return { id: null, no: '', liga: '', date: today(), opp: '', ha: 'L', inns: 9, notes: '',
     slots: Array.from({ length: 9 }, () => ({ pid: '', pos: '', sub: null })), cells: {},
@@ -1513,7 +1529,7 @@ function renderHome() {
       : '<div class="home-last"><span class="op sub">Sin juegos capturados todavía</span></div>';
     return `<a class="adm-card home-card" href="/${esc(t.slug)}" data-slug="${esc(t.slug)}" data-q="${esc((t.name + ' ' + (t.category || '') + ' ' + t.slug).toLowerCase())}">
     <div class="adm-band" data-plate="${esc(t.id)}">${t.logo ? `<img class="lg" src="${esc(t.logo)}" alt="">` : `<span class="ini">${esc((t.name[0] || '?').toUpperCase())}</span>`}${t.wordmark ? `<img class="wm" src="${esc(t.wordmark)}" alt="${esc(t.name)}">` : '<span class="tp-name"></span>'}</div>
-    <div class="adm-cbody"><div class="row spread" style="gap:8px;align-items:baseline"><div style="min-width:0"><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : ''}</div><span class="chip">${esc(ROLE_LAB[t.role] || '')}</span></div>
+    <div class="adm-cbody"><div class="row spread" style="gap:8px;align-items:baseline"><div style="min-width:0"><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : t.mode === 'mzt' ? ' <span class="chip">Torneo Mazatlán</span>' : ''}</div><span class="chip">${esc(ROLE_LAB[t.role] || '')}</span></div>
     ${rec}
     <div class="adm-meta"><span><b>${x.players}</b> jugadores</span><span><b>${x.games}</b> juegos</span></div>
     <div class="row spread home-foot" style="gap:8px"><div class="row" style="gap:8px">${planChip(t.plan)}${expTxt(t)}</div><span class="home-go">Abrir /${esc(t.slug)} →</span></div></div></a>`; };
@@ -1689,7 +1705,7 @@ function seasonNow() { if (curSeason === 'all') return 'all'; const l = seasonLi
 const seasonGames = () => { const y = seasonNow(); return sortedGames().filter(g => y === 'all' || String(g.date || '').slice(0, 4) === y); };
 const seasonLabel = () => seasonNow() === 'all' ? 'Carrera completa' : 'Temporada ' + seasonNow();
 const sortedGames = () => Object.entries(S.games).map(([id, g]) => ({ id, ...g })).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(b.id));
-function gameScore(g) { const us = sumA(g.us), them = sumA(g.them); return { us, them, res: us > them ? 'G' : us < them ? 'P' : 'E' }; }
+function gameScore(g) { const us = sumA(g.us), them = sumA(g.them), w = us === them && g.tb && g.tb.w; return { us, them, res: us > them || w === 'us' ? 'G' : us < them || w === 'them' ? 'P' : 'E', tb: !!w }; }
 const playerOpts = (sel, blank = '— jugador —') => `<option value="">${blank}</option>` + players().map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.num ?? '')} ${esc(p.name)}</option>`).join('') + (sel && !S.roster[sel] ? `<option value="${esc(sel)}" selected>Jugador eliminado</option>` : '');
 const posOpts = sel => '<option value="">Pos</option>' + POS.map(p => `<option${p === sel ? ' selected' : ''}>${p}</option>`).join('');
 
@@ -1726,12 +1742,42 @@ function deriveSide(slots, cells, n, keyAt, pitOf) {
 }
 /* Modalidad Chupón: batean N por entrada en orden corrido; los outs no cierran la entrada */
 const isCh = () => draft.mode === 'chupon';
-const bpiOf = () => Math.max(1, num(draft.bpi) || 10);
-function rotation(slots, inn) {
-  const L = lineupLen(slots), b = bpiOf(), start = ((inn - 1) * b) % L;
+/* Torneo Mazatlán: la entrada se cierra con 10 bateadores o 3 outs; la siguiente abre el que quedó en turno */
+const isMz = () => draft.mode === 'mzt';
+const isKid = () => isCh() || isMz();
+const kidMode = m => m === 'chupon' || m === 'mzt';
+const isTour = g => !!g && g.mode === 'mzt';
+// Logo del Torneo Mazatlán para PDF y tarjetas: se carga la primera vez que se necesita
+const TOUR_LOGO = '/img/torneo-mazatlan.png';
+let tourLogoData = null, tourLogoP = null;
+function tourLogo() {
+  if (tourLogoData) return Promise.resolve(tourLogoData);
+  return tourLogoP ||= new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = TOUR_LOGO; }).then(im => {
+    if (!im) { tourLogoP = null; return null; }
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0);
+    return tourLogoData = { src: c.toDataURL('image/png'), ratio: im.naturalWidth / im.naturalHeight, img: im };
+  });
+}
+const bpiOf = () => isMz() ? MZT.bpi : Math.max(1, num(draft.bpi) || 10);
+function rotation(slots, inn, cells) {
+  const L = lineupLen(slots), b = bpiOf();
+  let start = ((inn - 1) * b) % L;
+  if (isMz()) { const prev = sidePAs(slots, cells || {}, inn - 1).list; start = prev.length ? (prev[prev.length - 1].si + 1) % L : 0; }
   const order = Array.from({ length: b }, (_, k) => (start + k) % L);
   return { start, order, last: order[b - 1], L };
 }
+// Desempate del Torneo Mazatlán para la hoja que se está capturando (null si no aplica)
+function draftTb(der, od) {
+  if (!isMz()) return null;
+  const themRuns = od.anyCell ? od.runs : sumA(draft.them), played = der.inn.filter(I => I.pa).length;
+  if (der.runs !== themRuns || !der.anyCell || played < MZT.legal) return null;
+  if (draft.tbw === 'us' || draft.tbw === 'them') { const k = draft.tbk || 'F', c = MZT_TB.find(x => x[1] === k); return { w: draft.tbw, k, lab: c ? c[2] : 'volado', manual: true }; }
+  if (!od.anyCell) return { w: null, need: 'sheet' };
+  const side = (d, other) => ({ outs: other.inn.reduce((a, I) => a + I.outs, 0), so: d.slotTot.reduce((a, t) => a + (t.so || 0), 0), h: d.hits, lob: d.inn.reduce((a, I) => a + I.lob, 0), hr: d.slotTot.reduce((a, t) => a + (t.hr || 0), 0) });
+  const r = mztTiebreak(side(der, od), side(od, der));
+  return r.w ? { w: r.w === 'a' ? 'us' : 'them', k: r.k, lab: r.lab, us: r.a, them: r.b } : { w: null, need: 'coin' };
+}
+const tbText = (tb, opp) => tb && tb.w ? `${tb.w === 'us' ? S.team : (opp || 'Rival')} gana el desempate · criterio ${tb.k}: ${tb.lab}${tb.us != null ? ` (${S.team} ${tb.us}, ${opp || 'Rival'} ${tb.them})` : ''}` : '';
 const deriveSheet = d => deriveSide(d.slots, d.cells, d.inns, (s, i) => slotPidAt(s, i));
 // Rival: llave por fila ('3' titular, '3s' sustituto)
 const oKeyAt = (s, i, si) => (s.sub && (s.sub.name || s.sub.num) && i >= (num(s.sub.from) || 1)) ? si + 's' : si + '';
@@ -1817,7 +1863,10 @@ function renderClubs() {
 }
 const CH_INNS = 4, CH_MAX = 5;
 function fitInns(n) { draft.inns = n; draft.them = draft.them.slice(0, n); while (draft.them.length < n) draft.them.push(''); $('#gInns').value = n; }
-function syncMode() { $('#gInns').max = isCh() ? CH_MAX : 15; $('#gMode').value = draft.mode || 'trad'; $('#gBpi').value = draft.bpi || 10; $('#gBpiWrap').hidden = !isCh(); $('#pitWrap').hidden = isCh(); }
+function syncMode() {
+  $('#gInns').max = isKid() ? CH_MAX : 15; $('#gMode').value = draft.mode || 'trad'; $('#gBpi').value = draft.bpi || 10; $('#gBpiWrap').hidden = !isCh(); $('#pitWrap').hidden = isKid();
+  $('#tourBar').hidden = !isMz(); if (isMz()) tourLogo(); $('#gTb').value = draft.tbw || ''; $('#gTbK').value = draft.tbk || 'F';
+}
 function syncMetaInputs() {
   syncMode();
   $('#gNo').value = draft.no; $('#gLiga').value = draft.liga; $('#gDate').value = draft.date; $('#gOpp').value = draft.opp;
@@ -1831,13 +1880,17 @@ Object.keys(META).forEach(id => $('#' + id).addEventListener('input', e => { if 
 $('#gMode').addEventListener('change', e => {
   draft.mode = e.target.value;
   if (isCh() && draft.inns > CH_MAX || isCh() && draft.inns === 9) fitInns(CH_INNS);
-  if (!isCh() && draft.inns <= CH_MAX) fitInns(9);
-  if (isCh()) { while (draft.slots.length < 12) draft.slots.push({ pid: '', pos: '', sub: null }); while (draft.oslots.length < 12) draft.oslots.push({ num: '', name: '', pos: '', sub: null }); }
+  if (isMz()) { fitInns(MZT.inns); draft.bpi = MZT.bpi; if (!draft.liga.trim()) { draft.liga = MZT.name; $('#gLiga').value = draft.liga; } }
+  else if (draft.liga === MZT.name) { draft.liga = ''; $('#gLiga').value = ''; }
+  if (!isKid() && draft.inns <= CH_MAX) fitInns(9);
+  if (isKid()) { while (draft.slots.length < 12) draft.slots.push({ pid: '', pos: '', sub: null }); while (draft.oslots.length < 12) draft.oslots.push({ num: '', name: '', pos: '', sub: null }); }
   syncMode(); renderSheet();
 });
+$('#gTb').addEventListener('change', e => { draft.tbw = e.target.value; renderChecks(); });
+$('#gTbK').addEventListener('change', e => { draft.tbk = e.target.value; renderChecks(); });
 $('#gBpi').addEventListener('change', e => { draft.bpi = Math.max(1, Math.min(15, num(e.target.value) || 10)); e.target.value = draft.bpi; renderSheet(); });
 $('#gInns').addEventListener('change', e => {
-  const n = Math.max(1, Math.min(isCh() ? CH_MAX : 15, num(e.target.value) || (isCh() ? CH_INNS : 9))); draft.inns = n; e.target.value = n;
+  const n = Math.max(1, Math.min(isKid() ? CH_MAX : 15, num(e.target.value) || (isMz() ? MZT.inns : isCh() ? CH_INNS : 9))); draft.inns = n; e.target.value = n;
   draft.them = draft.them.slice(0, n); while (draft.them.length < n) draft.them.push('');
   renderSheet();
 });
@@ -1880,14 +1933,14 @@ function renderSheet() {
   const n = draft.inns, c = cur();
   const der = side === 'us' ? deriveSheet(draft) : deriveOpp();
   let h = '<thead><tr><th colspan="2" style="text-align:left;padding-left:8px">Nombre · Pos</th>';
-  for (let i = 1; i <= n; i++) h += `<th class="inn">${i}${isCh() ? `<small>Abre ${rotation(c.slots, i).start + 1}</small>` : ''}</th>`;
+  for (let i = 1; i <= n; i++) h += `<th class="inn">${i}${isKid() ? `<small>Abre ${rotation(c.slots, i, c.cells).start + 1}</small>` : ''}</th>`;
   TOTC.forEach(([k, lab], i) => h += `<th class="${i === 0 ? 'first' : ''}">${lab}</th>`);
   h += '</tr></thead><tbody>';
   c.slots.forEach((s, si) => {
     h += `<tr data-si="${si}"><td class="slotno">${si + 1}</td><td class="slot">${slotCellHTML(s, si)}</td>`;
     for (let i = 1; i <= n; i++) {
       const arr = c.cells[si + '_' + i] || [];
-      const rot = isCh() ? rotation(c.slots, i) : null, cls = rot ? (rot.order.includes(si) ? (rot.last === si ? ' closer' : '') : ' off') : '';
+      const rot = isKid() ? rotation(c.slots, i, c.cells) : null, cls = rot ? (rot.order.includes(si) ? (isCh() && rot.last === si ? ' closer' : '') : ' off') : '';
       h += `<td class="cell${cls}"><button type="button" data-si="${si}" data-inn="${i}" aria-label="Turno ${si + 1}, entrada ${i}${arr[0] ? ': ' + esc(arr[0].res) : ''}">${diamondSVG(arr[0], arr.length > 1 ? arr.length - 1 : 0)}</button></td>`;
     }
     const t = der.slotTot[si];
@@ -1895,7 +1948,7 @@ function renderSheet() {
     h += '</tr>';
   });
   const tt = {}; TOTC.forEach(([k]) => tt[k] = der.slotTot.reduce((a, t) => a + (t[k] || 0), 0));
-  const sumRow = (lab, key) => `<tr class="sum"><td colspan="2" class="lab">${lab}</td>` + der.inn.map(I => `<td class="${key === 'outs' && !isCh() && I.pa && I.outs !== 3 ? 'badouts' : ''}">${I.pa ? I[key] : ''}</td>`).join('');
+  const sumRow = (lab, key) => `<tr class="sum"><td colspan="2" class="lab">${lab}</td>` + der.inn.map(I => `<td class="${key === 'outs' && !isCh() && I.pa && (I.outs > 3 || (I.outs !== 3 && !(isMz() && I.pa >= bpiOf()))) ? 'badouts' : ''}">${I.pa ? I[key] : ''}</td>`).join('');
   h += '</tbody><tfoot>';
   h += sumRow('C · carreras', 'c') + TOTC.map(([k], i) => `<td class="tot${i === 0 ? ' first' : ''}" style="font-weight:700">${tt[k]}</td>`).join('') + '</tr>';
   h += sumRow('H · hits', 'h') + `<td colspan="${TOTC.length}" class="first"></td></tr>`;
@@ -1958,14 +2011,15 @@ function openPA(si, inn, idx) {
   const s = c.slots[si];
   $('#paWho').textContent = side === 'us' ? (pName(slotPidAt(s, inn)) || `Bateador ${si + 1}`) : oLabel(oKeyAt(s, inn, si));
   $('#paWhere').textContent = `${side === 'us' ? S.team : (draft.opp || 'Rival')} · Turno ${si + 1} · Entrada ${inn}`;
-  const rotP = isCh() ? rotation(c.slots, inn) : null, closer = rotP && rotP.last === si;
+  const rotP = isKid() ? rotation(c.slots, inn, c.cells) : null, closer = rotP && rotP.last === si;
   $('#paNote').hidden = !rotP || (!closer && rotP.order.includes(si));
-  if (rotP) $('#paNote').innerHTML = closer ? `<b>CIERRE</b><span>Último bateador (${bpiOf()}°) de la entrada: corre todas las bases hasta que la defensa pise una base más adelante que él. Marca hasta dónde llegó o si anotó, y marca "Anotó" en los corredores que alcanzaron a entrar.</span>` : `<b>FUERA DE TURNO</b><span>Según la rotación, a este bateador no le toca batear en la ${inn}a entrada. Abre el turno ${rotP.start + 1}.</span>`;
+  if (rotP && isMz()) $('#paNote').innerHTML = closer ? `<b>10° BATEADOR</b><span>Debe anunciarse al umpire antes de batear; si no se anuncia, se marca out (regla H). La entrada se cierra con él o antes si el rival hace 3 outs.</span>` : `<b>FUERA DE TURNO</b><span>Según el orden, la ${inn}a entrada la abre el turno ${rotP.start + 1} (el que quedó en turno en la entrada anterior).</span>`;
+  else if (rotP) $('#paNote').innerHTML = closer ? `<b>CIERRE</b><span>Último bateador (${bpiOf()}°) de la entrada: corre todas las bases hasta que la defensa pise una base más adelante que él. Marca hasta dónde llegó o si anotó, y marca "Anotó" en los corredores que alcanzaron a entrar.</span>` : `<b>FUERA DE TURNO</b><span>Según la rotación, a este bateador no le toca batear en la ${inn}a entrada. Abre el turno ${rotP.start + 1}.</span>`;
   $('#paTabs').innerHTML = arr.length > 1 ? arr.map((_, j) => `<button type="button" class="btn sm" data-j="${j}"${j === idx ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>${j + 1}a aparición</button>`).join('') : '';
   $('#paMore').hidden = paCtx.isNew || idx !== arr.length - 1;
   $('#paDel').hidden = paCtx.isNew;
   $('#paPlay').value = pa.play || ''; $('#paRbi').value = num(pa.rbi) || ''; $('#paSb').value = num(pa.sb) || ''; $('#paCs').checked = !!pa.cs;
-  $('#paPitWrap').hidden = side !== 'them';
+  $('#paPitWrap').hidden = side !== 'them' || isMz(); $('#paSbWrap').hidden = $('#paCsWrap').hidden = isMz();
   if (side === 'them') {
     const auto = activePitcher(inn);
     $('#paPit').innerHTML = `<option value="">Automático${auto ? ' (' + esc(pName(auto)) + ')' : ' (agrega lanzadores)'}</option>` + draft.pit.filter(p => p.pid).map(p => `<option value="${esc(p.pid)}"${pa.p === p.pid ? ' selected' : ''}>${esc(pName(p.pid))}</option>`).join('');
@@ -1976,7 +2030,7 @@ function openPA(si, inn, idx) {
 function paRender() {
   const pa = paCtx.pa, groups = {};
   Object.entries(RES).forEach(([k, r]) => (groups[r.g] ||= []).push(k));
-  if (isCh()) { const ok = ['H1', 'H2', 'H3', 'HR', 'E', 'BO', 'K', 'O']; Object.keys(groups).forEach(g => { groups[g] = groups[g].filter(k => ok.includes(k)); if (!groups[g].length) delete groups[g]; }); }
+  if (isKid()) { const ok = isMz() ? MZT.res : ['H1', 'H2', 'H3', 'HR', 'E', 'BO', 'K', 'O']; Object.keys(groups).forEach(g => { groups[g] = groups[g].filter(k => ok.includes(k)); if (!groups[g].length) delete groups[g]; }); }
   $('#paRes').innerHTML = Object.entries(groups).map(([g, ks]) => `<div class="grp"><span>${g}</span><div class="seg">${ks.map(k => `<button type="button" data-res="${k}" aria-pressed="${pa.res === k}" title="${RES[k].lab}">${k}</button>`).join('')}</div></div>`).join('');
   $('#paDesc').textContent = pa.res ? RES[pa.res].lab : 'Elige el resultado del turno.';
   $('#paReach').innerHTML = [['0', '—'], ['1', '1a'], ['2', '2a'], ['3', '3a'], ['4', 'Anotó']].map(([v, l]) => `<button type="button" data-reach="${v}" aria-pressed="${num(pa.reach) === +v}">${l}</button>`).join('');
@@ -2125,24 +2179,66 @@ function inningOutsCheck(d, batHome, myRuns, theirRuns, who, add) {
   if (!batted.length) return;
   bad.length ? add('warn', `${who}: entradas sin 3 outs anotados: ${bad.join(', ')}. Revisa los rombos (marca también los outs de corredores).`) : add('ok', `${who}: ${batted.length} entradas con sus 3 outs, ${myRuns} carreras y ${d.inn.reduce((a, I) => a + I.lob, 0)} dejados en base.`);
 }
+// Torneo Mazatlán: cada media entrada se cierra con 10 bateadores o 3 outs y el orden sigue corrido
+function mztCheck(d, cells, slots, who, add) {
+  const b = MZT.bpi, over = [], outs = [], open = [], rot = [];
+  const batted = d.inn.map((I, i) => ({ I, i })).filter(x => x.I.pa), lastI = batted.length ? batted[batted.length - 1].i : -1;
+  if (!batted.length) return;
+  batted.forEach(({ I, i }) => {
+    if (I.pa > b) over.push(`${i + 1}a (${I.pa} bateadores)`);
+    if (I.outs > 3) outs.push(`${i + 1}a (${I.outs} outs)`);
+    else if (I.pa < b && I.outs < 3 && i !== lastI) open.push(i + 1);
+    const exp = {}; rotation(slots, i + 1, cells).order.slice(0, I.pa).forEach(si => exp[si] = (exp[si] || 0) + 1);
+    if (slots.some((s, si) => (cells[si + '_' + (i + 1)] || []).filter(pa => RES[pa.res]).length !== (exp[si] || 0))) rot.push(i + 1);
+  });
+  if (over.length) add('bad', `${who}: más de ${b} bateadores en la entrada ${over.join(', ')}. La entrada se cierra al batear el 10°.`);
+  if (outs.length) add('bad', `${who}: más de 3 outs en la entrada ${outs.join(', ')}.`);
+  if (open.length) add('warn', `${who}: la entrada ${open.join(', ')} no llegó a ${b} bateadores ni a 3 outs. Revisa los rombos (marca también los outs de corredores).`);
+  if (!over.length && !outs.length && !open.length) add('ok', `${who}: ${batted.length} entradas cerradas con ${b} bateadores o 3 outs, ${d.runs} carreras y ${d.inn.reduce((a, I) => a + I.lob, 0)} dejados en base.`);
+  if (rot.length) add('warn', `${who}: el orden no sigue en la entrada ${rot.join(', ')}. Cada entrada la abre el que quedó en turno en la anterior; las celdas rayadas son de bateadores a los que no les tocaba.`);
+}
+// Reglas del torneo que no son de la hoja: juego legal, defensiva mínima, jugadas que no existen y desempate
+function mztRules(der, od, usRuns, themRuns, add) {
+  const played = Math.max(der.inn.filter(I => I.pa).length, od.inn.filter(I => I.pa).length, draft.them.filter(v => String(v).trim() !== '').length);
+  if (played && played < MZT.legal) add('warn', `Van ${played} entrada${played === 1 ? '' : 's'}: el juego es legal a partir de la ${MZT.legal}a entrada (regla Q).`);
+  const bad = [], steals = [];
+  [[draft.cells, draft.slots, S.team], [draft.ocells, draft.oslots, draft.opp || 'Rival']].forEach(([cells, slots, who]) => Object.entries(cells).forEach(([k, arr]) => (arr || []).forEach(pa => {
+    if (pa.res && !MZT.res.includes(pa.res)) bad.push(`${esc(who)} ${pa.res}`);
+    if (num(pa.sb) || pa.cs) steals.push(esc(who));
+  })));
+  if (bad.length) add('bad', `En el torneo no hay base por bolas, golpe, toque ni pisa y corre (reglas F y K). Corrige: ${[...new Set(bad)].join(', ')}.`);
+  if (steals.length) add('warn', `Hay bases robadas o atrapados robando anotados (${[...new Set(steals)].join(', ')}). En el torneo no se permite robar base (regla K).`);
+  const pids = [...new Set(draft.slots.flatMap(s => [s.pid, s.sub && s.sub.pid]).filter(Boolean))];
+  const anyEc = pids.some(pid => num((draft.fld[pid] || {}).ec));
+  if (anyEc) { const low = pids.filter(pid => num((draft.fld[pid] || {}).ec) < MZT.minDef); low.length ? add('warn', `Cada niño debe estar mínimo ${MZT.minDef} entradas a la defensiva (regla B). Revisa: ${low.map(pid => `${esc(pName(pid))} (${num((draft.fld[pid] || {}).ec)})`).join(', ')}.`) : add('ok', `Defensiva: todos los niños con ${MZT.minDef} o más entradas en el campo.`); }
+  else if (played >= MZT.legal && pids.length) add('warn', `Anota en Defensiva las EC (entradas en el campo) de cada niño para revisar el mínimo de ${MZT.minDef} entradas (regla B).`);
+  const tied = der.anyCell && usRuns === themRuns && played >= MZT.legal, tb = draftTb(der, od);
+  $('#gTbWrap').hidden = !tied; $('#gTbKWrap').hidden = !tied || !draft.tbw;
+  if (!tied) return;
+  if (tb && tb.w) add('ok', `Empate ${usRuns}-${themRuns}: ${esc(tbText(tb, draft.opp))}.`);
+  else if (tb && tb.need === 'sheet') add('warn', `Empate ${usRuns}-${themRuns}. Para aplicar los criterios de desempate (A–E) anota también la hoja del rival, o elige en Desempate quién lo ganó.`);
+  else add('warn', `Empate ${usRuns}-${themRuns} también en outs, ponches, hits, dejados en base y HR: se decide por volado (F). Elige en Desempate quién lo ganó.`);
+}
 function renderChecks() {
   const der = deriveSheet(draft), od = deriveOpp();
   const out = [], add = (lvl, txt) => out.push(`<div class="check ${lvl}"><b>${lvl === 'ok' ? 'OK' : lvl === 'warn' ? 'REVISA' : 'ERROR'}</b><span>${txt}</span></div>`);
-  if (!der.anyCell && !od.anyCell && !draft.legacy) { $('#checks').innerHTML = '<div class="check warn"><b>VACÍA</b><span>Elige a tus bateadores y toca los rombos para anotar cada turno.</span></div>'; return; }
+  if (!der.anyCell && !od.anyCell && !draft.legacy) { $('#gTbWrap').hidden = $('#gTbKWrap').hidden = true; $('#checks').innerHTML = '<div class="check warn"><b>VACÍA</b><span>Elige a tus bateadores y toca los rombos para anotar cada turno.</span></div>'; return; }
   if (!draft.opp.trim()) add('warn', 'Falta el nombre del rival.');
   const pids = draft.slots.flatMap(s => [s.pid, s.sub && s.sub.pid]).filter(Boolean), dup = pids.filter((p, i) => pids.indexOf(p) !== i);
   if (dup.length) add('bad', `Jugador repetido en el lineup: ${[...new Set(dup)].map(p => esc(pName(p))).join(', ')}.`);
   const unnamed = draft.slots.map((s, si) => !s.pid && Object.keys(draft.cells).some(k => k.startsWith(si + '_')) ? si + 1 : 0).filter(Boolean);
   if (unnamed.length) add('bad', `Hay turnos anotados sin jugador asignado (fila ${unnamed.join(', ')}). No contarán en las estadísticas individuales.`);
   const them = themArr(od), usRuns = der.runs, themRuns = od.anyCell ? od.runs : sumA(draft.them);
-  if (isCh()) { chuponCheck(der, draft.cells, draft.slots, esc(S.team), add); if (od.anyCell) chuponCheck(od, draft.ocells, draft.oslots, esc(draft.opp || 'Rival'), add); }
-  else { inningOutsCheck(der, draft.ha === 'L', usRuns, themRuns, esc(S.team), add);
+  if (isMz()) { mztCheck(der, draft.cells, draft.slots, esc(S.team), add); if (od.anyCell) mztCheck(od, draft.ocells, draft.oslots, esc(draft.opp || 'Rival'), add); mztRules(der, od, usRuns, themRuns, add); }
+  else if (isCh()) { chuponCheck(der, draft.cells, draft.slots, esc(S.team), add); if (od.anyCell) chuponCheck(od, draft.ocells, draft.oslots, esc(draft.opp || 'Rival'), add); }
+  if (!isMz()) $('#gTbWrap').hidden = $('#gTbKWrap').hidden = true;
+  if (!isKid()) { inningOutsCheck(der, draft.ha === 'L', usRuns, themRuns, esc(S.team), add);
   if (od.anyCell) inningOutsCheck(od, draft.ha === 'V', themRuns, usRuns, esc(draft.opp || 'Rival'), add); }
   const rbi = Object.values(der.bat).reduce((a, b) => a + b.rbi, 0);
   if (rbi > usRuns) add('warn', `Hay más carreras impulsadas (${rbi}) que carreras anotadas (${usRuns}).`);
   const defInns = them.filter(v => String(v).trim() !== '').length, pt = pitTotals(od), ft = fldTotals();
-  if (!isCh() && od.anyCell && !draft.pit.some(p => p.pid)) add('warn', 'Agrega a tus lanzadores para que la hoja del rival les reparta H, C, BB, K e IP.');
-  else if (od.noPit) add('warn', `${od.noPit} turnos del rival no tienen lanzador. Pon la entrada en que entró cada lanzador.`);
+  if (!isKid() && od.anyCell && !draft.pit.some(p => p.pid)) add('warn', 'Agrega a tus lanzadores para que la hoja del rival les reparta H, C, BB, K e IP.');
+  else if (od.noPit && !isMz()) add('warn', `${od.noPit} turnos del rival no tienen lanzador. Pon la entrada en que entró cada lanzador.`);
   if (!od.anyCell && draft.pit.some(p => isNaN(ipToOuts(p.ip)))) add('bad', 'Hay un IP mal escrito. Usa .1 o .2 para los outs (ej. 6.2).');
   if (draft.pit.length && defInns && !od.anyCell) {
     pt.outs === defInns * 3 ? add('ok', `Pitcheo: ${outsToIp(pt.outs)} IP para ${defInns} entradas a la defensiva.`) : add('warn', `Los lanzadores suman ${outsToIp(pt.outs)} IP y el rival bateó ${defInns} entradas (se esperaban ${defInns}.0). Es válido si hubo walk-off.`);
@@ -2162,7 +2258,7 @@ function loadDraftFromGame(id) {
   const g = S.games[id]; if (!g) return;
   const d = blankDraft(); d.id = id;
   ['no', 'liga', 'date', 'opp', 'ha', 'notes'].forEach(k => d[k] = g[k] != null ? String(g[k]) : d[k]);
-  d.mode = g.mode || 'trad'; d.bpi = g.bpi || 10;
+  d.mode = g.mode || 'trad'; d.bpi = g.bpi || 10; d.tbw = g.tb && g.tb.manual ? g.tb.w : ''; d.tbk = g.tb && g.tb.manual ? g.tb.k : 'F';
   d.inns = g.inns || 9; d.them = (g.them || []).slice(0, d.inns).map(String); while (d.them.length < d.inns) d.them.push('');
   d.themE = g.themE ? String(g.themE) : '';
   d.pit = (g.pit || []).map(p => { const q = blankPit(p.pid); q.ip = outsToIp(p.outs || 0); PITK.forEach(k => q[k] = p[k] ? String(p[k]) : ''); q.dec = p.dec || ''; q.from = p.from ? String(p.from) : ''; return q; });
@@ -2195,7 +2291,7 @@ $('#btnSave').addEventListener('click', () => {
     no: String(draft.no).trim(), liga: draft.liga.trim(), date: draft.date, opp: draft.opp.trim() || 'Rival', ha: draft.ha, inns: draft.inns, notes: draft.notes.trim(),
     us: usArr, them: themArr(od).map(String), themH: od.anyCell ? od.hits : pt.h, themE: num(draft.themE),
     sheet: { slots: draft.slots.map(s => ({ pid: s.pid, pos: s.pos, sub: s.sub ? { pid: s.sub.pid, pos: s.sub.pos, from: String(s.sub.from || '') } : null })), cells: draft.cells },
-    mode: draft.mode || 'trad', bpi: bpiOf(),
+    mode: draft.mode || 'trad', bpi: bpiOf(), tb: (t => t && t.w ? t : null)(draftTb(der, od)),
     osheet: od.anyCell ? { slots: draft.oslots, cells: draft.ocells } : null,
     olines: od.anyCell ? buildOppLines(od) : [],
     pit: effPit(od).filter(p => p.pid).map(p => { const o = { pid: p.pid, from: String(p.from || ''), outs: isNaN(p.outs) ? 0 : p.outs, dec: p.dec }; PITK.forEach(k => o[k] = num(p[k])); return o; }),
@@ -2208,15 +2304,15 @@ $('#btnSave').addEventListener('click', () => {
 function renderGames() {
   renderRivals(); renderOppList();
   $('#btnPdfSeason').hidden = !has('gold');
-  const gs = seasonGames().reverse();
+  const gs = seasonGames().reverse(); if (gs.some(isTour)) tourLogo();
   $('#gamesCount').textContent = gs.length ? `${gs.length} juego${gs.length === 1 ? '' : 's'}` : '';
   if (!gs.length) { $('#gamesList').innerHTML = '<div class="empty"><b>Todavía no hay juegos.</b><span>Llena tu primer box score.</span></div>'; return; }
   $('#gamesList').innerHTML = gs.map(g => {
     const s = gameScore(g);
     const conf = pendingDelete === g.id ? `<div class="confirm" style="grid-column:1/-1"><span>¿Eliminar el juego vs ${esc(g.opp)} del ${esc(g.date)}? Sus estadísticas dejarán de contar.</span><button class="btn sm danger" data-act="del-yes" data-id="${g.id}">Eliminar</button><button class="btn sm" data-act="del-no">Cancelar</button></div>` : '';
     return `<div class="game"><span class="date">${g.no ? '#' + esc(g.no) + ' · ' : ''}${esc(g.date)}</span>
-      <span class="opp">${g.ha === 'L' ? 'vs' : '@'} ${esc(g.opp)}${(ms => ms.length ? `<span class="mvpl"><span class="chip mvp">${ms.length > 1 ? 'MVP compartido' : 'MVP'}</span> ${ms.map(m => esc(pName(m.pid))).join(', ')} · ${fmtPts(ms[0].pts)}</span>` : '')(mvpsOf(g))}</span>
-      <span class="score"><span class="chip ${s.res === 'G' ? 'w' : s.res === 'P' ? 'l' : ''}">${s.res}</span> ${s.us}–${s.them}</span>
+      <span class="opp">${isTour(g) ? '<img class="tour-ico" src="/img/torneo-mazatlan.png" alt="" title="Mazatlán Baseball Tournament">' : ''}${g.ha === 'L' ? 'vs' : '@'} ${esc(g.opp)}${(ms => ms.length ? `<span class="mvpl"><span class="chip mvp">${ms.length > 1 ? 'MVP compartido' : 'MVP'}</span> ${ms.map(m => esc(pName(m.pid))).join(', ')} · ${fmtPts(ms[0].pts)}</span>` : '')(mvpsOf(g))}</span>
+      <span class="score"><span class="chip ${s.res === 'G' ? 'w' : s.res === 'P' ? 'l' : ''}">${s.res}</span> ${s.us}–${s.them}${s.tb ? ' <span class="sub" title="Ganado o perdido por criterio de desempate">desempate</span>' : ''}</span>
       <span class="acts"><button class="btn sm" data-act="view" data-id="${g.id}">Resumen</button><button class="btn sm edit-only" data-act="edit" data-id="${g.id}">Abrir box score</button><button class="btn sm danger edit-only" data-act="del" data-id="${g.id}">Eliminar</button></span>${conf}</div>`;
   }).join('');
 }
@@ -2277,8 +2373,11 @@ function openBox(id) {
   const tb = lines.filter(l => l.h).map(l => `${esc(pName(l.pid))} ${(l.h - l.d - l.t - l.hr) + 2 * l.d + 3 * l.t + 4 * l.hr}`);
   const wps = (g.pit || []).filter(p => p.wp).map(p => `${esc(pName(p.pid))}${p.wp > 1 ? ' ' + p.wp : ''}`);
   const notes = note('d', '2B') + note('t', '3B') + note('hr', 'HR') + (tb.length ? `<div><b>TB:</b> ${tb.join(', ')}.</div>` : '') + note('rbi', 'RBI') + note('sf', 'SF') + note('sh', 'SAC') + note('hbp', 'HBP') + note('sb', 'SB') + note('cs', 'CS') + note('e', 'E') + note('dp', 'DP') + (wps.length ? `<div><b>WP:</b> ${wps.join(', ')}.</div>` : '');
-  $('#boxDlgBody').innerHTML = `<div class="boxhead"><div><div class="sub">${g.no ? 'Box score #' + esc(g.no) + ' · ' : ''}${esc(g.date)}${g.liga ? ' · ' + esc(g.liga) : ''}${g.notes ? ' · ' + esc(g.notes) : ''}</div><h2>${esc(S.team)} ${s.us}, ${esc(g.opp)} ${s.them}</h2></div><div class="row" style="gap:6px"><button class="btn sm" id="shareBox">Compartir resumen</button><button class="btn sm primary" id="pdfBox">Guardar PDF</button><button class="btn sm" id="closeBox">Cerrar</button></div></div>
+  const tour = isTour(g); if (tour) tourLogo();
+  const tbN = s.tb ? `<div class="tb-note"><b>Empate ${s.us}-${s.them} en ${n} entradas.</b> ${esc(tbText(g.tb, g.opp))}.</div>` : '';
+  $('#boxDlgBody').innerHTML = `<div class="boxhead"><div class="tour-head">${tour ? '<img src="/img/torneo-mazatlan.png" alt="Mazatlán Baseball Tournament">' : ''}<div><div class="sub">${g.no ? 'Box score #' + esc(g.no) + ' · ' : ''}${esc(g.date)}${g.liga ? ' · ' + esc(g.liga) : ''}${g.notes ? ' · ' + esc(g.notes) : ''}</div><h2>${esc(S.team)} ${s.us}, ${esc(g.opp)} ${s.them}</h2></div></div><div class="row" style="gap:6px"><button class="btn sm" id="shareBox">Compartir resumen</button><button class="btn sm primary" id="pdfBox">Guardar PDF</button><button class="btn sm" id="closeBox">Cerrar</button></div></div>
     <div class="scroll"><table class="linescore">${ls}</table></div>
+    ${tbN}
     ${mvpBoxHTML(g)}
     <div class="scroll"><table>${bt}</table></div>
     ${ot ? `<div class="scroll"><table>${ot}</table></div>` : ''}
@@ -2358,7 +2457,7 @@ const bCols = [['name', 'Jugador', 's'], ['g', 'G'], ['pa', 'PA'], ['ab', 'AB'],
   ['avg', 'AVG', 'r'], ['obp', 'OBP', 'r'], ['slg', 'SLG', 'r'], ['ops', 'OPS', 'r'], ['iso', 'ISO', 'r'], ['babip', 'BABIP', 'r'], ['woba', 'wOBA', 'r'], ['kp', 'K%', 'p'], ['bbp', 'BB%', 'p'], ['sbp', 'SB%', 'p']];
 let bSort = { k: 'ops', dir: -1 }, fSort = { k: 'tc', dir: -1 }, pSort = { k: 'outs', dir: -1 };
 function renderBat() {
-  syncModeSel(); const chM = curStatMode() === 'chupon';
+  syncModeSel(); const chM = kidMode(curStatMode());
   const gs = rangeGames($('#bRange').value), teamG = gs.length, minPA = Math.ceil(3.1 * teamG), m = aggBat(gs);
   const all = Object.values(m).map(p => ({ ...p, name: pName(p.pid), num: pNum(p.pid) }));
   const PLb = paList(gs), anyCq = has('gold') && PLb.some(x => x.cq), byP = {}; PLb.forEach(x => (byP[x.pid] ||= []).push(x));
@@ -2545,7 +2644,7 @@ function renderInd() {
   const mode = iMode || curStatMode(); $('#iMode').value = mode;
   const all = seasonGames().filter(g => mode === 'all' || gameMode(g) === mode), sel = $('#iRange').value, gs = sel === 'all' ? all : all.slice(-Number(sel));
   if (!gs.length) { body.innerHTML = '<div class="empty">No hay juegos capturados en esta modalidad. Los indicadores aparecen en cuanto guardes el primer box score.</div>'; return; }
-  const I = indCompute(gs), P = I.pa, ch = mode === 'chupon';
+  const I = indCompute(gs), P = I.pa, ch = kidMode(mode);
   // color de rivales: si el color del equipo es azul, se usa naranja para que no se confundan
   const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), hx = /^#([0-9a-f]{6})$/i.test(acc) ? hexRgb(acc) : [200, 22, 30];
   const mx = Math.max(...hx), mn = Math.min(...hx), hue = mx === mn ? 0 : mx === hx[0] ? ((hx[1] - hx[2]) / (mx - mn) * 60 + 360) % 360 : mx === hx[1] ? ((hx[2] - hx[0]) / (mx - mn) + 2) * 60 : ((hx[0] - hx[1]) / (mx - mn) + 4) * 60;
@@ -2922,7 +3021,8 @@ function gameSummary(id) {
   const order = g.ha === 'L' ? ['them', 'us'] : ['us', 'them'], nm = side => side === 'us' ? S.team : (g.opp || 'Rival');
   const ms = mvpsOf(g), hrs = (g.lines || []).filter(l => num(l.hr)).map(l => pName(l.pid) + (num(l.hr) > 1 ? ' ' + num(l.hr) : ''));
   const W = (g.pit || []).find(p => p.dec === 'G'), L = (g.pit || []).find(p => p.dec === 'P'), SV = (g.pit || []).find(p => p.dec === 'S');
-  return [`${S.team} ${s.us}, ${g.opp || 'Rival'} ${s.them} · ${bdayLabel(g.date)}${s.res === 'G' ? ' · ¡Victoria!' : ''}`,
+  return [isTour(g) ? `🏆 ${MZT.name}` : '', `${S.team} ${s.us}, ${g.opp || 'Rival'} ${s.them} · ${bdayLabel(g.date)}${s.res === 'G' ? ' · ¡Victoria!' : ''}`,
+    s.tb ? `Desempate: ${tbText(g.tb, g.opp)}` : '',
     ...order.map(sd => `${nm(sd)}: ${row(sd)} = ${sd === 'us' ? s.us : s.them}`),
     ms.length ? `MVP: ${ms.map(m => `${pName(m.pid)} (${mvpText(m)})`).join(' y ')}` : '',
     hrs.length ? `Jonrones: ${hrs.join(', ')}` : '',
@@ -2995,7 +3095,7 @@ function liveSnap(status) {
     pitcher = { n: String(pNum(ppid)), name: shortName(pName(ppid)), age, max: pitchMax(age), np, rest: np && age != null ? restDays(np, age) : null, outs: num(op.outs), so: num(op.so), bb: num(op.bb), h: num(op.h) };
   }
   return {
-    v: 1, status, at: Date.now(), team: S.team, opp: draft.opp || 'Rival', ha: draft.ha, date: draft.date, inns: draft.inns, mode: draft.mode || 'trad', bpi: bpiOf(),
+    v: 1, status, at: Date.now(), team: S.team, opp: draft.opp || 'Rival', ha: draft.ha, date: draft.date, inns: draft.inns, mode: draft.mode || 'trad', bpi: bpiOf(), tb: (t => t && t.w ? t.w : null)(draftTb(der, od)),
     line: { us: der.us.map(String), them: them.map(v => String(v ?? '')), R: [der.runs, sumA(them)], H: [der.hits, od.anyCell ? od.hits : pt.h], E: [fldE, num(draft.themE)] },
     inn: st.inn, half: st.half, side: st.side, outs: st.outs, pas: st.pas, started: st.started, over: st.over, manual: st.manual,
     bases: st.bases.map(si => si == null ? null : label(who(st.side, si, st.inn))),
@@ -3139,14 +3239,14 @@ function renderLive() {
   // A · barra fija con el marcador
   const bug = `<div class="lv-bug">
     <div class="lv-bteams">${rows.map(sd => `<span class="nm">${esc(nm(sd))}</span><span class="r${(sd === 'us' ? lead > 0 : lead < 0) ? ' lead' : ''}">${L.R[ix(sd)]}</span>`).join('')}</div>
-    ${fin ? '<div class="lv-binn">Final</div>' : `<div class="lv-binn">${s.half === 'top' ? '▲' : '▼'} ${s.inn}ª${s.mode === 'chupon' ? `<small>Turno ${Math.min(s.pas + 1, s.bpi)}/${s.bpi}</small>` : `<span class="lv-dots" aria-label="${s.outs} outs">${[0, 1, 2].map(i => `<i class="${i < s.outs ? 'on' : ''}"></i>`).join('')}</span>`}</div>
+    ${fin ? '<div class="lv-binn">Final</div>' : `<div class="lv-binn">${s.half === 'top' ? '▲' : '▼'} ${s.inn}ª${s.mode === 'chupon' ? `<small>Turno ${Math.min(s.pas + 1, s.bpi)}/${s.bpi}</small>` : `${s.mode === 'mzt' ? `<small>Turno ${Math.min(s.pas + 1, s.bpi)}/${s.bpi}</small>` : ''}<span class="lv-dots" aria-label="${s.outs} outs">${[0, 1, 2].map(i => `<i class="${i < s.outs ? 'on' : ''}"></i>`).join('')}</span>`}</div>
     <svg class="lv-mini" viewBox="0 0 64 58" aria-label="Corredores en base">${sq(43, 22, s.bases[0]) + sq(25, 6, s.bases[1]) + sq(7, 22, s.bases[2])}</svg>`}
     <div class="lv-bst">${fin ? 'Juego terminado' : `<span class="lv-pulse${stale ? ' stale' : ''}"></span>${stale ? 'Sin cambios ' + agoTxt(ago) : 'En vivo · ' + agoTxt(ago)}`}<span>${esc(s.date || '')}</span></div>
   </div>`;
 
   // C · cartel del batazo grande (o del final)
   const mo = fin ? null : liveMoment(s);
-  const moment = fin ? `<div class="lv-moment${lead < 0 ? ' sad' : ''}"><span class="k">Final</span><span class="big">${lead > 0 ? '¡Ganamos!' : lead < 0 ? 'Perdimos' : 'Empate'}</span><span class="sub">${esc(s.team)} ${L.R[0]}, ${esc(s.opp)} ${L.R[1]}</span></div>`
+  const tbw = lead === 0 ? s.tb : null, moment = fin ? `<div class="lv-moment${lead < 0 || tbw === 'them' ? ' sad' : ''}"><span class="k">Final</span><span class="big">${lead > 0 ? '¡Ganamos!' : lead < 0 ? 'Perdimos' : tbw === 'us' ? '¡Ganamos en el desempate!' : tbw === 'them' ? 'Perdimos en el desempate' : 'Empate'}</span><span class="sub">${esc(s.team)} ${L.R[0]}, ${esc(s.opp)} ${L.R[1]}</span></div>`
     : mo ? `<div class="lv-moment"><span class="k">${mo.p.h === 'top' ? 'Alta' : 'Baja'} ${mo.p.i}ª</span><span class="big">${mo.t}</span><span class="sub"><b>${esc(mo.p.w)}</b> · ${esc(LIVE_TXT[mo.p.res] || mo.p.res)}${mo.p.p ? ` (${esc(mo.p.p)})` : ''}${mo.p.rbi ? `, ${mo.p.rbi} ${mo.p.rbi === 1 ? 'impulsada' : 'impulsadas'}` : ''}.${mo.ahead && mo.t !== '¡Pasamos al frente!' ? ` ${esc(s.team)} se pone al frente.` : ''}</span></div>` : '';
 
   // C · aviso cuando le toca a mi jugador
@@ -3218,7 +3318,8 @@ function renderLive() {
       : `<div class="lv-note">${p.np ? `${p.np} lanzamientos.` : 'El coach todavía no anota el conteo de lanzamientos.'}</div>`}</section>`;
   }
 
-  host.innerHTML = `${bug}<div class="lv-cols"><div class="lv-left">${moment}${alert}${field}${bat}${mineCard}<div class="lv-late">${line}${pit}</div></div><div class="lv-right">${playsCard}</div></div>`;
+  const tourH = s.mode === 'mzt' ? `<div class="lv-tour"><img src="${TOUR_LOGO}" alt="">${esc(MZT.name)} · Pre-iniciación</div>` : '';
+  host.innerHTML = `${tourH}${bug}<div class="lv-cols"><div class="lv-left">${moment}${alert}${field}${bat}${mineCard}<div class="lv-late">${line}${pit}</div></div><div class="lv-right">${playsCard}</div></div>`;
 }
 
 /* ---------- PROYECCIÓN (Marcel simplificado) ---------- */
@@ -3252,7 +3353,7 @@ function pjBat(pid, mode, hor, age) {
   const last = used[0].p, paG = last.pa / last.g, PA = hor === 'season' ? last.pa : paG;
   const proj = { g: hor === 'season' ? last.g : 1 }; PJ_K.forEach(k => proj[k] = rate[k] * PA); derive(proj);
   const atLeast = p => 1 - Math.pow(1 - Math.min(Math.max(p, 0), .999), paG);
-  const onP = mode === 'chupon' ? rate.onb : rate.h + rate.bb + rate.hbp;
+  const onP = kidMode(mode) ? rate.onb : rate.h + rate.bb + rate.hbp;
   return { used, lg: derive({ ...lg }), proj, last, wPA, rel: wPA / (wPA + PJ_REG_PA), paG, ag,
     prob: { hit: atLeast(rate.h), on: atLeast(onP), xbh: atLeast(rate.d + rate.t + rate.hr), so: atLeast(rate.so) } };
 }
@@ -3304,7 +3405,7 @@ function renderProj() {
   if (!B && !P) { body.innerHTML = h + `<div class="empty">No tiene juegos registrados en esta modalidad.</div>`; return; }
   if (!game) h += `<p class="hint"><b>Edad:</b> ${esc(ag.note)}</p>`;
   if (B) {
-    const ch = mode === 'chupon', x = B.proj, d1 = v => game ? v.toFixed(1) : Math.round(v);
+    const ch = kidMode(mode), x = B.proj, d1 = v => game ? v.toFixed(1) : Math.round(v);
     const rows = ch ? [['contact', 'Contacto', 'p'], ['onbp', 'En base (EB%)', 'p'], ['bpt', 'Bases por turno', 'r2'], ['avg', 'AVG', 'r'], ['slg', 'SLG', 'r']]
       : [['avg', 'AVG', 'r'], ['obp', 'OBP', 'r'], ['slg', 'SLG', 'r'], ['ops', 'OPS', 'r'], ['iso', 'ISO', 'r'], ['kp', 'K%', 'p', true], ['bbp', 'BB%', 'p']];
     const cols = ch ? [['pa', 'VB'], ['ab', 'AB'], ['h', 'H'], ['d', '2B'], ['t', '3B'], ['hr', 'HR'], ['so', 'K'], ['onb', 'EB'], ['bases', 'BT'], ['r', 'C'], ['rbi', 'CI']]
@@ -3628,7 +3729,7 @@ async function openCards(cfg) {
     <div class="row" style="justify-content:flex-end"><button class="btn" id="bdPng">Descargar imágenes</button><button class="btn" id="bdPdf">Descargar PDF</button><button class="btn primary" id="bdShare">Compartir por WhatsApp</button></div>`;
   if (!$('#bdayDlg').open) $('#bdayDlg').showModal();
   const dv = $('.hero .devil');
-  [bd.d.img, bd.d.logo] = await Promise.all([loadImg(cfg.photo), loadImg(dv && !dv.hidden ? dv.src : '')]);
+  [bd.d.img, bd.d.logo, bd.d.tour] = await Promise.all([loadImg(cfg.photo), loadImg(dv && !dv.hidden ? dv.src : ''), loadImg(bd.d.tourSrc || '')]);
   try { await Promise.all(['700 40px "Barlow Condensed"', '600 40px "Barlow Condensed"', '400 40px "Yellowtail"', '400 20px "IBM Plex Sans"', '600 20px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch {}
   bdRender();
 }
@@ -4023,7 +4124,16 @@ function mvpDrawMedalla(ctx, d) { // C · Reconocimiento con medalla
   ctx.textAlign = 'right'; ctx.fillStyle = '#6b6466'; ctx.font = '600 24px "IBM Plex Mono", monospace'; bdSpacing(ctx, 3); const fd = bdayLabel(d.date).toUpperCase() + ' DE ' + d.date.slice(0, 4), fdw = ctx.measureText(fd).width; ctx.fillText(fd, BD_W - 100, 1254); bdSpacing(ctx, 0);
   ctx.textAlign = 'left'; ctx.fillStyle = rgb(d.red); bdFit(ctx, d.sign, '400 #px "Yellowtail", cursive', 62, BD_W - 200 - fdw - 30); ctx.fillText(d.sign, 100, 1258);
 }
-const MVP_DRAW = { portada: mvpDrawPortada, marcador: mvpDrawMarcador, medalla: mvpDrawMedalla };
+// Logo del torneo en cada diseño de la tarjeta MVP (x, y, alto) en un espacio libre de cada uno
+const MVP_TOUR_AT = { portada: [BD_W - 55, 300, 150, 'right'], marcador: [64 + 185, 1148, 120, 'center'], medalla: [80, 186, 120, 'left'] };
+function mvpTour(k, draw) {
+  return (ctx, d) => {
+    draw(ctx, d); if (!d.tour) return;
+    const [x, y, h, al] = MVP_TOUR_AT[k], w = h * d.tour.width / d.tour.height, x0 = al === 'right' ? x - w : al === 'center' ? x - w / 2 : x;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14; ctx.drawImage(d.tour, x0, y, w, h); ctx.restore();
+  };
+}
+const MVP_DRAW = { portada: mvpTour('portada', mvpDrawPortada), marcador: mvpTour('marcador', mvpDrawMarcador), medalla: mvpTour('medalla', mvpDrawMedalla) };
 function openMvp(gid, pid) {
   const g = { id: gid, ...S.games[gid] }, ms = mvpsOf(g), x = ms.find(m => m.pid === pid) || ms[0]; if (!x) { toast('Este juego todavía no tiene MVP.'); return; }
   const p = S.roster[x.pid] || {}, s = gameScore(g), n = g.inns || 9, home = g.ha === 'L' ? 'us' : 'them';
@@ -4032,7 +4142,7 @@ function openMvp(gid, pid) {
     c: side === 'us' ? s.us : s.them, h: side === 'us' ? t.h : (g.themH ?? 0), e: side === 'us' ? t.e : (g.themE ?? 0) });
   const team = S.team || 'Mi equipo', base = { opp: g.opp || 'Rival', us: s.us, them: s.them, res: s.res };
   const d = { ...base, full: String(p.name || pName(x.pid)).replace(/\(.*?\)/g, '').trim(), num: p.num != null && p.num !== '' ? String(p.num) : '', pos: ((g.lines || []).find(l => l.pid === x.pid) || {}).pos || p.pos || '',
-    team, date: g.date || today(), liga: g.liga || '', no: g.no || '', pts: x.pts, co: ms.length > 1, tiles: mvpTiles(x), ls: { n, rows: (g.ha === 'L' ? ['them', 'us'] : ['us', 'them']).map(row) },
+    team, date: g.date || today(), liga: g.liga || '', no: g.no || '', tourSrc: isTour(g) ? TOUR_LOGO : '', pts: x.pts, co: ms.length > 1, tiles: mvpTiles(x), ls: { n, rows: (g.ha === 'L' ? ['them', 'us'] : ['us', 'them']).map(row) },
     sign: `Coach y equipo ${team}`, msgs: Object.fromEntries(MVP_DESIGNS.filter(y => y.msg).map(y => [y.k, y.msg(base)])) };
   openCards({ title: `Tarjeta MVP · ${d.full}`, d, designs: MVP_DESIGNS, draw: MVP_DRAW, photo: p.photo, file: () => `MVP_${String(bd.d.full).replace(/\s+/g, '_')}_${d.date}`, share: () => `MVP: ${bd.d.full}`,
     hint: `${fmtPts(x.pts)} en el juego ${g.ha === 'L' ? 'vs' : 'en'} ${g.opp} del ${bdayLabel(g.date)}: ${mvpText(x)}.`,
@@ -4042,7 +4152,7 @@ function openMvp(gid, pid) {
 /* ---------- Reportes PDF ---------- */
 let RED = [200, 22, 30], ROSE = [246, 225, 226], STRIPE = [141, 144, 150]; const INK = [30, 31, 34];
 const pdfSafe = s => String(s ?? '').replace(/[—–−]/g, '-').replace(/[▾▴]/g, '').replace(/[^\x00-\xFF]/g, '').trim();
-function pdfDoc(orientation, title, subtitle) {
+function pdfDoc(orientation, title, subtitle, tour) {
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('No se pudo cargar el generador de PDF. Revisa tu conexión y recarga la página.'); return null; }
   const doc = new window.jspdf.jsPDF({ orientation, unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth();
@@ -4054,7 +4164,9 @@ function pdfDoc(orientation, title, subtitle) {
   if (nameImg) { try { const ih = Math.min(40, W * .5 / nameImg.ratio); doc.addImage(nameImg.src, 'PNG', 80, Math.max(3, 24 - ih / 2), ih * nameImg.ratio, ih); } catch {} }
   else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pdfSafe(S.team).toUpperCase(), 84, 32); }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(pdfSafe(title), 84, nameImg ? 57 : 50);
-  if (subtitle) { doc.setFontSize(9); doc.text(pdfSafe(subtitle), W - 20, 50, { align: 'right' }); }
+  let sx = W - 20;
+  if (tour && tourLogoData) { try { const h = 58, w = h * tourLogoData.ratio; doc.addImage(tourLogoData.src, 'PNG', W - 14 - w, 3, w, h); sx = W - 24 - w; } catch {} }
+  if (subtitle) { doc.setFontSize(9); doc.text(pdfSafe(subtitle), sx, 50, { align: 'right' }); }
   doc.setTextColor(...INK);
   return doc;
 }
@@ -4152,13 +4264,14 @@ function pdfSeason() {
   $('#bRange').value = prevB[0]; $('#bQual').checked = prevB[1]; renderBat(); $('#fGroup').value = prevF; renderFld();
   pdfSave(doc, 'temporada');
 }
-function pdfBox(id) {
-  const g = S.games[id]; if (!g) return; const s = gameScore(g);
-  const doc = pdfDoc('portrait', `Box score #${g.no || ''} · ${g.date}`, g.liga || ''); if (!doc) return;
+async function pdfBox(id) {
+  const g = S.games[id]; if (!g) return; const s = gameScore(g), tour = isTour(g); if (tour) await tourLogo();
+  const doc = pdfDoc('portrait', `Box score #${g.no || ''} · ${g.date}`, g.liga || '', tour); if (!doc) return;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...INK);
   doc.text(pdfSafe(`${S.team} ${s.us}, ${g.opp} ${s.them}`), 32, 96);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(110); doc.text(pdfSafe(`${g.ha === 'L' ? 'Local' : 'Visitante'}${g.notes ? ' · ' + g.notes : ''}`), 32, 110);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(110); doc.text(pdfSafe(`${g.ha === 'L' ? 'Local' : 'Visitante'}${tour ? ' · Pre-iniciación (5-6 años)' : ''}${g.notes ? ' · ' + g.notes : ''}`), 32, 110);
   let y = 124;
+  if (s.tb) { doc.setFont('helvetica', 'bold'); doc.setTextColor(...INK); doc.text(pdfSafe(`Empate ${s.us}-${s.them}: ${tbText(g.tb, g.opp)}`), 32, 122); doc.setFont('helvetica', 'normal'); y = 136; }
   const tables = [...$('#boxDlgBody').querySelectorAll('table')];
   tables.forEach(t => { y = pdfTable(doc, t, y, { fs: 8 }); });
   const notes = $('#boxDlgBody .notes'); if (notes) { y = pdfSection(doc, 'Notas', y); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...INK); const lines = doc.splitTextToSize(pdfSafe([...notes.children].map(n => n.textContent).join('\n')), doc.internal.pageSize.getWidth() - 64); doc.text(lines, 32, y + 6); }
@@ -4247,7 +4360,7 @@ async function pdfProj() {
   renderProj();
   const imgs = new Map(); for (const sv of $('#pjBody').querySelectorAll('.spray-blk svg.sc-svg')) imgs.set(sv, await pdfSvg(sv));
   const p = S.roster[pjPid], body = $('#pjBody'), opt = id => $(id).selectedOptions[0].textContent;
-  const doc = pdfDoc('portrait', 'Proyección sabermétrica del jugador', `${opt('#pjHor')} · ${opt('#pjMode')}`); if (!doc) return;
+  const doc = pdfDoc('portrait', 'Proyección sabermétrica del jugador', `${opt('#pjHor')} · ${opt('#pjMode')}`, $('#pjMode').value === 'mzt'); if (!doc) return;
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
   const room = (y, need) => { if (y + need > H - 40) { doc.addPage(); return 40; } return y; };
   // encabezado del jugador
@@ -4311,7 +4424,7 @@ async function pdfInd() {
   const body = $('#indBody'); if (!body.querySelector('.ind-sec')) { toast('Todavía no hay juegos para el reporte.'); return; }
   const charts = new Map(); for (const sv of body.querySelectorAll('svg.ind-svg, .spray svg')) charts.set(sv, await pdfSvg(sv));
   const opt = id => $(id).selectedOptions[0].textContent;
-  const doc = pdfDoc('portrait', 'Indicadores sabermétricos', `${opt('#iRange')} · ${opt('#iMode')}`); if (!doc) return;
+  const doc = pdfDoc('portrait', 'Indicadores sabermétricos', `${opt('#iRange')} · ${opt('#iMode')}`, $('#iMode').value === 'mzt'); if (!doc) return;
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64; let y = 90;
   const room = need => { if (y + need > H - 40) { doc.addPage(); y = 40; } };
   const para = (txt, size = 8.5, color = 90, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(color); const ls = doc.splitTextToSize(pdfSafe(txt), CW); room(ls.length * size * 1.3); doc.text(ls, 32, y); y += ls.length * size * 1.3 + 6; };
@@ -4424,18 +4537,19 @@ function pdfScoreCard(doc, y, isUs, der, availH) {
   });
   return doc.lastAutoTable.finalY + 18;
 }
-function pdfSheet() {
+async function pdfSheet() {
   const der = deriveSheet(draft), od = deriveOpp(), pt = pitTotals(od), n = draft.inns;
   const oppHas = od.anyCell || draft.oslots.some(s => s.name || s.num);
   if (!der.anyCell && !od.anyCell && !draft.slots.some(s => s.pid)) { toast('Llena el lineup o anota algún turno antes de crear el reporte.'); return; }
   const opp = draft.opp.trim() || 'Rival';
-  const doc = pdfDoc('landscape', `Box score${draft.no ? ' #' + draft.no : ''} · ${draft.date || ''} · Hoja de anotación`, draft.liga || ''); if (!doc) return;
+  if (isMz()) await tourLogo();
+  const doc = pdfDoc('landscape', `Box score${draft.no ? ' #' + draft.no : ''} · ${draft.date || ''} · Hoja de anotación`, draft.liga || '', isMz()); if (!doc) return;
   const H = doc.internal.pageSize.getHeight();
   const themR = od.anyCell ? od.runs : sumA(draft.them);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...INK);
   doc.text(pdfSafe(`${S.team} ${der.runs}, ${opp} ${themR}`), 32, 90);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110);
-  doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'}${isCh() ? ' · Modalidad Chupón (' + bpiOf() + ' bateadores por entrada)' : ''} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
+  doc.text(pdfSafe(`${draft.ha === 'L' ? 'Local' : 'Visitante'}${isCh() ? ' · Modalidad Chupón (' + bpiOf() + ' bateadores por entrada)' : isMz() ? ' · Torneo Mazatlán, Pre-iniciación (10 bateadores o 3 outs por entrada)' : ''} · ${n} entradas${draft.notes ? ' · ' + draft.notes : ''}${draft.id ? '' : ' · Borrador sin guardar'}`), 32, 103);
   const BOTTOM = 30; // espacio para el pie de página
   let y = pdfSection(doc, `${S.team} al bat`, 122);
   y = pdfScoreCard(doc, y, true, der, H - y - BOTTOM);
@@ -4719,7 +4833,7 @@ $('#udLogout').addEventListener('click', async () => {
 const $$ = q => [...document.querySelectorAll(q)];
 /* ---------- Administración ---------- */
 let adm = { teams: [], users: [], recent: [], gamesWeek: 0 }, admSec = 'res', admEditTeam = null, admLogo, admWord, admAccess = [], admTeamPending = false, admMenu = null;
-const CATS = ['Chupón 4-6', 'Pañal', 'Pre-infantil', 'Infantil', 'Juvenil', 'Libre'];
+const CATS = ['Chupón 4-6', 'Pre-iniciación 5-6', 'Pañal', 'Pre-infantil', 'Infantil', 'Juvenil', 'Libre'];
 const tLabel = t => t ? t.name + (t.category ? ' · ' + t.category : '') : '';
 const normTxt = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
 const fmtDay = d => { if (!d) return '—'; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return String(d).slice(0, 10); return `${m[3]} ${['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+m[2] - 1]}`; };
@@ -4787,7 +4901,7 @@ function renderAdmTeams() {
   $('#admCards').innerHTML = '<button type="button" class="adm-new" data-a="tnew">+ Nuevo equipo</button>' + list.map(t => {
     const n = teamUsers(t.id).length;
     return `<div class="adm-card"><div class="adm-band" data-plate="${esc(t.id)}">${t.logo ? `<img class="lg" src="${esc(t.logo)}" alt="">` : `<span class="ini">${esc((t.name[0] || '?').toUpperCase())}</span>`}${t.wordmark ? `<img class="wm" src="${esc(t.wordmark)}" alt="${esc(t.name)}">` : '<span class="tp-name"></span>'}</div>
-      <div class="adm-cbody"><div><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : ''}${t.slug ? `<div class="sub" style="font-size:12.5px">${esc(location.host)}/${esc(t.slug)}</div>` : ''}<div class="row" style="gap:8px;margin-top:4px">${planChip(t.plan)}${expTxt(t)}</div></div>
+      <div class="adm-cbody"><div><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : t.mode === 'mzt' ? ' <span class="chip">Torneo Mazatlán</span>' : ''}${t.slug ? `<div class="sub" style="font-size:12.5px">${esc(location.host)}/${esc(t.slug)}</div>` : ''}<div class="row" style="gap:8px;margin-top:4px">${planChip(t.plan)}${expTxt(t)}</div></div>
       <div class="adm-meta"><span><b>${t.players}</b> jugadores</span><span><b>${t.games}</b> juegos</span><span><b>${n}</b> con acceso</span></div>
       ${n ? '' : '<div class="check warn" style="padding:5px 9px"><b>SIN ACCESO</b><span>Nadie asignado</span></div>'}
       <div class="row" style="gap:6px"><button type="button" class="btn sm primary" data-a="tview" data-id="${esc(t.id)}">Ver datos</button><button type="button" class="btn sm" data-a="tedit" data-id="${esc(t.id)}">Editar</button><button type="button" class="btn sm" data-a="tacc" data-id="${esc(t.id)}">Acceso</button></div></div></div>`;
