@@ -5325,7 +5325,7 @@ function renderEsp(r) {
     const lv = espLv(t.pct), more = Math.max(0, Math.floor((r.loadLimit * .95 - t.load) / (t.games ? t.gamesLoad / t.games : gameAvg)));
     return `<tr><td class="l name"><b>${esc(t.team ? t.team.name : t.id)}</b>${t.team && t.team.category ? `<br><span class="sub">${esc(t.team.category)}</span>` : ''}</td>
       <td class="l"><span class="esp-st ${lv}">${lv === 'bad' ? 'Cerca del límite' : lv === 'warn' ? 'Vigilar' : 'Bien'}</span></td>
-      <td class="l" style="min-width:170px">${espBar(t.pct)}<span class="sub">${fmtB(t.load)} de ${fmtB(r.loadLimit)} · caben ~${more} juegos más</span></td>
+      <td class="l" style="min-width:170px">${espBar(t.pct)}<span class="sub">${fmtB(t.load)} de ${fmtB(r.loadLimit)} · caben unos ${more} juegos más</span></td>
       <td>${t.players}${t.photos ? `<br><span class="sub">${t.photos} con foto</span>` : ''}</td>
       <td>${t.games}${t.seasons ? `<br><span class="sub">${t.seasons} temporada${t.seasons === 1 ? '' : 's'}</span>` : ''}</td>
       <td>${fmtB(t.disk)}<br><span class="sub">${t.photos ? 'fotos ' + fmtB(t.photoBytes) : 'sin fotos'}</span></td></tr>`;
