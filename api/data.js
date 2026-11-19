@@ -52,6 +52,12 @@ async function db() {
       create unique index if not exists bs_teams_slug on bs_teams(slug);
       create table if not exists bs_live (team_id text primary key references bs_teams(id) on delete cascade, token text not null unique,
         snap jsonb, updated_at timestamptz not null default now());
+      create table if not exists bs_visits (id bigserial primary key, user_id text not null references bs_users(id) on delete cascade,
+        kind text not null, device text not null default '', at timestamptz not null default now(), seen_at timestamptz not null default now());
+      create index if not exists bs_visits_user on bs_visits(user_id, seen_at desc);
+      create index if not exists bs_visits_at on bs_visits(at desc);
+      create table if not exists bs_drafts (team_id text not null references bs_teams(id) on delete cascade, user_id text not null references bs_users(id) on delete cascade,
+        data jsonb not null, at bigint not null, updated_at timestamptz not null default now(), primary key (team_id, user_id));
     `).then(() => fillSlugs(p)).catch(e => { ready = null; throw e; });
   }
   await ready;
@@ -150,6 +156,20 @@ function shareGame(g, pid) {
   }
   return o;
 }
+/* ---------- entradas a la plataforma ---------- */
+const VISIT_GAP = '30 minutes', VISIT_KEEP = '365 days';
+function deviceOf(req) {
+  const ua = String(req.headers['user-agent'] || '');
+  const kind = /iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) ? 'Tableta' : /Mobi|iPhone|Android/i.test(ua) ? 'Celular' : 'Computadora';
+  const os = /iPhone|iPad|iPod/i.test(ua) ? 'iPhone/iPad' : /Android/i.test(ua) ? 'Android' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'Mac' : /CrOS/i.test(ua) ? 'Chromebook' : /Linux/i.test(ua) ? 'Linux' : '';
+  return os ? `${kind} · ${os}` : kind;
+}
+// Cada petición con sesión alarga la entrada abierta; si pasaron 30 minutos sin actividad cuenta como entrada nueva
+async function touchVisit(p, uid, req) {
+  await p.query(`with upd as (update bs_visits set seen_at = now() where id = (select id from bs_visits where user_id = $1 and seen_at > now() - interval '${VISIT_GAP}' order by seen_at desc limit 1) returning 1)
+                 insert into bs_visits (user_id, kind, device) select $1, 'visit', $2 where not exists (select 1 from upd)`, [uid, deviceOf(req)]);
+}
+const okTz = tz => { try { return typeof tz === 'string' && tz.length < 60 && !!new Intl.DateTimeFormat('en', { timeZone: tz }); } catch { return false; } };
 const clientIp = req => String(req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '').split(',')[0].trim().slice(0, 60) || 'desconocida';
 
 /* ---------- sesión y permisos ---------- */
@@ -242,6 +262,8 @@ export default async function handler(req, res) {
       }
       await p.query('delete from bs_login_fail where k = $1', ['e:' + email]);
       await p.query('update bs_users set last_login = now() where id = $1', [u.id]);
+      await p.query("insert into bs_visits (user_id, kind, device) values ($1, 'login', $2)", [u.id, deviceOf(req)]);
+      await p.query(`delete from bs_visits where at < now() - interval '${VISIT_KEEP}'`);
       const token = sign({ uid: u.id, ph: u.pass_hash.slice(-12), exp: Date.now() + SESSION_DAYS * 864e5 });
       return send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, token, SESSION_DAYS * 86400) });
     }
@@ -272,6 +294,8 @@ export default async function handler(req, res) {
 
     const me = await loadUser(p, req);
     if (!me) fail(401, 'auth', 'Inicia sesión para continuar.');
+    // El registro de entradas nunca debe impedir guardar ni cargar
+    await touchVisit(p, me.id, req).catch(e => console.error('touchVisit', e));
 
     if (op === 'password') {
       if (!checkPass(b.current, me.ph)) fail(401, 'bad_password', 'La contraseña actual no es correcta.');
@@ -328,6 +352,8 @@ export default async function handler(req, res) {
           out.ids = { roster: ri.rows.map(x => x.id), games: gi.rows.map(x => x.id) };
         }
         out.canEdit = canWrite(me, teamId);
+        // Copia en la nube del box score en curso de este usuario (por si se borra el teléfono o se recarga la página)
+        if (out.canEdit && !since) { const d = (await p.query('select data, at from bs_drafts where team_id = $1 and user_id = $2', [teamId, me.id])).rows[0]; out.draft = d ? { draft: d.data, at: Number(d.at) } : null; }
         if (out.canEdit) {
           out.shares = Object.fromEntries((await p.query('select pid, token from bs_shares where team_id = $1 and not revoked', [teamId])).rows.map(x => [x.pid, x.token]));
           out.live = ((await p.query('select token from bs_live where team_id = $1', [teamId])).rows[0] || {}).token || '';
@@ -337,9 +363,22 @@ export default async function handler(req, res) {
     }
 
     // ---- escritura de datos de un equipo
-    if (['put', 'del', 'import', 'teamName', 'shareCreate', 'shareRevoke', 'liveLink', 'livePut', 'liveRevoke'].includes(op)) {
+    if (['put', 'del', 'import', 'teamName', 'shareCreate', 'shareRevoke', 'liveLink', 'livePut', 'liveRevoke', 'draftPut', 'draftDel'].includes(op)) {
       const teamId = String(b.team || '');
       if (!canWrite(me, teamId)) fail(403, 'forbidden', 'Tu usuario no puede modificar los datos de este equipo.');
+      // Box score en curso: se guarda solo el más reciente (at = hora del teléfono en ms)
+      if (op === 'draftPut') {
+        if (!isObj(b.draft)) fail(400, 'bad_request');
+        const json = JSON.stringify(b.draft); if (json.length > MAX_DOC) fail(413, 'too_big', 'El box score es demasiado grande.');
+        const at = Number.isSafeInteger(b.at) && b.at > 0 ? b.at : Date.now();
+        await p.query(`insert into bs_drafts (team_id, user_id, data, at) values ($1, $2, $3::jsonb, $4)
+                       on conflict (team_id, user_id) do update set data = excluded.data, at = excluded.at, updated_at = now() where bs_drafts.at <= excluded.at`, [teamId, me.id, json, at]);
+        return send(res, 200, { ok: true });
+      }
+      if (op === 'draftDel') {
+        await p.query('delete from bs_drafts where team_id = $1 and user_id = $2 and ($3::bigint is null or at <= $3)', [teamId, me.id, Number.isSafeInteger(b.at) ? b.at : null]);
+        return send(res, 200, { ok: true });
+      }
       if (op === 'put' || op === 'del') {
         const table = TABLES[b.col];
         if (!table || !validId(b.id)) fail(400, 'bad_request');
@@ -408,7 +447,7 @@ export default async function handler(req, res) {
     if (op && op.startsWith('admin')) {
       if (!me.isAdmin) fail(403, 'forbidden', 'Solo un administrador puede hacer esto.');
       if (op === 'adminList') {
-        const [teams, users, members, recent, week] = await Promise.all([
+        const [teams, users, members, recent, week, visits] = await Promise.all([
           p.query(`select t.id, t.name, t.category, t.slug, t.data, t.created_at,
                      (select count(*)::int from bs_roster r where r.team_id = t.id) as players,
                      (select count(*)::int from bs_games g where g.team_id = t.id) as games,
@@ -419,14 +458,36 @@ export default async function handler(req, res) {
           p.query(`select team_id, data->>'date' as date, data->>'opp' as opp, data->>'ha' as ha, data->'us' as us, data->'them' as them, data->'tb'->>'w' as tbw, data->>'_by' as by
                    from bs_games order by data->>'date' desc nulls last, updated_at desc limit 8`),
           p.query(`select count(*)::int as n from bs_games where data->>'date' >= to_char(current_date - 7, 'YYYY-MM-DD')`),
+          p.query(`select user_id, count(*) filter (where at > now() - interval '30 days')::int as n30, max(seen_at) as last from bs_visits group by user_id`),
         ]);
+        const vis = Object.fromEntries(visits.rows.map(v => [v.user_id, v]));
         return send(res, 200, {
           teams: teams.rows.map(t => ({ id: t.id, name: t.name, category: t.category, slug: t.slug || '', ...teamLook(t.data), players: t.players, games: t.games, lastGame: t.last_game })),
           users: users.rows.map(u => ({ id: u.id, email: u.email, name: u.name, isAdmin: u.is_admin, isSupervisor: !u.is_admin && u.is_supervisor, active: u.active, mustChange: u.must_change, lastLogin: u.last_login,
+            lastSeen: vis[u.id] ? vis[u.id].last : null, visits30: vis[u.id] ? vis[u.id].n30 : 0,
             teams: members.rows.filter(m => m.user_id === u.id).map(m => ({ team: m.team_id, role: m.role })) })),
           recent: recent.rows.map(g => ({ team: g.team_id, date: g.date, opp: g.opp, ha: g.ha, us: Array.isArray(g.us) ? g.us : [], them: Array.isArray(g.them) ? g.them : [], tb: g.tbw ? { w: g.tbw } : null, by: g.by || '' })),
           gamesWeek: week.rows[0].n,
         });
+      }
+      // Historial de entradas: de todos o de un usuario, por periodo, de 100 en 100 (before = cursor)
+      if (op === 'adminVisits') {
+        const days = [1, 7, 30, 90, 365].includes(Number(b.days)) ? Number(b.days) : 30, tz = okTz(b.tz) ? b.tz : 'America/Mexico_City';
+        const user = validId(b.user) ? b.user : null, before = /^\d{1,18}$/.test(String(b.before || '')) ? String(b.before) : null;
+        // Días completos en la hora local de quien consulta: "Hoy" desde la medianoche, "7 días" = hoy y los 6 anteriores
+        const cond = `v.at >= (date_trunc('day', now() at time zone $1) at time zone $1) - interval '${days - 1} days' and ($2::text is null or v.user_id = $2)`;
+        const rows = (await p.query(`select v.id, v.user_id, v.kind, v.device, v.at, v.seen_at from bs_visits v
+                                     where ${cond} and ($3::bigint is null or v.id < $3) order by v.id desc limit 101`, [tz, user, before])).rows;
+        const out = { more: rows.length > 100, rows: rows.slice(0, 100).map(v => ({ id: String(v.id), user: v.user_id, kind: v.kind, device: v.device, at: v.at, seen: v.seen_at })) };
+        if (!before) {
+          const [daily, tot] = await Promise.all([
+            p.query(`select to_char(v.at at time zone $1, 'YYYY-MM-DD') as d, count(*)::int as n from bs_visits v where ${cond} group by 1 order by 1`, [tz, user]),
+            p.query(`select count(*)::int as n, count(distinct v.user_id)::int as users, count(*) filter (where v.kind = 'login')::int as logins,
+                       coalesce(sum(extract(epoch from v.seen_at - v.at)), 0)::bigint as secs from bs_visits v where ${cond}`, [tz, user]),
+          ]);
+          out.daily = daily.rows; out.total = { ...tot.rows[0], secs: Number(tot.rows[0].secs) };
+        }
+        return send(res, 200, out);
       }
       if (op === 'adminTeamSave') {
         const name = String(b.name || '').trim().slice(0, 60); if (!name) fail(400, 'bad_request', 'Escribe el nombre del equipo.');

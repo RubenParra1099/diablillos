@@ -8,7 +8,7 @@ process.env.DIABLILLOS_DB_URL = 'postgres://prueba@pglite/mem'; process.env.EDIT
 const { default: handler } = await import(tmp.href); fs.unlinkSync(tmp);
 let cookie = '';
 async function call(body, query = {}, opts = {}) {
-  const req = { method: body ? 'POST' : 'GET', body: body || undefined, query, url: '/api/data?' + new URLSearchParams(query), headers: { cookie: opts.noCookie ? '' : cookie, 'x-forwarded-for': opts.ip || '10.0.0.1', 'x-forwarded-proto': 'https' } };
+  const req = { method: body ? 'POST' : 'GET', body: body || undefined, query, url: '/api/data?' + new URLSearchParams(query), headers: { cookie: opts.noCookie ? '' : cookie, 'x-forwarded-for': opts.ip || '10.0.0.1', 'x-forwarded-proto': 'https', 'user-agent': opts.ua || '' } };
   const res = { h: {}, setHeader(k, v) { this.h[k] = v; }, status(c) { this.code = c; return this; }, json(b) { this.body = b; } };
   await handler(req, res);
   const sc = res.h['Set-Cookie']; if (sc && !opts.noCookie) { const v = sc.split(';')[0]; cookie = v.endsWith('=') ? '' : v; }
@@ -151,6 +151,66 @@ r = await call(null, { live: ltok }, { noCookie: true });
 ok('al desactivarlo, el enlace anterior ya no abre', r.code === 404);
 r = await call({ op: 'liveLink', team });
 ok('el enlace nuevo es distinto', r.code === 200 && r.token !== ltok);
+
+// Entradas a la plataforma
+const tz = 'America/Mexico_City';
+r = await call({ op: 'adminVisits', days: 30, tz });
+const coachId = (await call({ op: 'adminList' })).users.find(u => u.email === 'coach@x.mx').id;
+ok('cada inicio de sesión queda registrado', r.code === 200 && r.rows.filter(v => v.user === coachId && v.kind === 'login').length === 2 && r.total.logins === 4, JSON.stringify(r.total));
+ok('las peticiones de una sesión no crean entradas de visita extra', r.rows.filter(v => v.kind === 'visit').length === 1, r.rows.map(v => v.kind).join());
+const n0 = r.total.n;
+await call({ op: 'login', email: 'lectura@x.mx', password: 'temporal123' }, {}, { ip: '10.0.3.1', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Mobile' });
+await call(null, { team });
+await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.3.2' });
+r = await call({ op: 'adminVisits', days: 1, tz });
+const lect = r.rows.find(v => v.kind === 'login' && v.device.startsWith('Celular'));
+ok('se registra el dispositivo', lect && lect.device === 'Celular · iPhone/iPad', lect && lect.device);
+ok('el total del periodo suma las nuevas entradas', r.total.n === n0 + 2 && r.daily.length === 1 && r.daily[0].n === r.total.n, JSON.stringify(r.daily));
+r = await call({ op: 'adminVisits', days: 30, tz, user: lect.user });
+ok('se filtra por usuario', r.rows.length >= 1 && r.rows.every(v => v.user === lect.user) && r.total.users === 1);
+r = await call({ op: 'adminList' });
+ok('la lista de usuarios trae entradas de 30 días y la última', r.users.find(u => u.id === lect.user).visits30 >= 1 && r.users.find(u => u.id === lect.user).lastSeen);
+r = await call({ op: 'adminVisits', days: 30, tz, before: r.users.length ? '1' : '' });
+ok('el cursor pagina hacia atrás', r.code === 200 && r.rows.length === 0 && !r.more && !r.daily);
+await call({ op: 'login', email: 'lectura@x.mx', password: 'temporal123' }, {}, { ip: '10.0.3.3' });
+r = await call({ op: 'adminVisits', days: 30, tz });
+ok('solo un administrador ve las entradas', r.code === 403);
+await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.3.4' });
+
+// Copia en la nube del box score en curso
+r = await call(null, { team });
+ok('sin box score en curso la carga trae draft vacío', r.draft === null);
+r = await call({ op: 'draftPut', team, draft: { opp: 'Toros', cells: { '0_1': [{ res: 'H1' }] } }, at: 1000 });
+ok('se guarda el box score en curso', r.code === 200);
+r = await call(null, { team });
+ok('la carga lo devuelve para recuperarlo', r.draft && r.draft.at === 1000 && r.draft.draft.opp === 'Toros');
+await call({ op: 'draftPut', team, draft: { opp: 'Viejo' }, at: 500 });
+r = await call(null, { team });
+ok('una copia más vieja no pisa a la nueva', r.draft.draft.opp === 'Toros');
+r = await call(null, { team, since: r.now });
+ok('la carga parcial no lo repite', !('draft' in r));
+await call({ op: 'draftDel', team, at: 900 });
+r = await call(null, { team });
+ok('borrar con una marca anterior no borra la copia más nueva', r.draft && r.draft.at === 1000);
+await call({ op: 'draftDel', team, at: 2000 });
+r = await call(null, { team });
+ok('al guardar el juego se borra la copia', r.draft === null);
+r = await call({ op: 'draftPut', team, draft: 'x' });
+ok('un box score que no es objeto se rechaza', r.code === 400);
+await call({ op: 'login', email: 'lectura@x.mx', password: 'temporal123' }, {}, { ip: '10.0.4.1' });
+r = await call({ op: 'draftPut', team, draft: { opp: 'X' }, at: 1 });
+ok('un usuario de solo lectura no guarda box score en curso', r.code === 403);
+await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.4.2' });
+
+// Eliminar un equipo con datos
+await call({ op: 'put', team: team2, col: 'roster', id: 'px', data: { name: 'Uno' }, base: null });
+r = await call({ op: 'adminTeamDelete', id: team2 });
+ok('un equipo con datos no se borra sin confirmación', r.code === 409 && r.error === 'not_empty');
+r = await call({ op: 'adminTeamDelete', id: team2, force: true });
+r = await call({ op: 'adminList' });
+ok('con confirmación se borra el equipo y sus jugadores', !r.teams.some(t => t.id === team2));
+r = await call({ op: 'put', team, col: 'roster', id: 'px', data: { name: 'Reusa id' }, base: null });
+ok('el jugador borrado ya no existe', r.code === 200);
 
 // R4 límite de intentos
 await call({ op: 'logout' });

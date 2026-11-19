@@ -320,6 +320,13 @@ a.home-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .adm-utable td{vertical-align:top}
 .adm-utable td.l{font-family:var(--f-body)}
 .adm-tm{display:block;line-height:1.9;white-space:nowrap}
+.vis-chart{display:flex;align-items:flex-end;gap:2px;height:96px;padding-top:6px}
+.vis-chart i{flex:1;min-width:2px;background:var(--accent);border-radius:2px 2px 0 0;opacity:.85}
+.vis-chart i.on{opacity:1}
+.vis-chart i.z{background:var(--line);opacity:1;height:2px!important}
+.vis-axis{display:flex;justify-content:space-between;font:600 10.5px var(--f-mono);color:var(--muted);margin-top:4px}
+.vis-day td{background:var(--chip);font:600 11px var(--f-mono)!important;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.vis-more{display:flex;justify-content:center;padding:10px}
 .adm-dots{border:0;background:transparent;font-size:20px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 10px;border-radius:4px}
 .adm-dots:hover{background:var(--hover)}
 .adm-menu{position:absolute;right:8px;top:34px;background:var(--paper);border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;min-width:210px;z-index:5;overflow:hidden;text-align:left}
@@ -1130,7 +1137,7 @@ body.live .record{display:none!important}
     <div class="row spread" style="align-items:center">
       <h2>Administración</h2>
       <div class="row" style="align-items:center;gap:8px">
-        <div class="adm-seg" id="admSeg" role="tablist"><button type="button" data-s="res" aria-pressed="true">Resumen</button><button type="button" data-s="eq" aria-pressed="false">Equipos</button><button type="button" data-s="us" aria-pressed="false">Usuarios</button></div>
+        <div class="adm-seg" id="admSeg" role="tablist"><button type="button" data-s="res" aria-pressed="true">Resumen</button><button type="button" data-s="eq" aria-pressed="false">Equipos</button><button type="button" data-s="us" aria-pressed="false">Usuarios</button><button type="button" data-s="ent" aria-pressed="false">Entradas</button></div>
         <button class="btn sm" id="admRefresh" type="button">Actualizar</button>
         <button class="btn sm plat-only" id="admHome" type="button">Tus equipos</button>
       </div>
@@ -1152,6 +1159,14 @@ body.live .record{display:none!important}
     <div id="admUs" class="adm-sec" hidden>
       <div class="adm-toolbar"><input type="search" id="aqUser" placeholder="Buscar por nombre o correo…" aria-label="Buscar usuario"><select id="aqLevel" aria-label="Nivel"><option value="">Todos los niveles</option><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="user">Usuario</option></select><select id="aqUTeam" aria-label="Equipo"></select><button class="btn primary" type="button" id="admNewUser">+ Nuevo usuario</button></div>
       <div class="panel" style="padding:0"><div class="scroll adm-utable"><table id="admUsers"></table></div></div>
+    </div>
+
+    <div id="admEnt" class="adm-sec" hidden>
+      <div class="adm-toolbar"><select id="avDays" aria-label="Periodo"><option value="1">Hoy</option><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option></select><select id="avUser" aria-label="Usuario"></select></div>
+      <div class="adm-kpis" id="avKpis"></div>
+      <div class="panel"><h3 id="avChartT">Entradas por día</h3><div id="avChart"></div></div>
+      <div class="panel" style="padding:0"><div class="scroll adm-utable"><table id="avRows"></table></div><div class="vis-more" id="avMore" hidden><button type="button" class="btn sm">Ver más</button></div></div>
+      <p class="hint" style="margin:0">Una entrada es cada vez que alguien abre la plataforma. Si recarga o sigue usándola sin dejar pasar 30 minutos, cuenta como la misma entrada. "Con contraseña" es cuando escribió su correo y contraseña; "Sesión abierta" es cuando ya tenía la sesión iniciada. El historial se guarda un año.</p>
     </div>
   </section>
 </div></main>
@@ -1552,6 +1567,7 @@ async function enterRoute() {
   if (!pathSlug()) {
     homeMode = true; setPlat(true); showView('inicio'); await loadHome(); return;
   }
+  saveDraftLocal(); draftCloud(true);
   homeMode = false; setPlat(false); curTeam = null; curTeamObj = null; slugTried = false; syncSince = '';
   draft = blankDraft(); syncMetaInputs(); showView('captura');
   await apiLoad(true);
@@ -1594,6 +1610,7 @@ async function apiLoad(full) {
     ['roster', 'games'].forEach(c => { const keep = new Set((j.ids || {})[c] || []); Object.keys(S[c]).forEach(id => { if (!keep.has(id) && !pend.has(c + ':' + id)) { delete S[c][id]; delete VER[c][id]; } }); });
   } else { S.roster = j.roster || {}; S.games = j.games || {}; VER = j.ver || { roster: {}, games: {} }; }
   syncSince = j.now ? String(BigInt(j.now) - 5000000n) : ''; syncTeam = curTeam; SHARES = j.shares || {}; LIVE = j.live || ''; renderLiveBtn(); storeReady = true;
+  if ('draft' in j) { cloudDraft = j.draft ? { ...j.draft, team: curTeam } : null; cloudKnown = curTeam; }
   S.team = j.team ? j.team.name : 'Sin equipo';
   applyOutbox(); saveCache();
   const fresh = !draft.id && !draft.opp && !Object.keys(draft.cells).length && !Object.keys(draft.ocells || {}).length;
@@ -1637,32 +1654,78 @@ async function saveTeam(name) {
   else lsSave();
   S.team = name; renderHeader(); renderClubs();
 }
-// El box score en curso se guarda en el teléfono en cada cambio; al volver se ofrece continuarlo
-const draftKey = () => 'bs-draft:' + (curTeam || 'local');
+// El box score en curso se guarda en el teléfono en cada cambio y una copia en la nube cada pocos segundos.
+// Al volver (recarga, se cerró el navegador, otro teléfono o se borraron los datos) se recupera solo.
+const draftKey = () => 'bs-draft:' + (curTeam || 'local'), DONEK = t => 'bs-draft-done:' + (t || '');
 const draftHasContent = d => !!(d && (Object.keys(d.cells || {}).length || Object.keys(d.ocells || {}).length || (d.pit || []).some(p => p.pid) || String(d.opp || '').trim() || (d.slots || []).some(x => x.pid)));
-let draftSaved = '', draftOffer = null, draftChecked = '';
+let draftSaved = '', draftSavedKey = '', draftChecked = '', draftAt = 0, draftBase = '', cloudDraft = null, cloudKnown = null, cloudSent = '', cloudTeam = null, cloudBusy = false, cloudLast = 0;
+// Si el teléfono se queda sin espacio, se liberan las copias de otros equipos (se vuelven a descargar)
+function lsSet(k, v) {
+  try { localStorage.setItem(k, v); return true; } catch {}
+  try { Object.keys(localStorage).filter(x => x.startsWith('bs-cache:') && x !== CACHEK(curTeam)).forEach(x => localStorage.removeItem(x)); localStorage.setItem(k, v); return true; } catch { return false; }
+}
 function saveDraftLocal() {
-  if (draftOffer || !storeReady) return;
+  if (!storeReady) return;
+  const k = draftKey(); if (draftSavedKey !== k) { draftSaved = ''; draftSavedKey = k; }
   try {
-    if (!draftHasContent(draft)) { if (draftSaved !== '-') { localStorage.removeItem(draftKey()); draftSaved = '-'; } return; }
-    const dj = JSON.stringify(draft); if (dj !== draftSaved) { localStorage.setItem(draftKey(), JSON.stringify({ at: Date.now(), draft })); draftSaved = dj; }
+    // Solo se borra la copia que escribió esta misma sesión; nunca una que espera ser recuperada
+    if (!draftHasContent(draft)) { if (draftSaved && draftSaved !== '-') { localStorage.removeItem(k); draftSaved = '-'; } return; }
+    const dj = JSON.stringify(draft); if (dj !== draftSaved) { draftAt = Date.now(); if (lsSet(k, JSON.stringify({ at: draftAt, draft }))) draftSaved = dj; }
   } catch {}
 }
-function checkDraftOffer() {
-  if (!storeReady || draftChecked === draftKey()) return; draftChecked = draftKey();
-  let sv = null; try { sv = JSON.parse(localStorage.getItem(draftKey()) || 'null'); } catch {}
-  if (!sv || !draftHasContent(sv.draft) || draftHasContent(draft)) return;
-  draftOffer = sv; const d = sv.draft, n = Object.values(d.cells || {}).flat().length, min = Math.max(1, Math.round((Date.now() - sv.at) / 60000));
-  $('#draftTxt').textContent = `Tienes un box score sin guardar${d.opp ? ' contra ' + d.opp : ''}${d.date ? ' del ' + d.date : ''}: ${n} turno${n === 1 ? '' : 's'} anotado${n === 1 ? '' : 's'}, guardado en este teléfono hace ${min < 60 ? min + ' min' : Math.round(min / 60) + ' h'}.`;
-  $('#draftBar').hidden = false;
+// Copia en la nube: cada 8 s si hubo cambios, y en cuanto se sale de la app
+async function draftCloud(now) {
+  if (!api || !apiCanEdit || !curTeam || !storeReady || !draftHasContent(draft)) return;
+  if (cloudTeam !== curTeam) { cloudTeam = curTeam; cloudSent = ''; }
+  const dj = JSON.stringify(draft); if (dj === cloudSent || (cloudBusy && !now) || (!now && Date.now() - cloudLast < 8000)) return;
+  const body = { op: 'draftPut', team: curTeam, draft, at: draftAt || Date.now() };
+  if (now) { try { fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true, credentials: 'same-origin' }); cloudSent = dj; } catch {} return; }
+  cloudBusy = true; cloudLast = Date.now();
+  try { await apiCall(body); cloudSent = dj; } catch {} finally { cloudBusy = false; }
 }
-$('#draftYes').addEventListener('click', () => { if (!draftOffer) return; draft = draftOffer.draft; draftOffer = null; $('#draftBar').hidden = true; side = 'us'; noTouched = true; syncMetaInputs(); renderSheet(); showView('captura'); toast('Box score recuperado'); });
-$('#draftNo').addEventListener('click', () => { draftOffer = null; $('#draftBar').hidden = true; try { localStorage.removeItem(draftKey()); } catch {} draftSaved = '-'; });
-let draftT; const draftSoon = () => { clearTimeout(draftT); draftT = setTimeout(() => { saveDraftLocal(); livePush(); }, 500); };
+// Al guardar o descartar el juego se borran las dos copias. Si no hay señal, la marca evita que se recupere un juego ya guardado
+function draftDrop(team) {
+  team = team || curTeam; const at = Date.now();
+  try { localStorage.removeItem('bs-draft:' + (team || 'local')); localStorage.setItem(DONEK(team), String(at)); } catch {}
+  draftSaved = '-'; draftSavedKey = 'bs-draft:' + (team || 'local'); cloudSent = ''; if (cloudDraft && cloudDraft.team === team) cloudDraft = null;
+  if (api && team) apiCall({ op: 'draftDel', team, at }).then(() => { try { localStorage.removeItem(DONEK(team)); } catch {} }).catch(() => {});
+}
+const draftDirty = () => draftHasContent(draft) && JSON.stringify(draft) !== draftBase;
+const markDraftClean = () => { draftBase = JSON.stringify(draft); };
+// Antes de cambiar el box score en pantalla por otro: confirmar si hay turnos sin guardar
+function okToReplaceDraft() {
+  if (!draftDirty()) return true;
+  const n = Object.values(draft.cells || {}).flat().length;
+  return confirm(`El box score en pantalla${draft.opp ? ' contra ' + draft.opp : ''} tiene ${n} turno${n === 1 ? '' : 's'} sin guardar. Si continúas se pierde.\n\n¿Continuar de todos modos?`);
+}
+function checkDraftOffer() {
+  if (!storeReady) return;
+  const ck = draftKey() + (api && cloudKnown === curTeam ? ':' + (cloudDraft ? cloudDraft.at : 0) : ''); if (draftChecked === ck) return; draftChecked = ck;
+  if (draftHasContent(draft) || (api && !apiCanEdit)) return;
+  let sv = null, done = 0; try { sv = JSON.parse(localStorage.getItem(draftKey()) || 'null'); done = +localStorage.getItem(DONEK(curTeam)) || 0; } catch {}
+  const cl = cloudDraft && cloudDraft.team === curTeam && cloudDraft.at > done ? cloudDraft : null;
+  if (cloudDraft && cloudDraft.team === curTeam && !cl && api) apiCall({ op: 'draftDel', team: curTeam, at: done }).catch(() => {});
+  const cands = [sv && sv.at > done && draftHasContent(sv.draft) ? { ...sv, src: 'teléfono' } : null, cl && draftHasContent(cl.draft) ? { ...cl, src: 'nube' } : null].filter(Boolean).sort((a, b) => b.at - a.at);
+  const pick = cands[0]; if (!pick) return;
+  // Se recupera solo: no depende de que alguien vea un aviso
+  draft = pick.draft; draftAt = pick.at; draftBase = ''; side = 'us'; noTouched = true; syncMetaInputs(); renderSheet();
+  const d = pick.draft, n = Object.values(d.cells || {}).flat().length, min = Math.max(1, Math.round((Date.now() - pick.at) / 60000));
+  $('#draftTxt').textContent = `Se recuperó el box score sin guardar${d.opp ? ' contra ' + d.opp : ''}${d.date ? ' del ' + d.date : ''}: ${n} turno${n === 1 ? '' : 's'} anotado${n === 1 ? '' : 's'} (copia ${pick.src === 'nube' ? 'en la nube' : 'del teléfono'} de hace ${min < 60 ? min + ' min' : Math.round(min / 60) + ' h'}). Sigue anotando y guárdalo al terminar.`;
+  $('#draftBar').hidden = false; toast('Box score recuperado');
+  saveDraftLocal(); draftCloud();
+}
+$('#draftYes').addEventListener('click', () => { $('#draftBar').hidden = true; showView('captura'); });
+$('#draftNo').addEventListener('click', () => {
+  if (!confirm('¿Descartar este box score? Se borra del teléfono y de la nube y no se puede recuperar.')) return;
+  $('#draftBar').hidden = true; draftDrop(); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); markDraftClean(); syncMetaInputs(); renderSheet();
+});
+let draftT; const draftSoon = () => { clearTimeout(draftT); draftT = setTimeout(() => { saveDraftLocal(); draftCloud(); livePush(); }, 500); };
 ['input', 'change', 'click'].forEach(ev => document.addEventListener(ev, draftSoon, true));
-setInterval(() => { saveDraftLocal(); livePush(); }, 4000);
-addEventListener('pagehide', saveDraftLocal);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveDraftLocal(); });
+setInterval(() => { saveDraftLocal(); draftCloud(); livePush(); }, 4000);
+addEventListener('pagehide', () => { saveDraftLocal(); draftCloud(true); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { saveDraftLocal(); draftCloud(true); } });
+// Pide al navegador que no borre los datos de la app cuando falta espacio
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch {}
 function setSync(live, txt) { $('#syncDot').classList.toggle('live', live); $('#syncTxt').textContent = txt; }
 async function initStore() {
   const shareTok = new URLSearchParams(location.search).get('p'); if (shareTok) { await startShare(shareTok); return; }
@@ -2272,7 +2335,7 @@ function loadDraftFromGame(id) {
   draft = d; side = 'us'; syncMetaInputs(); renderSheet(); showView('captura'); window.scrollTo(0, 0);
   if (d.legacy) toast('Juego de la versión anterior: su bateo se conserva hasta que anotes turnos en la hoja.');
 }
-$('#btnNewGame').addEventListener('click', () => { noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); syncMetaInputs(); renderSheet(); });
+$('#btnNewGame').addEventListener('click', () => { if (!okToReplaceDraft()) return; if (draftHasContent(draft)) draftDrop(); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); markDraftClean(); $('#draftBar').hidden = true; syncMetaInputs(); renderSheet(); });
 function buildOppLines(od) {
   return Object.keys(od.bat).sort((a, b) => parseInt(a, 10) - parseInt(b, 10) || a.length - b.length).map(key => {
     const si = parseInt(key, 10), s = draft.oslots[si], p = key.endsWith('s') ? s.sub : s, b = od.bat[key];
@@ -2297,7 +2360,7 @@ $('#btnSave').addEventListener('click', () => {
     pit: effPit(od).filter(p => p.pid).map(p => { const o = { pid: p.pid, from: String(p.from || ''), outs: isNaN(p.outs) ? 0 : p.outs, dec: p.dec }; PITK.forEach(k => o[k] = num(p[k])); return o; }),
     lines: buildLines(der),
   };
-  guarded(async () => { await put('games', id, data); await liveFinal(); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); syncMetaInputs(); renderSheet(); showView('juegos'); }, 'Juego guardado');
+  guarded(async () => { await put('games', id, data); draftDrop(); await liveFinal(); noTouched = false; draft = blankDraft(); side = 'us'; draft.no = String(Object.keys(S.games).length + 1); markDraftClean(); $('#draftBar').hidden = true; syncMetaInputs(); renderSheet(); showView('juegos'); }, 'Juego guardado');
 });
 
 /* ---------- JUEGOS ---------- */
@@ -2319,7 +2382,7 @@ function renderGames() {
 $('#gamesList').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.dataset.id;
   if (b.dataset.act === 'view') openBox(id);
-  if (b.dataset.act === 'edit') loadDraftFromGame(id);
+  if (b.dataset.act === 'edit' && okToReplaceDraft()) { loadDraftFromGame(id); markDraftClean(); $('#draftBar').hidden = true; }
   if (b.dataset.act === 'del') { pendingDelete = id; renderGames(); }
   if (b.dataset.act === 'del-no') { pendingDelete = null; renderGames(); }
   if (b.dataset.act === 'del-yes') { pendingDelete = null; guarded(() => del('games', id), 'Juego eliminado'); }
@@ -4775,6 +4838,7 @@ function renderAuthUI() {
   renderPlanUI(); if (VIEW_PLAN[curView]) showView(curView);
 }
 $('#teamSel').addEventListener('change', async e => {
+  saveDraftLocal(); draftCloud(true);
   curTeam = e.target.value; try { localStorage.setItem(TEAMK, curTeam); } catch {}
   draft = blankDraft(); syncMetaInputs();
   try { await apiLoad(); toast('Equipo: ' + S.team); } catch (er) { toast(er.message); }
@@ -4847,7 +4911,8 @@ async function admLoad() {
 }
 function admShow(s) {
   admSec = s; $$('#admSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === s)));
-  $('#admRes').hidden = s !== 'res'; $('#admEq').hidden = s !== 'eq'; $('#admUs').hidden = s !== 'us';
+  $('#admRes').hidden = s !== 'res'; $('#admEq').hidden = s !== 'eq'; $('#admUs').hidden = s !== 'us'; $('#admEnt').hidden = s !== 'ent';
+  if (s === 'ent') visLoad();
 }
 $('#admSeg').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) admShow(b.dataset.s); });
 function renderAdmin() {
@@ -4855,6 +4920,7 @@ function renderAdmin() {
   const sel = (el, first, opts) => { const v = el.value; el.innerHTML = `<option value="">${first}</option>` + opts.map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join(''); el.value = opts.some(([k]) => k === v) ? v : ''; };
   sel($('#aqCat'), 'Todas las categorías', cats.map(c => [c, c]));
   sel($('#aqUTeam'), 'Todos los equipos', adm.teams.map(t => [t.id, tLabel(t)]));
+  sel($('#avUser'), 'Todos los usuarios', adm.users.map(u => [u.id, u.name ? `${u.name} · ${u.email}` : u.email]));
   $('#atCatList').innerHTML = [...new Set([...CATS, ...cats])].map(c => `<option value="${esc(c)}">`).join('');
   renderAdmRes(); renderAdmTeams(); renderAdmUsers();
 }
@@ -5057,10 +5123,10 @@ $('#admTeamForm').addEventListener('submit', async e => {
 function renderAdmUsers() {
   const q = normTxt($('#aqUser').value), lv = $('#aqLevel').value, tm = $('#aqUTeam').value;
   const list = adm.users.filter(u => (!lv || levelOf(u) === lv) && (!tm || levelOf(u) !== 'user' || u.teams.some(m => m.team === tm)) && (!q || normTxt(u.name + ' ' + u.email).includes(q)));
-  $('#admUsers').innerHTML = '<thead><tr><th class="l">Nombre</th><th class="l">Nivel</th><th class="l">Equipos</th><th class="l">Estado</th><th class="l">Último acceso</th><th></th></tr></thead><tbody>' + (list.map(u => {
+  $('#admUsers').innerHTML = '<thead><tr><th class="l">Nombre</th><th class="l">Nivel</th><th class="l">Equipos</th><th class="l">Estado</th><th class="l">Última entrada</th><th></th></tr></thead><tbody>' + (list.map(u => {
     const teams = levelOf(u) !== 'user' ? '<span class="sub">Todos</span>' + u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return t ? `<span class="adm-tm">${esc(tLabel(t))} <span class="chip">Su equipo</span></span>` : ''; }).join('') : (u.teams.map(m => { const t = adm.teams.find(t => t.id === m.team); return `<span class="adm-tm">${esc(tLabel(t) || m.team)} <span class="chip">${ROLE_LAB[m.role]}</span></span>`; }).join('') || '<span class="sub">Ninguno</span>');
     const st = (u.active ? 'Activa' : '<span class="chip l">Inactiva</span>') + (u.mustChange ? '<br><span class="chip tmp">Contraseña temporal</span>' : '');
-    return `<tr><td class="l name"><b>${esc(u.name || '—')}</b>${me && u.id === me.id ? ' <span class="sub">(tú)</span>' : ''}<br><span class="sub">${esc(u.email)}</span></td><td class="l">${LV_CHIP[levelOf(u)]}</td><td class="l">${teams}</td><td class="l">${st}</td><td class="l">${u.lastLogin ? fmtDay(u.lastLogin) : '<span class="sub">Nunca</span>'}</td>
+    return `<tr><td class="l name"><b>${esc(u.name || '—')}</b>${me && u.id === me.id ? ' <span class="sub">(tú)</span>' : ''}<br><span class="sub">${esc(u.email)}</span></td><td class="l">${LV_CHIP[levelOf(u)]}</td><td class="l">${teams}</td><td class="l">${st}</td><td class="l">${u.lastSeen || u.lastLogin ? `${visAgo(u.lastSeen || u.lastLogin)}<br><span class="sub">${u.visits30} entrada${u.visits30 === 1 ? '' : 's'} en 30 días</span> · <button type="button" class="adm-link" data-u="vis" data-id="${esc(u.id)}">Entradas</button>` : '<span class="sub">Nunca</span>'}</td>
       <td style="position:relative;text-align:right">${admMenu && admMenu.id === u.id ? userMenu(u) : ''}<button type="button" class="adm-dots" data-m="${esc(u.id)}" aria-label="Opciones de ${esc(u.name || u.email)}">⋯</button></td></tr>`;
   }).join('') || '<tr><td class="l" colspan="6" style="padding:14px;color:var(--muted)">Ningún usuario coincide.</td></tr>') + '</tbody>';
 }
@@ -5078,12 +5144,71 @@ $('#admUsers').addEventListener('click', async e => {
   if (a === 'close') { admMenu = null; renderAdmUsers(); return; }
   if (a === 'del') { admMenu = { id: u.id, confirm: true }; renderAdmUsers(); return; }
   admMenu = null; renderAdmUsers();
+  if (a === 'vis') { $('#avUser').value = u.id; return admShow('ent'); }
   if (a === 'edit') return openUserDlg(u);
   if (a === 'reset') { const pw = genPw(); try { await apiCall({ op: 'adminUserReset', id: u.id, password: pw }); await admLoad(); $('#auName').value = u.name || ''; $('#auEmail').value = u.email; auErr(''); wz = { step: 4, edit: adm.users.find(x => x.id === u.id) || u, lv: levelOf(u), teams: {}, pw, reset: true }; u.teams.forEach(m => wz.teams[m.team] = m.role); paintWz(); $('#admUserDlg').showModal(); } catch (er) { toast(er.message); } return; }
   if (a === 'toggle') { try { await apiCall({ op: 'adminUserActive', id: u.id, active: !u.active }); toast(u.active ? 'Usuario desactivado' : 'Usuario activado'); await admLoad(); } catch (er) { toast(er.message); } return; }
   if (a === 'del-yes') { try { await apiCall({ op: 'adminUserDelete', id: u.id }); toast('Usuario eliminado'); await admLoad(); } catch (er) { toast(er.message); } }
 });
 document.addEventListener('click', e => { if (admMenu && !e.target.closest('.adm-menu')) { admMenu = null; renderAdmUsers(); } });
+/* ---- Entradas a la plataforma (vista general y por usuario) ---- */
+let vis = { rows: [], more: false, total: null, daily: [], seq: 0 };
+const VIS_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } })();
+const visKey = d => new Date(d).toLocaleDateString('en-CA');
+const visTime = d => new Date(d).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
+const visDate = d => new Date(d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+const visDur = s => { const m = Math.round(s / 60); return m < 1 ? 'menos de 1 min' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}`; };
+// "hoy 7:42 p.m.", "ayer 4:10 p.m." o la fecha
+function visAgo(d) {
+  const k = visKey(d), t = new Date(); const y = new Date(t); y.setDate(t.getDate() - 1);
+  return (k === visKey(t) ? 'hoy' : k === visKey(y) ? 'ayer' : new Date(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: t.getFullYear() === new Date(d).getFullYear() ? undefined : 'numeric' })) + ' ' + visTime(d);
+}
+async function visLoad(more) {
+  const seq = ++vis.seq, body = { op: 'adminVisits', days: +$('#avDays').value, user: $('#avUser').value || undefined, tz: VIS_TZ };
+  if (more) body.before = vis.rows[vis.rows.length - 1].id;
+  else { $('#avRows').innerHTML = '<tbody><tr><td class="l" style="padding:14px;color:var(--muted)">Cargando…</td></tr></tbody>'; $('#avMore').hidden = true; }
+  try {
+    const r = await apiCall(body); if (seq !== vis.seq) return;
+    vis.rows = more ? vis.rows.concat(r.rows) : r.rows; vis.more = r.more;
+    if (!more) { vis.total = r.total; vis.daily = r.daily; }
+    renderVis();
+  } catch (e) { if (seq === vis.seq) toast(e.message); }
+}
+function renderVis() {
+  const days = +$('#avDays').value, one = $('#avUser').value, T = vis.total || { n: 0, users: 0, logins: 0, secs: 0 };
+  const k = (lab, v, s) => `<div class="adm-kpi"><div class="k">${lab}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const per = days === 1 ? 'hoy' : days === 365 ? 'en el último año' : `en ${days} días`;
+  $('#avKpis').innerHTML = k('Entradas', T.n, per) + (one ? '' : k('Usuarios', T.users, `entraron ${per}`)) +
+    k('Con contraseña', T.logins, `${T.n - T.logins} con la sesión abierta`) + k('Tiempo de uso', T.secs >= 60 ? visDur(T.secs) : '—', 'aproximado, sumando entradas');
+  // Barras: por día hasta 30 días, por semana en 90 y por mes en un año
+  const by = Object.fromEntries((vis.daily || []).map(x => [x.d, x.n])), t0 = new Date();
+  const keys = Array.from({ length: days }, (_, i) => { const d = new Date(t0); d.setDate(t0.getDate() - (days - 1 - i)); return d; });
+  const group = days <= 30 ? 'd' : days <= 90 ? 'w' : 'm', bars = [];
+  keys.forEach((d, i) => {
+    const g = group === 'd' ? i : group === 'w' ? Math.floor(i / 7) : d.getFullYear() * 12 + d.getMonth();
+    let b = bars[bars.length - 1]; if (!b || b.g !== g) bars.push(b = { g, from: d, to: d, n: 0 });
+    b.to = d; b.n += by[visKey(d)] || 0;
+  });
+  const mx = Math.max(1, ...bars.map(b => b.n)), lab = d => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  const tip = b => group === 'm' ? b.from.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : group === 'w' ? `${lab(b.from)} al ${lab(b.to)}` : visDate(b.from);
+  $('#avChartT').textContent = group === 'd' ? 'Entradas por día' : group === 'w' ? 'Entradas por semana' : 'Entradas por mes';
+  $('#avChart').parentElement.hidden = days === 1;
+  $('#avChart').innerHTML = `<div class="vis-chart" role="img" aria-label="${esc($('#avChartT').textContent)}">${bars.map(b => `<i class="${b.n ? '' : 'z'}" style="height:${(100 * b.n / mx).toFixed(1)}%" data-tip="${esc(`${tip(b)}|${b.n} entrada${b.n === 1 ? '' : 's'}`)}"></i>`).join('')}</div>
+    <div class="vis-axis"><span>${bars.length ? (group === 'm' ? bars[0].from.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }) : lab(bars[0].from)) : ''}</span><span>Máximo: ${Math.max(0, ...bars.map(b => b.n))}</span><span>Hoy</span></div>`;
+  // Lista agrupada por día, de la más reciente a la más antigua
+  const name = id => { const u = adm.users.find(u => u.id === id); return u ? (u.name || u.email) : '—'; };
+  let last = '', html = '';
+  vis.rows.forEach(v => {
+    const dk = visKey(v.at);
+    if (dk !== last) { last = dk; html += `<tr class="vis-day"><td class="l" colspan="${one ? 4 : 5}">${esc(visDate(v.at))}</td></tr>`; }
+    html += `<tr><td class="l">${visTime(v.at)}</td>${one ? '' : `<td class="l name"><b>${esc(name(v.user))}</b></td>`}<td class="l">${v.kind === 'login' ? '<span class="chip">Con contraseña</span>' : 'Sesión abierta'}</td><td class="l">${esc(v.device || '—')}</td><td class="l">${visDur((new Date(v.seen) - new Date(v.at)) / 1000)}</td></tr>`;
+  });
+  $('#avRows').innerHTML = vis.rows.length ? `<thead><tr><th class="l">Hora</th>${one ? '' : '<th class="l">Usuario</th>'}<th class="l">Tipo</th><th class="l">Dispositivo</th><th class="l">Duración aprox.</th></tr></thead><tbody>${html}</tbody>`
+    : `<tbody><tr><td class="l" style="padding:14px;color:var(--muted)">No hay entradas ${per}.</td></tr></tbody>`;
+  $('#avMore').hidden = !vis.more;
+}
+['avDays', 'avUser'].forEach(id => $('#' + id).addEventListener('change', () => visLoad()));
+$('#avMore').addEventListener('click', e => { if (e.target.closest('button')) visLoad(true); });
 /* ---- Asistente de usuario ---- */
 let wz = { step: 1, edit: null, lv: 'user', teams: {}, pw: '' };
 function genPw() {
@@ -5170,7 +5295,7 @@ $('#auCopy').addEventListener('click', async () => {
   catch { const r = document.createRange(); r.selectNodeContents($('#auMsg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selecciona y copia el mensaje'); }
 });
 $$('#admTeamDlg [data-close], #admUserDlg [data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
-$('#admRefresh').addEventListener('click', admLoad);
+$('#admRefresh').addEventListener('click', async () => { await admLoad(); if (admSec === 'ent') visLoad(); });
 
 /* ---------- Render global ---------- */
 function renderAll() {
