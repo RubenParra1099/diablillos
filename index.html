@@ -927,7 +927,7 @@ body.live .record{display:none!important}
 
   <section id="v-juegos" class="view" hidden>
     <div class="panel">
-      <div class="row spread"><h2>Juegos capturados</h2><div class="row" style="align-items:center"><span class="sub" id="gamesCount"></span><button class="btn sm primary" id="btnPdfSeason">Reporte de temporada (PDF)</button></div></div>
+      <div class="row spread"><h2>Juegos capturados</h2><div class="row" style="align-items:center"><span class="sub" id="gamesCount"></span><button class="btn sm primary" id="btnPdfSeason">Reporte de temporada (PDF)</button><button class="btn sm" id="btnZipSeason">Descargar temporada (ZIP)</button></div></div>
       <div class="confirm" id="demoBar" hidden style="background:var(--warn-bg)"><span id="demoTxt" style="flex:1;min-width:200px"></span><button class="btn sm danger" id="btnDemoDel">Borrar datos de ejemplo</button></div>
       <div class="games" id="gamesList"></div>
       <div id="rivalsBox"></div>
@@ -1226,6 +1226,7 @@ body.live .record{display:none!important}
 <dialog id="helpDlg" class="narrow"><div class="dlg" id="helpBody"></div></dialog>
 <dialog id="bdayDlg"><div class="dlg" id="bdayBody"></div></dialog>
 <dialog id="boxDlg"><div class="dlg" id="boxDlgBody"></div></dialog>
+<dialog id="zipDlg" class="narrow"><div class="dlg" style="display:flex;flex-direction:column;gap:10px"><h2 style="margin:0" id="zipTitle">Preparando la temporada</h2><div class="esp-bar big"><i id="zipBar" style="width:0"></i></div><p class="hint" style="margin:0" id="zipTxt">Empezando…</p><p class="hint" style="margin:0">No cierres esta página hasta que termine la descarga.</p></div></dialog>
 <dialog id="admTeamDlg" class="adm-dlg"><form class="adm-modal" id="admTeamForm" novalidate>
   <div class="adm-mhead"><div><div class="sub" id="atSub">Editar equipo</div><h2 id="atTitle">Equipo</h2></div><button type="button" class="btn sm" data-close>Cerrar</button></div>
   <div class="adm-mbody">
@@ -4382,6 +4383,8 @@ async function pdfSave(doc, name) {
   const n = doc.internal.getNumberOfPages(), W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
   for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(120, 110, 112); doc.text(pdfSafe(`${S.team} · Generado el ${today()}`), 32, H - 18); doc.text(`Página ${i} de ${n}`, W - 32, H - 18, { align: 'right' }); }
   const file = (S.team || 'equipo').replace(/[^\w-]+/g, '_') + '_' + name + '_' + today() + '.pdf';
+  // Descargar temporada: los PDF se juntan en el ZIP en lugar de bajarse uno por uno
+  if (pdfCapture) { pdfCapture.push({ name, data: doc.output('arraybuffer') }); return; }
   await saveFile(file, doc.output('arraybuffer'), 'application/pdf');
 }
 function recordLine() {
@@ -4753,6 +4756,86 @@ async function pdfSheet() {
   pdfSave(doc, 'hoja_boxscore_' + (draft.no || draft.date || today()));
 }
 $('#btnPdfSheet').addEventListener('click', pdfSheet);
+
+/* ---------- Descargar temporada: un ZIP con los PDF, el Excel y el respaldo de la temporada elegida ---------- */
+let pdfCapture = null;
+const libCache = {};
+// Las librerías del ZIP y del Excel solo se bajan al usar el botón
+const loadLib = (src, name) => libCache[src] || (libCache[src] = new Promise((ok, ko) => {
+  if (window[name]) return ok(window[name]);
+  const s = document.createElement('script'); s.src = src; s.onload = () => window[name] ? ok(window[name]) : ko(new Error('lib')); s.onerror = () => { delete libCache[src]; ko(new Error('Sin conexión: no se pudo preparar la descarga.')); };
+  document.head.appendChild(s);
+}));
+const fileSafe = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\(.*?\)/g, '').trim().replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'sin_nombre';
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+async function zipSeason() {
+  const games = seasonGames(); if (!games.length) { toast('Esta temporada no tiene juegos.'); return; }
+  const season = seasonNow(), label = season === 'all' ? 'carrera' : season, base = `${fileSafe(S.team)}_temporada_${label}`;
+  const gold = has('gold'), pids = gold ? players().filter(p => playerData(p.id).log.length).map(p => p.id) : [];
+  const steps = 4 + games.length + pids.length; let step = 0;
+  const dlg = $('#zipDlg'), say = txt => { $('#zipTxt').textContent = txt; $('#zipBar').style.width = Math.round(100 * step / steps) + '%'; };
+  $('#zipTitle').textContent = `Preparando ${seasonLabel().toLowerCase()}`; say('Cargando herramientas…'); dlg.showModal();
+  const btn = $('#btnZipSeason'); btn.disabled = true;
+  // Los box score y las fichas se arman en sus ventanas, ocultas mientras dura la descarga
+  const hidden = ['#boxDlg', '#playerDlg'].map(s => $(s)); hidden.forEach(d => d.style.visibility = 'hidden');
+  const prevB = [$('#bRange').value, $('#bQual').checked], prevF = $('#fGroup').value;
+  pdfCapture = [];
+  try {
+    const [JSZip, XLSX] = await Promise.all([loadLib('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'JSZip'), loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'XLSX')]);
+    const zip = new JSZip(), root = zip.folder(base), take = () => pdfCapture.splice(0).map(x => x.data), add = (n, d) => { if (d) root.file(n, d); };
+    // Reporte de temporada y estadísticas (con todos los jugadores, no solo los calificados)
+    say('Reporte de temporada…'); pdfSeason(); add('01_Reporte_de_temporada.pdf', take()[0]); step++;
+    $('#bRange').value = 'all'; $('#bQual').checked = false; renderBat(); $('#fGroup').value = 'player'; renderFld();
+    if (gold) {
+      say('Estadísticas…'); await nextFrame();
+      [['b', '02_Bateo'], ['p', '03_Pitcheo'], ['f', '04_Fildeo']].forEach(([k, n]) => { pdfStats(k); add(n + '.pdf', take()[0]); });
+    }
+    step++;
+    // Excel: una hoja por tabla
+    say('Excel…');
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['No.', 'Fecha', 'Rival', 'L/V', 'Carreras a favor', 'Carreras en contra', 'Resultado', 'Liga', 'Notas'],
+      ...games.map(g => { const s = gameScore(g); return [g.no || '', g.date, g.opp, g.ha === 'L' ? 'Local' : 'Visitante', s.us, s.them, s.res, g.liga || '', g.notes || '']; })]), 'Juegos');
+    if (gold) [['#bTbl', 'Bateo'], ['#pTbl', 'Pitcheo'], ['#fTbl', 'Fildeo']].forEach(([sel, n]) => { const t = $(sel); if (t && t.querySelector('tbody tr')) XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(t), n); });
+    root.file(`Estadisticas_${label}.xlsx`, XLSX.write(wb, { type: 'array', bookType: 'xlsx' })); step++;
+    // Box score de cada juego
+    const used = new Set(), uniq = n => { let k = n, i = 2; while (used.has(k)) k = `${n}_${i++}`; used.add(k); return k; };
+    for (const g of games) {
+      say(`Box score ${step - 2} de ${games.length}: ${g.date} contra ${g.opp}`);
+      openBox(g.id); await nextFrame(); await pdfBox(g.id); $('#boxDlg').close();
+      const pdf = take()[0]; if (pdf) add(`Juegos/${uniq(`${g.date}_${g.ha === 'L' ? 'vs' : 'en'}_${fileSafe(g.opp)}`)}.pdf`, pdf); step++;
+    }
+    // Ficha de cada jugador que jugó en la temporada
+    for (const pid of pids) {
+      const p = S.roster[pid]; say(`Ficha ${step - 2 - games.length} de ${pids.length}: ${p.name}`);
+      openPlayer(pid); await nextFrame(); await pdfPlayer(pid); $('#playerDlg').close();
+      const pdf = take()[0]; if (pdf) add(`Fichas/${uniq((p.num != null && p.num !== '' ? String(p.num).padStart(2, '0') + '_' : '') + fileSafe(p.name))}.pdf`, pdf); step++;
+    }
+    // Respaldo de la temporada (se puede volver a cargar en Equipo → Respaldo de datos)
+    say('Respaldo…');
+    const roster = {};
+    for (const [id, p] of Object.entries(S.roster)) { roster[id] = p.photo ? { ...p, photo: await photoData(p.photo) } : p; if (roster[id].photo === '') delete roster[id].photo; }
+    const gs = Object.fromEntries(games.map(({ id, ...g }) => [id, g]));
+    root.file(`Respaldo_${label}.json`, JSON.stringify({ app: 'dugout-boxscore', version: 1, exported: new Date().toISOString(), team: S.team, season: label, roster, games: gs })); step++;
+    const r = recordLine();
+    root.file('LEEME.txt', [`${S.team} · ${seasonLabel()}`, `Récord ${r.w}-${r.l} (${r.pct}) · ${games.length} juegos · descargado el ${today()}`, '',
+      '01_Reporte_de_temporada.pdf  Récord, resultados y estadísticas del equipo.',
+      gold ? '02 a 04  Bateo, pitcheo y fildeo de todos los jugadores.' : '', `Estadisticas_${label}.xlsx  Las mismas tablas en Excel.`,
+      'Juegos/  El box score de cada juego.', gold ? 'Fichas/  La ficha técnica de cada jugador.' : '',
+      `Respaldo_${label}.json  Copia de los datos de la temporada. Se puede volver a cargar en Equipo > Respaldo de datos.`].filter(x => x !== '').join('\r\n'));
+    say('Armando el archivo ZIP…'); await nextFrame();
+    const blob = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    step = steps; say('Listo.');
+    await saveFile(base + '.zip', blob, 'application/zip');
+    toast(`Temporada descargada: ${games.length} juegos${pids.length ? ' y ' + pids.length + ' fichas' : ''}`);
+  } catch (e) { toast(e.message || 'No se pudo preparar la descarga.'); }
+  finally {
+    pdfCapture = null; hidden.forEach(d => { if (d.open) d.close(); d.style.visibility = ''; });
+    $('#bRange').value = prevB[0]; $('#bQual').checked = prevB[1]; renderBat(); $('#fGroup').value = prevF; renderFld();
+    btn.disabled = false; if (dlg.open) dlg.close();
+  }
+}
+$('#btnZipSeason').addEventListener('click', zipSeason);
 
 /* ---------- Respaldo ---------- */
 $('#btnBackup').addEventListener('click', async () => {
