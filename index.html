@@ -2784,12 +2784,13 @@ function scShape(kind, x, y, s, color, dashed) {
   if (kind === 'star') { let d = ''; for (let k = 0; k < 10; k++) { const an = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? s * .55 : s * 1.35; d += (k ? 'L' : 'M') + (x + rr * Math.cos(an)).toFixed(1) + ',' + (y + rr * Math.sin(an)).toFixed(1); } return `<path d="${d}Z" style="${st}"/>`; }
   return `<circle cx="${x}" cy="${y}" r="${kind === 'ring' ? s * .8 : s}" style="${st}${dashed ? ';stroke-dasharray:2 2' : ''}"/>`;
 }
-// Trayectoria simulada desde home: rodado con botes, línea casi recta, elevado en arco (se abre hacia la línea de foul de su lado)
+// Trayectoria simulada desde home: rodado con botes, línea casi recta, elevado en arco.
+// El derecho la curva de derecha a izquierda y el zurdo de izquierda a derecha; sin mano conocida se curva hacia el centro (nunca sale del campo)
 const SC_TRT = { ground: 'Rodado', line: 'Línea', fly: 'Elevado', pop: 'Elevado al cuadro' };
 const scType = x => { const t = (parsePlay(x.play) || {}).type; return SC_TRT[t] ? t : x.cat === 'HR' || x.d >= .85 ? 'fly' : x.d >= .5 ? 'line' : 'ground'; };
 function scTrail(x, bats) {
   const [hx, hy] = SC_H, [ex, ey] = scPt(x.a, x.d), dx = ex - hx, dy = ey - hy, len = Math.hypot(dx, dy) || 1;
-  const s = x.a < -1 ? -1 : x.a > 1 ? 1 : bats === 'Z' ? 1 : -1, nx = -dy / len * s, ny = dx / len * s;
+  const s = bats === 'D' ? 1 : bats === 'Z' ? -1 : x.a < 0 ? 1 : -1, nx = -dy / len * s, ny = dx / len * s;
   const P = (f, h) => (hx + dx * f + nx * h * len).toFixed(1) + ',' + (hy + dy * f + ny * h * len).toFixed(1);
   const t = scType(x);
   if (t === 'ground') { let d = `M${hx},${hy}`, f = 0; [[.46, .05], [.32, .035], [.22, .02]].forEach(([w, h]) => { d += ` Q${P(f + w / 2, h * 2)} ${P(f += w, 0)}`; }); return [t, d]; }
@@ -2850,7 +2851,7 @@ function renderPaLoc() {
   const pa = paCtx && paCtx.pa, wrap = $('#paLocWrap'); if (!pa || !wrap) return;
   const show = !pa.res || !NO_BIP.includes(pa.res); wrap.hidden = !show; if (!show) return;
   let mk = '';
-  if (pa.loc) { const [x, y] = scPt(pa.loc.a, pa.loc.d), cat = sprayCat(pa.res || 'O'), [nm, col, kind] = SC_RES[cat]; mk = `<g class="sc-tr" aria-hidden="true">${scTrailPath({ a: pa.loc.a, d: pa.loc.d, cat, play: $('#paPlay').value }, '', col, 0)}</g><circle cx="${x}" cy="${y}" r="16" fill="var(--accent)" fill-opacity=".18"/>${scShape(kind, x, y, 7, col)}`; }
+  if (pa.loc) { const [x, y] = scPt(pa.loc.a, pa.loc.d), cat = sprayCat(pa.res || 'O'), [nm, col, kind] = SC_RES[cat]; mk = `<g class="sc-tr" aria-hidden="true">${scTrailPath({ a: pa.loc.a, d: pa.loc.d, cat, play: $('#paPlay').value }, paCtx.side === 'us' ? (S.roster[slotPidAt(cur().slots[paCtx.si], paCtx.inn)] || {}).bats : '', col, 0)}</g><circle cx="${x}" cy="${y}" r="16" fill="var(--accent)" fill-opacity=".18"/>${scShape(kind, x, y, 7, col)}`; }
   $('#paLoc').innerHTML = scField(mk, 'Toca dónde cayó la bola');
   $('#paLocClr').hidden = !pa.loc;
 }
