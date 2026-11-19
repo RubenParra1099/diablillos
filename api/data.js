@@ -477,8 +477,16 @@ export default async function handler(req, res) {
       if (op === 'adminTeamDelete') {
         if (!validId(b.id)) fail(400, 'bad_request');
         const n = (await p.query('select (select count(*) from bs_roster where team_id = $1) + (select count(*) from bs_games where team_id = $1) as n', [b.id])).rows[0].n;
-        if (Number(n) > 0) fail(409, 'not_empty', 'El equipo todavía tiene jugadores o juegos. Bórralos primero.');
-        await p.query('delete from bs_teams where id = $1', [b.id]);
+        if (Number(n) > 0 && b.force !== true) fail(409, 'not_empty', 'El equipo todavía tiene jugadores o juegos. Bórralos primero.');
+        // Con force borra también jugadores y juegos; accesos, enlaces compartidos y en vivo caen por cascada
+        const client = await p.connect();
+        try {
+          await client.query('begin');
+          await client.query('delete from bs_roster where team_id = $1', [b.id]);
+          await client.query('delete from bs_games where team_id = $1', [b.id]);
+          await client.query('delete from bs_teams where id = $1', [b.id]);
+          await client.query('commit');
+        } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
         return send(res, 200, { ok: true });
       }
       if (op === 'adminUserSave') {

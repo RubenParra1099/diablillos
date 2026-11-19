@@ -4833,7 +4833,7 @@ $('#udLogout').addEventListener('click', async () => {
 
 const $$ = q => [...document.querySelectorAll(q)];
 /* ---------- Administración ---------- */
-let adm = { teams: [], users: [], recent: [], gamesWeek: 0 }, admSec = 'res', admEditTeam = null, admLogo, admWord, admAccess = [], admTeamPending = false, admMenu = null;
+let adm = { teams: [], users: [], recent: [], gamesWeek: 0 }, admSec = 'res', admEditTeam = null, admLogo, admWord, admAccess = [], admMenu = null;
 const CATS = ['Chupón 4-6', 'Pre-iniciación 5-6', 'Pañal', 'Pre-infantil', 'Infantil', 'Juvenil', 'Libre'];
 const tLabel = t => t ? t.name + (t.category ? ' · ' + t.category : '') : '';
 const normTxt = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
@@ -4905,7 +4905,7 @@ function renderAdmTeams() {
       <div class="adm-cbody"><div><b>${esc(t.name)}</b>${t.category ? ` · <span class="sub" style="font-size:13.5px">${esc(t.category)}</span>` : ''}${t.mode === 'chupon' ? ' <span class="chip">Chupón</span>' : t.mode === 'mzt' ? ' <span class="chip">Torneo Mazatlán</span>' : ''}${t.slug ? `<div class="sub" style="font-size:12.5px">${esc(location.host)}/${esc(t.slug)}</div>` : ''}<div class="row" style="gap:8px;margin-top:4px">${planChip(t.plan)}${expTxt(t)}</div></div>
       <div class="adm-meta"><span><b>${t.players}</b> jugadores</span><span><b>${t.games}</b> juegos</span><span><b>${n}</b> con acceso</span></div>
       ${n ? '' : '<div class="check warn" style="padding:5px 9px"><b>SIN ACCESO</b><span>Nadie asignado</span></div>'}
-      <div class="row" style="gap:6px"><button type="button" class="btn sm primary" data-a="tview" data-id="${esc(t.id)}">Ver datos</button><button type="button" class="btn sm" data-a="tedit" data-id="${esc(t.id)}">Editar</button><button type="button" class="btn sm" data-a="tacc" data-id="${esc(t.id)}">Acceso</button></div></div></div>`;
+      <div class="row" style="gap:6px"><button type="button" class="btn sm primary" data-a="tview" data-id="${esc(t.id)}">Ver datos</button><button type="button" class="btn sm" data-a="tedit" data-id="${esc(t.id)}">Editar</button><button type="button" class="btn sm" data-a="tacc" data-id="${esc(t.id)}">Acceso</button><button type="button" class="btn sm danger" data-a="tdel" data-id="${esc(t.id)}" aria-label="Eliminar ${esc(t.name)}">Eliminar</button></div></div></div>`;
   }).join('') + (list.length || !adm.teams.length ? '' : '<p class="hint" style="align-self:center">Ningún equipo coincide con la búsqueda.</p>');
   $$('#admCards [data-plate]').forEach(b => { const t = adm.teams.find(t => t.id === b.dataset.plate), nm = b.querySelector('.tp-name'); if (nm) paintPlate(b, nm, t); else paintPlate(b, document.createElement('span'), t); });
 }
@@ -4915,6 +4915,7 @@ $('#admCards').addEventListener('click', async e => {
   if (a === 'tnew') return openTeamDlg(null, 'dat');
   if (a === 'tedit') return openTeamDlg(adm.teams.find(t => t.id === id), 'dat');
   if (a === 'tacc') return openTeamDlg(adm.teams.find(t => t.id === id), 'acc');
+  if (a === 'tdel') return delTeam(id);
   if (a === 'tview') { const t = adm.teams.find(t => t.id === id); if (t && t.slug) goPath('/' + t.slug); }
 });
 /* ---- Equipo: ventana con pestañas ---- */
@@ -4922,7 +4923,7 @@ function atTab(t) { $$('#atTabs button').forEach(b => b.setAttribute('aria-press
 $('#atTabs').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (b) atTab(b.dataset.t); });
 function atErr(msg) { $('#atErr').hidden = !msg; $('#atErrTxt').textContent = msg || ''; }
 function openTeamDlg(t, tab) {
-  admEditTeam = t ? t.id : null; admLogo = undefined; admWord = undefined; admTeamPending = false; atErr('');
+  admEditTeam = t ? t.id : null; admLogo = undefined; admWord = undefined; atErr('');
   $('#admTeamForm').reset();
   $('#atName').value = t ? t.name : ''; $('#atCat').value = t ? (t.category || '') : ''; $('#atMode').value = (t && t.mode) || 'trad';
   $('#atSlug').value = (t && t.slug) || ''; paintSlugUrl();
@@ -4939,15 +4940,24 @@ function openTeamDlg(t, tab) {
 }
 function renderAtDel() {
   const t = admEditTeam && adm.teams.find(t => t.id === admEditTeam);
-  $('#atDelWrap').innerHTML = !t ? '' : admTeamPending
-    ? (t.players || t.games ? `<span class="sub">Tiene ${t.players} jugadores y ${t.games} juegos: bórralos primero.</span> <button type="button" class="btn sm" data-del="no">Entendido</button>` : `<span class="sub">¿Eliminar ${esc(tLabel(t))}?</span> <button type="button" class="btn sm danger" data-del="yes">Eliminar</button> <button type="button" class="btn sm" data-del="no">No</button>`)
-    : '<button type="button" class="btn danger" data-del="ask">Eliminar equipo</button>';
+  $('#atDelWrap').innerHTML = t ? '<button type="button" class="btn danger" data-del="ask">Eliminar equipo</button>' : '';
+}
+// Elimina un equipo (solo admin). Si tiene jugadores o juegos se borran con él: hay que escribir el nombre para confirmar
+async function delTeam(id) {
+  const t = adm.teams.find(t => t.id === id); if (!t) return false;
+  const full = t.players || t.games;
+  if (full) {
+    const typed = prompt(`${tLabel(t)} tiene ${t.players} jugador${t.players === 1 ? '' : 'es'} y ${t.games} juego${t.games === 1 ? '' : 's'}. Se borrarán junto con el equipo, sus accesos y enlaces compartidos. No se puede deshacer.\n\nEscribe el nombre del equipo para confirmar:`);
+    if (typed == null) return false;
+    if (normTxt(typed.trim()) !== normTxt(t.name)) { toast('El nombre no coincide; no se eliminó'); return false; }
+  } else if (!confirm(`¿Eliminar ${tLabel(t)}? No se puede deshacer.`)) return false;
+  try { await apiCall({ op: 'adminTeamDelete', id, force: !!full }); } catch (er) { toast(er.message); return false; }
+  toast('Equipo eliminado'); if (curTeam === id) curTeam = null;
+  await admLoad(); await apiLoad(); return true;
 }
 $('#atDelWrap').addEventListener('click', async e => {
   const b = e.target.closest('[data-del]'); if (!b) return;
-  if (b.dataset.del === 'ask') admTeamPending = true; else if (b.dataset.del === 'no') admTeamPending = false;
-  else { try { await apiCall({ op: 'adminTeamDelete', id: admEditTeam }); toast('Equipo eliminado'); $('#admTeamDlg').close(); if (curTeam === admEditTeam) curTeam = null; await admLoad(); await apiLoad(); } catch (er) { atErr(er.message); } admTeamPending = false; }
-  renderAtDel();
+  if (await delTeam(admEditTeam)) $('#admTeamDlg').close();
 });
 // Misma regla que la API: minúsculas, sin acentos, lo demás se vuelve guion
 const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40).replace(/-$/, '');
