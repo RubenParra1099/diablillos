@@ -9,10 +9,10 @@ const { default: handler } = await import(tmp.href); fs.unlinkSync(tmp);
 let cookie = '';
 async function call(body, query = {}, opts = {}) {
   const req = { method: body ? 'POST' : 'GET', body: body || undefined, query, url: '/api/data?' + new URLSearchParams(query), headers: { cookie: opts.noCookie ? '' : cookie, 'x-forwarded-for': opts.ip || '10.0.0.1', 'x-forwarded-proto': 'https', 'user-agent': opts.ua || '' } };
-  const res = { h: {}, setHeader(k, v) { this.h[k] = v; }, status(c) { this.code = c; return this; }, json(b) { this.body = b; } };
+  const res = { h: {}, setHeader(k, v) { this.h[k] = v; }, status(c) { this.code = c; return this; }, json(b) { this.body = b; }, end(b) { this.raw = b; } };
   await handler(req, res);
   const sc = res.h['Set-Cookie']; if (sc && !opts.noCookie) { const v = sc.split(';')[0]; cookie = v.endsWith('=') ? '' : v; }
-  return { code: res.code, ...res.body };
+  return { code: res.code || res.statusCode, ...res.body, raw: res.raw, headers: res.h };
 }
 const ok = (name, cond, extra = '') => test(name, () => assert.ok(cond, name + ' ' + extra));
 
@@ -176,6 +176,28 @@ await call({ op: 'login', email: 'lectura@x.mx', password: 'temporal123' }, {}, 
 r = await call({ op: 'adminVisits', days: 30, tz });
 ok('solo un administrador ve las entradas', r.code === 403);
 await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { ip: '10.0.3.4' });
+
+// Fotos: no viajan en la carga del equipo, se piden aparte
+const png = 'data:image/png;base64,' + Buffer.from('foto-de-prueba').toString('base64');
+r = await call({ op: 'put', team, col: 'roster', id: 'pf', data: { name: 'Con Foto', photo: png }, base: null });
+ok('se guarda un jugador con foto', r.code === 200);
+r = await call(null, { team });
+const purl = r.roster.pf.photo;
+ok('la carga trae la dirección de la foto y no la foto', typeof purl === 'string' && purl.startsWith('/api/data?photo=pf&') && !JSON.stringify(r.roster).includes('base64'), purl);
+const pq = Object.fromEntries(new URLSearchParams(purl.split('?')[1]));
+r = await call(null, pq);
+ok('la foto se descarga aparte', r.code === 200 && Buffer.from(r.raw).toString() === 'foto-de-prueba' && r.headers['Content-Type'] === 'image/png' && /immutable/.test(r.headers['Cache-Control']));
+let vp = (await call(null, { team })).ver.roster.pf;
+r = await call({ op: 'put', team, col: 'roster', id: 'pf', data: { name: 'Con Foto Editado', photo: purl }, base: vp });
+r = await call(null, pq);
+ok('editar al jugador sin cambiar la foto la conserva', Buffer.from(r.raw || '').toString() === 'foto-de-prueba');
+r = await call(null, { team });
+ok('la dirección cambia al editar al jugador', r.roster.pf.photo !== purl && r.roster.pf.name === 'Con Foto Editado');
+r = await call({ op: 'put', team, col: 'roster', id: 'pf', data: { name: 'Sin Foto' }, base: r.ver.roster.pf });
+r = await call(null, pq);
+ok('quitar la foto la borra', r.code === 404);
+r = await call(null, { photo: 'pf', team: 'otro-equipo' });
+ok('no se piden fotos de un equipo sin acceso', r.code === 404);
 
 // Copia en la nube del box score en curso
 r = await call(null, { team });

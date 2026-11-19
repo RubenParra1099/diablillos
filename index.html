@@ -1468,7 +1468,7 @@ function unstashUserData(uid) {
   if (n) toast(`Se recuperaron ${n} cambio${n === 1 ? '' : 's'} sin subir de tu sesión anterior en este teléfono`);
   draftChecked = '';
 }
-function clearUserData() { try { Object.keys(localStorage).filter(k => k === TEAMK || k === OUTK || k === OWNK || k.startsWith('bs-cache:') || k.startsWith('bs-draft:') || k.startsWith('bs-draft-done:')).forEach(k => localStorage.removeItem(k)); } catch {} }
+function clearUserData() { try { Object.keys(localStorage).filter(k => k === TEAMK || k === OUTK || k === OWNK || k.startsWith('bs-cache:') || k.startsWith('bs-draft:') || k.startsWith('bs-draft-done:')).forEach(k => localStorage.removeItem(k)); } catch {} try { caches.delete('bs-photos-v1'); } catch {} }
 function markOwner() {
   if (!me || !me.id) return; let o = ''; try { o = localStorage.getItem(OWNK) || ''; } catch {}
   if (o === me.id) return false;
@@ -1650,6 +1650,7 @@ async function apiLoad(full) {
   applyBrand(j.team); renderAuthUI(); renderAll(); syncBadge();
   if (me.mustChange && !$('#pwDlg').open) openPwDlg(true);
   if (outbox().length) setTimeout(flushOutbox);
+  if (!j.partial && apiCanEdit) setTimeout(slimPhotos, 3000);
 }
 async function put(col, id, data, opts = {}) {
   if (db) await db.collection(col).doc(id).set(data);
@@ -3588,21 +3589,62 @@ $('#rosterForm').addEventListener('submit', e => {
 const initials = name => String(name || '?').replace(/\(.*?\)/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
 function avatarHTML(pid, size = 34) {
   const p = S.roster[pid] || {};
-  return p.photo ? `<img class="avatar" src="${esc(p.photo)}" alt="" style="width:${size}px;height:${size}px">`
+  // Sin señal y sin la foto guardada en el teléfono: se oculta en vez de mostrar una imagen rota
+  return p.photo ? `<img class="avatar" src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" style="width:${size}px;height:${size}px">`
     : `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .42)}px" aria-hidden="true">${esc(p.num != null && p.num !== '' ? p.num : initials(p.name))}</span>`;
 }
 const plink = (pid, name) => `<button type="button" class="plink" data-pid="${esc(pid)}">${esc(name)}</button>`;
 document.addEventListener('click', e => { const b = e.target.closest('.plink'); if (b) { e.preventDefault(); openPlayer(b.dataset.pid); } });
 
+// Fotos de jugadores: el lado mayor de hasta 320 px en JPEG (unos 20 KB), sin recortar y con su proporción
+const PHOTO_MAX = 320, PHOTO_Q = .78, PHOTO_HEAVY = 45;
+function shrinkImg(img) {
+  const k = Math.min(1, PHOTO_MAX / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', PHOTO_Q);
+}
+// La foto llega como dirección (/api/data?photo=…); el PDF y el respaldo la necesitan completa
+const photoCache = new Map();
+async function photoData(src) {
+  if (!src || src.startsWith('data:')) return src || '';
+  if (photoCache.has(src)) return photoCache.get(src);
+  try {
+    const b = await (await fetch(src, { credentials: 'same-origin' })).blob(); if (!/^image\//.test(b.type)) return '';
+    const d = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ko; fr.readAsDataURL(b); });
+    photoCache.set(src, d); return d;
+  } catch { return ''; }
+}
+const photoKB = src => +(new URLSearchParams(String(src || '').split('?')[1] || '').get('k') || 0);
+// Las fotos pesadas que se subieron antes se aligeran solas, una vez al día, cuando las abre alguien que puede capturar
+let slimming = false;
+async function slimPhotos() {
+  if (slimming || !api || !apiCanEdit || !curTeam || netDown) return;
+  const team = curTeam, mk = 'bs-slim:' + team; try { if (localStorage.getItem(mk) === today()) return; } catch {}
+  const heavy = Object.entries(S.roster).filter(([, p]) => photoKB(p.photo) > PHOTO_HEAVY);
+  slimming = true; let n = 0, done = true;
+  try {
+    for (const [pid, p] of heavy) {
+      if (curTeam !== team) { done = false; break; }
+      const src = await photoData(p.photo); if (!src) continue;
+      const img = await new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; }); if (!img) continue;
+      const small = shrinkImg(img); if (small.length >= src.length) continue;
+      const cur = S.roster[pid]; if (!cur || cur.photo !== p.photo) continue; // alguien lo cambió mientras tanto
+      try {
+        const r = await apiCall({ op: 'put', team, col: 'roster', id: pid, data: { ...cur, photo: small }, base: VER.roster[pid] ?? null });
+        VER.roster[pid] = r.version; n++;
+        S.roster[pid] = { ...cur, photo: `/api/data?photo=${encodeURIComponent(pid)}&team=${encodeURIComponent(team)}&v=${r.version}&k=${Math.round(small.length * 3 / 4 / 1024)}` };
+      } catch (e) { if (e.code === 'network') { done = false; break; } } // si otra persona lo editó, se intenta otro día
+    }
+    if (done) try { localStorage.setItem(mk, today()); } catch {}
+    if (n && curTeam === team) { saveCache(); renderAll(); }
+  } finally { slimming = false; }
+}
 function resizePhoto(file) {
   return new Promise((res, rej) => {
     const fr = new FileReader();
     fr.onerror = () => rej(new Error('read'));
     fr.onload = () => { const img = new Image(); img.onerror = () => rej(new Error('img')); img.onload = () => {
-      // sin recortar: conserva la foto completa y su proporción, con el lado mayor de hasta 480 px
-      const k = Math.min(1, 480 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-      const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
-      res(c.toDataURL('image/jpeg', .82));
+      res(shrinkImg(img));
     }; img.src = fr.result; };
     fr.readAsDataURL(file);
   });
@@ -4383,7 +4425,7 @@ async function pdfPlayer(pid) {
   const imgs = new Map(); for (const sv of host.querySelectorAll('.trend svg, .spray-blk svg.sc-svg')) imgs.set(sv, await pdfSvg(sv));
   const doc = pdfDoc('portrait', 'Ficha técnica del jugador', seasonLabel()); if (!doc) return;
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
-  const ph = p.photo ? pdfPhoto(doc, p.photo, 32, 88, 110, 110) : null;
+  const ph = p.photo ? pdfPhoto(doc, await photoData(p.photo), 32, 88, 110, 110) : null;
   if (!ph) { doc.setFillColor(...RED); doc.circle(87, 143, 55, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(40); doc.text(pdfSafe(p.num ?? initials(p.name)), 87, 157, { align: 'center' }); }
   doc.setDrawColor(...RED); doc.setLineWidth(2); doc.rect(...(ph || [32, 88, 110, 110]));
   doc.setTextColor(...RED); doc.setFont('helvetica', 'bold'); doc.setFontSize(38); doc.text(pdfSafe(p.num ?? ''), 160, 124);
@@ -4459,7 +4501,7 @@ async function pdfProj() {
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), CW = W - 64;
   const room = (y, need) => { if (y + need > H - 40) { doc.addPage(); return 40; } return y; };
   // encabezado del jugador
-  if (p.photo) pdfPhoto(doc, p.photo, 32, 84, 64, 64);
+  if (p.photo) pdfPhoto(doc, await photoData(p.photo), 32, 84, 64, 64);
   else { doc.setFillColor(...RED); doc.circle(64, 116, 32, 'F'); doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.text(pdfSafe(p.num ?? initials(p.name)), 64, 124, { align: 'center' }); }
   doc.setTextColor(...INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(pdfSafe((p.num != null && p.num !== '' ? '#' + p.num + '  ' : '') + p.name), 110, 108);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(90);
@@ -4699,8 +4741,11 @@ async function pdfSheet() {
 $('#btnPdfSheet').addEventListener('click', pdfSheet);
 
 /* ---------- Respaldo ---------- */
-$('#btnBackup').addEventListener('click', () => {
-  const data = JSON.stringify({ app: 'dugout-boxscore', version: 1, exported: new Date().toISOString(), team: S.team, roster: S.roster, games: S.games });
+$('#btnBackup').addEventListener('click', async () => {
+  // Las fotos llegan como dirección: el respaldo las lleva completas para que sirva sin la plataforma
+  const roster = {};
+  for (const [id, p] of Object.entries(S.roster)) { roster[id] = p.photo ? { ...p, photo: await photoData(p.photo) } : p; if (roster[id].photo === '') delete roster[id].photo; }
+  const data = JSON.stringify({ app: 'dugout-boxscore', version: 1, exported: new Date().toISOString(), team: S.team, roster, games: S.games });
   saveFile((S.team || 'equipo').replace(/[^\w-]+/g, '_') + '_respaldo_' + today() + '.json', data, 'application/json');
 });
 let pendingBackup = null;

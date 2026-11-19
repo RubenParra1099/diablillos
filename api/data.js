@@ -128,10 +128,15 @@ function sessionCookie(req, value, maxAge) {
 const VER = "(extract(epoch from updated_at) * 1000000)::bigint::text";
 // base: versión que tenía abierta quien guarda (null = registro nuevo). Si no coincide, alguien más guardó antes.
 async function upsertDoc(c, table, id, teamId, data, base) {
-  const json = JSON.stringify(data);
-  if (json.length > MAX_DOC) fail(413, 'too_big', 'El registro es demasiado grande.');
   // El id es único en toda la tabla: no permitir pisar un registro de otro equipo
   const prev = (await c.query(`select team_id, data, ${VER} as v from ${table} where id = $1`, [id])).rows[0];
+  // La app recibe la foto como dirección (/api/data?photo=…): si regresa así, se conserva la foto guardada
+  if (table === 'bs_roster' && typeof data.photo === 'string' && !data.photo.startsWith('data:image/')) {
+    const keep = prev && prev.team_id === teamId && prev.data && typeof prev.data.photo === 'string' && prev.data.photo.startsWith('data:image/') ? prev.data.photo : '';
+    data = { ...data }; if (keep) data.photo = keep; else delete data.photo;
+  }
+  const json = JSON.stringify(data);
+  if (json.length > MAX_DOC) fail(413, 'too_big', 'El registro es demasiado grande.');
   if (prev && prev.team_id && prev.team_id !== teamId) fail(403, 'forbidden', 'Ese registro pertenece a otro equipo.');
   if (base !== undefined && prev && String(base || '') !== prev.v) {
     const e = new Error('Otra persona guardó este registro mientras lo editabas.'); e.status = 409; e.code = 'conflict';
@@ -140,6 +145,12 @@ async function upsertDoc(c, table, id, teamId, data, base) {
   const row = (await c.query(`insert into ${table} (id, team_id, data, updated_at) values ($1, $2, $3::jsonb, now())
                  on conflict (id) do update set data = excluded.data, team_id = excluded.team_id, updated_at = now() returning ${VER} as v`, [id, teamId, json])).rows[0];
   return row.v;
+}
+// Las fotos no viajan en la carga del equipo (pesan casi todo): van como dirección y se piden aparte.
+// v cambia cuando cambia el jugador (para que el navegador no use una foto vieja) y k son los KB de la foto
+function slimPlayer(d, id, teamId, v) {
+  if (!d || typeof d.photo !== 'string' || !d.photo.startsWith('data:image/')) return d;
+  return { ...d, photo: `/api/data?photo=${encodeURIComponent(id)}&team=${encodeURIComponent(teamId)}&v=${v}&k=${Math.round(d.photo.length * 3 / 4 / 1024)}` };
 }
 const TEAM_BAT = ['ab', 'h', 'd', 't', 'hr', 'bb', 'so', 'hbp', 'sf', 'sh', 'sb', 'cs'];
 // Vista para papás: solo el jugador compartido; de los demás no viajan nombres ni líneas
@@ -294,6 +305,18 @@ export default async function handler(req, res) {
 
     const me = await loadUser(p, req);
     if (!me) fail(401, 'auth', 'Inicia sesión para continuar.');
+    // Foto de un jugador (la app la pide aparte con la dirección que trae el roster)
+    const qp = op === 'load' ? (req.query || Object.fromEntries(new URLSearchParams(String(req.url || '').split('?')[1] || ''))) : {};
+    if (qp.photo) {
+      const teamId = String(qp.team || ''), pid = String(qp.photo);
+      if (!validId(pid) || !canRead(me, teamId)) fail(404, 'not_found', 'Foto no encontrada.');
+      const row = (await p.query("select data->>'photo' as ph from bs_roster where id = $1 and team_id = $2", [pid, teamId])).rows[0];
+      const m = row && /^data:(image\/[a-z0-9.+-]+);base64,([\s\S]*)$/i.exec(row.ph || '');
+      if (!m) fail(404, 'not_found', 'Foto no encontrada.');
+      // La dirección cambia (v) cuando cambia el jugador, así que el navegador la puede guardar mucho tiempo
+      res.setHeader('Content-Type', m[1]); res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+      res.statusCode = 200; return res.end(Buffer.from(m[2], 'base64'));
+    }
     // El registro de entradas nunca debe impedir guardar ni cargar
     await touchVisit(p, me.id, req).catch(e => console.error('touchVisit', e));
 
@@ -344,7 +367,7 @@ export default async function handler(req, res) {
           p.query(`select id, data, ${VER} as v from bs_games where ${cond}`, args),
         ]);
         out.team = publicTeam(me.teams.find(t => t.id === teamId));
-        out.roster = Object.fromEntries(r.rows.map(x => [x.id, x.data])); r.rows.forEach(x => out.ver.roster[x.id] = x.v);
+        out.roster = Object.fromEntries(r.rows.map(x => [x.id, slimPlayer(x.data, x.id, teamId, x.v)])); r.rows.forEach(x => out.ver.roster[x.id] = x.v);
         out.games = Object.fromEntries(g.rows.map(x => [x.id, x.data])); g.rows.forEach(x => out.ver.games[x.id] = x.v);
         if (since) {
           // ids vigentes, para saber qué se borró
