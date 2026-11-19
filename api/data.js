@@ -495,6 +495,28 @@ export default async function handler(req, res) {
           gamesWeek: week.rows[0].n,
         });
       }
+      // Espacio: cuánto ocupa cada equipo en la base y cuánto pesa abrirlo (la carga no puede pasar de 4.5 MB en Vercel)
+      if (op === 'adminUsage') {
+        const [ro, ga, db, tb] = await Promise.all([
+          p.query(`select team_id, count(*)::int as n, count(*) filter (where data->>'photo' like 'data:image/%')::int as photos,
+                     coalesce(sum(pg_column_size(data)), 0)::bigint as disk, coalesce(sum(octet_length(coalesce(data->>'photo', ''))), 0)::bigint as photo_bytes,
+                     coalesce(sum(octet_length((data - 'photo')::text)), 0)::bigint as load_bytes from bs_roster group by team_id`),
+          p.query(`select team_id, count(*)::int as n, count(distinct left(data->>'date', 4))::int as seasons,
+                     coalesce(sum(pg_column_size(data)), 0)::bigint as disk, coalesce(sum(octet_length(data::text)), 0)::bigint as load_bytes from bs_games group by team_id`),
+          p.query('select pg_database_size(current_database())::bigint as size'),
+          p.query(`select relname as name, pg_total_relation_size(relid)::bigint as size from pg_catalog.pg_statio_user_tables where relname like 'bs\\_%' order by 2 desc`),
+        ]);
+        const N = x => Number(x || 0), by = rows => Object.fromEntries(rows.map(x => [x.team_id, x]));
+        const R = by(ro.rows), G = by(ga.rows);
+        const teams = (await p.query('select id from bs_teams')).rows.map(({ id }) => {
+          const r = R[id] || {}, g = G[id] || {};
+          // Al abrir: roster sin fotos (cada foto es una dirección de ~110 bytes) y todos los juegos
+          return { id, players: N(r.n), photos: N(r.photos), photoBytes: N(r.photo_bytes), rosterDisk: N(r.disk), games: N(g.n), seasons: N(g.seasons), gamesDisk: N(g.disk), gamesLoad: N(g.load_bytes),
+            load: N(r.load_bytes) + N(r.photos) * 110 + N(g.load_bytes) };
+        });
+        return send(res, 200, { teams, db: N(db.rows[0].size), dbLimit: (Number(process.env.DB_LIMIT_MB) || 512) * 1024 * 1024, loadLimit: 4.5 * 1024 * 1024,
+          tables: tb.rows.map(x => ({ name: x.name, size: N(x.size) })) });
+      }
       // Historial de entradas: de todos o de un usuario, por periodo, de 100 en 100 (before = cursor)
       if (op === 'adminVisits') {
         const days = [1, 7, 30, 90, 365].includes(Number(b.days)) ? Number(b.days) : 30, tz = okTz(b.tz) ? b.tz : 'America/Mexico_City';

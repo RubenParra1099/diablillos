@@ -126,6 +126,7 @@ Un usuario puede tener acceso a varios equipos, con un rol distinto en cada uno.
 | `DIABLILLOS_DB_URL` | Cadena de conexión de Neon (con pooling). Tiene prioridad sobre `DATABASE_URL`. |
 | `EDIT_KEY` | Clave de instalación: solo se pide al crear el primer administrador. |
 | `AUTH_SECRET` | **Recomendada**: secreto largo y aleatorio para firmar las sesiones. Si falta, se deriva de la cadena de conexión. |
+| `DB_LIMIT_MB` | Opcional: tamaño del plan de la base en MB, para la pantalla Administración → Espacio. Si falta, usa 512 (plan gratis de Neon). |
 
 ## Pruebas
 

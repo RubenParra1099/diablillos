@@ -199,6 +199,15 @@ ok('quitar la foto la borra', r.code === 404);
 r = await call(null, { photo: 'pf', team: 'otro-equipo' });
 ok('no se piden fotos de un equipo sin acceso', r.code === 404);
 
+// Espacio que ocupa cada equipo
+await call({ op: 'put', team, col: 'roster', id: 'pf2', data: { name: 'Otra Foto', photo: png }, base: null });
+r = await call({ op: 'adminUsage' });
+const ut = r.teams && r.teams.find(t => t.id === team), loadReal = JSON.stringify((await call(null, { team })).games).length;
+ok('el espacio trae jugadores, fotos y juegos de cada equipo', r.code === 200 && ut.players >= 3 && ut.photos === 1 && ut.photoBytes === png.length && ut.games >= 1 && ut.seasons === 1, JSON.stringify(ut));
+ok('la carga estimada no cuenta las fotos', ut.load >= loadReal && ut.load < loadReal + 5000, ut.load + ' vs ' + loadReal);
+ok('el espacio trae el tamaño de la base y sus tablas', r.db > 0 && r.dbLimit === 512 * 1024 * 1024 && r.tables.some(t => t.name === 'bs_games'));
+await call({ op: 'del', team, col: 'roster', id: 'pf2' });
+
 // Copia en la nube del box score en curso
 r = await call(null, { team });
 ok('sin box score en curso la carga trae draft vacío', r.draft === null);

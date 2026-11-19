@@ -290,7 +290,7 @@ a.home-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 /* ---- Admin ---- */
 #v-admin{display:flex;flex-direction:column;gap:16px}
 .adm-sec{display:flex;flex-direction:column;gap:16px}
-.adm-seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
+.adm-seg{display:inline-flex;flex-wrap:wrap;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
 .adm-seg button{border:0;background:transparent;font:600 14px var(--f-body);padding:7px 14px;border-radius:6px;cursor:pointer;color:var(--muted)}
 .adm-seg button[aria-pressed="true"]{background:var(--paper);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.14)}
 .adm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
@@ -328,6 +328,14 @@ a.home-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .vis-axis{display:flex;justify-content:space-between;font:600 10.5px var(--f-mono);color:var(--muted);margin-top:4px}
 .vis-day td{background:var(--chip);font:600 11px var(--f-mono)!important;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .vis-more{display:flex;justify-content:center;padding:10px}
+.esp-bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;min-width:90px}
+.esp-bar i{display:block;height:100%;background:var(--win);border-radius:5px}
+.esp-bar.warn i{background:var(--warn)} .esp-bar.bad i{background:var(--loss)}
+.esp-bar.big{height:16px;border-radius:8px;margin:6px 0 8px}
+.esp-st{font:600 11px var(--f-mono);padding:2px 7px;border-radius:3px;white-space:nowrap;background:var(--ok-bg);color:var(--win)}
+.esp-st.warn{background:var(--warn-bg);color:var(--warn)} .esp-st.bad{background:var(--bad-bg);color:var(--loss)}
+.esp-split{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.esp-split b{color:var(--ink);font-variant-numeric:tabular-nums}
 .adm-dots{border:0;background:transparent;font-size:20px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 10px;border-radius:4px}
 .adm-dots:hover{background:var(--hover)}
 .adm-menu{position:absolute;right:8px;top:34px;background:var(--paper);border:1px solid var(--line-strong);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;min-width:210px;z-index:5;overflow:hidden;text-align:left}
@@ -1138,7 +1146,7 @@ body.live .record{display:none!important}
     <div class="row spread" style="align-items:center">
       <h2>Administración</h2>
       <div class="row" style="align-items:center;gap:8px">
-        <div class="adm-seg" id="admSeg" role="tablist"><button type="button" data-s="res" aria-pressed="true">Resumen</button><button type="button" data-s="eq" aria-pressed="false">Equipos</button><button type="button" data-s="us" aria-pressed="false">Usuarios</button><button type="button" data-s="ent" aria-pressed="false">Entradas</button></div>
+        <div class="adm-seg" id="admSeg" role="tablist"><button type="button" data-s="res" aria-pressed="true">Resumen</button><button type="button" data-s="eq" aria-pressed="false">Equipos</button><button type="button" data-s="us" aria-pressed="false">Usuarios</button><button type="button" data-s="ent" aria-pressed="false">Entradas</button><button type="button" data-s="esp" aria-pressed="false">Espacio</button></div>
         <button class="btn sm" id="admRefresh" type="button">Actualizar</button>
         <button class="btn sm plat-only" id="admHome" type="button">Tus equipos</button>
       </div>
@@ -1168,6 +1176,12 @@ body.live .record{display:none!important}
       <div class="panel"><h3 id="avChartT">Entradas por día</h3><div id="avChart"></div></div>
       <div class="panel" style="padding:0"><div class="scroll adm-utable"><table id="avRows"></table></div><div class="vis-more" id="avMore" hidden><button type="button" class="btn sm">Ver más</button></div></div>
       <p class="hint" style="margin:0">Una entrada es cada vez que alguien abre la plataforma. Si recarga o sigue usándola sin dejar pasar 30 minutos, cuenta como la misma entrada. "Con contraseña" es cuando escribió su correo y contraseña; "Sesión abierta" es cuando ya tenía la sesión iniciada. El historial se guarda un año.</p>
+    </div>
+    <div id="admEsp" class="adm-sec" hidden>
+      <div class="adm-kpis" id="espKpis"></div>
+      <div class="panel"><h3>Base de datos de la plataforma</h3><div id="espDb"></div></div>
+      <div class="panel" style="padding:0"><div class="scroll adm-utable"><table id="espTeams"></table></div></div>
+      <p class="hint" style="margin:0" id="espNote"></p>
     </div>
   </section>
 </div></main>
@@ -4987,8 +5001,9 @@ async function admLoad() {
 }
 function admShow(s) {
   admSec = s; $$('#admSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === s)));
-  $('#admRes').hidden = s !== 'res'; $('#admEq').hidden = s !== 'eq'; $('#admUs').hidden = s !== 'us'; $('#admEnt').hidden = s !== 'ent';
+  $('#admRes').hidden = s !== 'res'; $('#admEq').hidden = s !== 'eq'; $('#admUs').hidden = s !== 'us'; $('#admEnt').hidden = s !== 'ent'; $('#admEsp').hidden = s !== 'esp';
   if (s === 'ent') visLoad();
+  if (s === 'esp') espLoad();
 }
 $('#admSeg').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) admShow(b.dataset.s); });
 function renderAdmin() {
@@ -5284,6 +5299,41 @@ function renderVis() {
   $('#avMore').hidden = !vis.more;
 }
 ['avDays', 'avUser'].forEach(id => $('#' + id).addEventListener('change', () => visLoad()));
+/* ---- Espacio: cuánto ocupa cada equipo y la plataforma ---- */
+const fmtB = b => b >= 1048576 ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB' : b > 0 ? Math.max(1, Math.round(b / 1024)) + ' KB' : '0';
+const espLv = pct => pct >= 85 ? 'bad' : pct >= 60 ? 'warn' : '';
+const espBar = (pct, big) => `<div class="esp-bar${big ? ' big' : ''} ${espLv(pct)}" role="img" aria-label="${Math.round(pct)}%"><i style="width:${Math.min(100, Math.max(pct > 0 ? 1.5 : 0, pct)).toFixed(1)}%"></i></div>`;
+const ESP_TABLES = { bs_games: 'Juegos', bs_roster: 'Jugadores y fotos', bs_visits: 'Entradas', bs_drafts: 'Juegos en curso', bs_live: 'En vivo', bs_teams: 'Equipos', bs_users: 'Usuarios' };
+let espSeq = 0;
+async function espLoad() {
+  const seq = ++espSeq; $('#espTeams').innerHTML = '<tbody><tr><td class="l" style="padding:14px;color:var(--muted)">Calculando…</td></tr></tbody>';
+  try { const r = await apiCall({ op: 'adminUsage' }); if (seq === espSeq) renderEsp(r); } catch (e) { if (seq === espSeq) toast(e.message); }
+}
+function renderEsp(r) {
+  const T = r.teams.map(t => ({ ...t, team: adm.teams.find(x => x.id === t.id), disk: t.rosterDisk + t.gamesDisk, pct: 100 * t.load / r.loadLimit })).sort((a, b) => b.pct - a.pct || b.disk - a.disk);
+  const dbPct = 100 * r.db / r.dbLimit, used = T.filter(t => t.disk > 0), avgTeam = used.length ? used.reduce((s, t) => s + t.disk, 0) / used.length : 0;
+  const games = T.reduce((s, t) => s + t.games, 0), photos = T.reduce((s, t) => s + t.photos, 0), photoB = T.reduce((s, t) => s + t.photoBytes, 0);
+  const gameAvg = games ? T.reduce((s, t) => s + t.gamesLoad, 0) / games : 12 * 1024, top = T[0];
+  const k = (lab, v, s) => `<div class="adm-kpi"><div class="k">${lab}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  $('#espKpis').innerHTML = k('Base de datos', fmtB(r.db), `${Math.round(dbPct)}% de ${fmtB(r.dbLimit)}`) +
+    k('Equipos', T.length, avgTeam ? `${fmtB(avgTeam)} en promedio cada uno` : 'sin datos todavía') +
+    k('Juegos', games, `${fmtB(gameAvg)} en promedio cada uno`) + k('Fotos', photos, `${fmtB(photoB)} en total`);
+  const room = avgTeam ? Math.max(0, Math.floor((r.dbLimit * .95 - r.db) / avgTeam)) : null;
+  $('#espDb').innerHTML = espBar(dbPct, true) + `<div class="esp-split"><span>Usado <b>${fmtB(r.db)}</b> de <b>${fmtB(r.dbLimit)}</b></span>${room != null ? `<span>Caben aprox. <b>${room}</b> equipos más como el promedio</span>` : ''}</div>
+    <div class="esp-split" style="margin-top:8px">${r.tables.filter(x => ESP_TABLES[x.name]).map(x => `<span>${ESP_TABLES[x.name]} <b>${fmtB(x.size)}</b></span>`).join('')}</div>`;
+  $('#espTeams').innerHTML = `<thead><tr><th class="l">Equipo</th><th class="l">Estado</th><th class="l">Al abrir el equipo</th><th>Jugadores</th><th>Juegos</th><th>En la base</th></tr></thead><tbody>` + (T.map(t => {
+    const lv = espLv(t.pct), more = Math.max(0, Math.floor((r.loadLimit * .95 - t.load) / (t.games ? t.gamesLoad / t.games : gameAvg)));
+    return `<tr><td class="l name"><b>${esc(t.team ? t.team.name : t.id)}</b>${t.team && t.team.category ? `<br><span class="sub">${esc(t.team.category)}</span>` : ''}</td>
+      <td class="l"><span class="esp-st ${lv}">${lv === 'bad' ? 'Cerca del límite' : lv === 'warn' ? 'Vigilar' : 'Bien'}</span></td>
+      <td class="l" style="min-width:170px">${espBar(t.pct)}<span class="sub">${fmtB(t.load)} de ${fmtB(r.loadLimit)} · caben ~${more} juegos más</span></td>
+      <td>${t.players}${t.photos ? `<br><span class="sub">${t.photos} con foto</span>` : ''}</td>
+      <td>${t.games}${t.seasons ? `<br><span class="sub">${t.seasons} temporada${t.seasons === 1 ? '' : 's'}</span>` : ''}</td>
+      <td>${fmtB(t.disk)}<br><span class="sub">${t.photos ? 'fotos ' + fmtB(t.photoBytes) : 'sin fotos'}</span></td></tr>`;
+  }).join('') || '<tr><td class="l" colspan="6" style="padding:14px;color:var(--muted)">Todavía no hay equipos.</td></tr>') + '</tbody>';
+  $('#espNote').innerHTML = `<b>Al abrir el equipo</b> es lo que descarga la app al entrar: los datos de los jugadores (sin fotos) y todos sus juegos. No puede pasar de ${fmtB(r.loadLimit)}; si un equipo se acerca, hay que hacer que cargue por temporada. ` +
+    `<b>En la base</b> es lo que ocupa guardado, con fotos. El límite de ${fmtB(r.dbLimit)} es el del plan gratis de Neon; si cambias de plan, pon el nuevo tamaño en MB en la variable <code>DB_LIMIT_MB</code> de Vercel.` +
+    (top && top.pct >= 60 ? ` <b>Atención:</b> ${esc(top.team ? top.team.name : top.id)} ya usa el ${Math.round(top.pct)}% de su carga.` : '');
+}
 $('#avMore').addEventListener('click', e => { if (e.target.closest('button')) visLoad(true); });
 /* ---- Asistente de usuario ---- */
 let wz = { step: 1, edit: null, lv: 'user', teams: {}, pw: '' };
@@ -5371,7 +5421,7 @@ $('#auCopy').addEventListener('click', async () => {
   catch { const r = document.createRange(); r.selectNodeContents($('#auMsg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selecciona y copia el mensaje'); }
 });
 $$('#admTeamDlg [data-close], #admUserDlg [data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
-$('#admRefresh').addEventListener('click', async () => { await admLoad(); if (admSec === 'ent') visLoad(); });
+$('#admRefresh').addEventListener('click', async () => { await admLoad(); if (admSec === 'ent') visLoad(); if (admSec === 'esp') espLoad(); });
 
 /* ---------- Render global ---------- */
 function renderAll() {
