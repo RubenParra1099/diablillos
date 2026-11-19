@@ -15,6 +15,7 @@ img{max-width:100%}
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Dugout Box Score</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1443,11 +1444,40 @@ function askConflict(col, info, mine) {
 const TEAMK = 'bs-team', OWNK = 'bs-owner';
 // Datos de la sesión guardados en el teléfono: copias de equipos, cambios sin subir y borradores.
 // Se borran al cerrar sesión o al entrar otro usuario, para que el siguiente no vea ni suba lo del anterior.
-function clearUserData() { try { Object.keys(localStorage).filter(k => k === TEAMK || k === OUTK || k === OWNK || k.startsWith('bs-cache:') || k.startsWith('bs-draft:')).forEach(k => localStorage.removeItem(k)); } catch {} }
+// Antes, los cambios sin subir y los box score en curso se apartan a nombre de su dueño: nunca se pierden
+const STASHK = u => 'bs-stash:' + u, sameOp = (a, b) => a.team === b.team && a.col === b.col && a.id === b.id;
+function stashUserData(uid) {
+  if (!uid) return true;
+  try {
+    const q = outbox(), drafts = {};
+    Object.keys(localStorage).filter(k => k.startsWith('bs-draft:') || k.startsWith('bs-draft-done:')).forEach(k => drafts[k] = localStorage.getItem(k));
+    if (!q.length && !Object.keys(drafts).some(k => k.startsWith('bs-draft:'))) return true;
+    let prev = {}; try { prev = JSON.parse(localStorage.getItem(STASHK(uid)) || '{}') || {}; } catch {}
+    const ob = (prev.outbox || []).filter(o => !q.some(x => sameOp(x, o))).concat(q);
+    return lsSet(STASHK(uid), JSON.stringify({ at: Date.now(), outbox: ob, drafts: { ...(prev.drafts || {}), ...drafts } }));
+  } catch { return false; }
+}
+// Al volver a entrar su dueño: se regresan a la cola (se suben solos) y los box score en curso se recuperan
+function unstashUserData(uid) {
+  let st = null; try { st = JSON.parse(localStorage.getItem(STASHK(uid)) || 'null'); } catch {}
+  if (!st) return;
+  const q = outbox(); (st.outbox || []).forEach(o => { if (!q.some(x => sameOp(x, o))) q.push(o); }); setOutbox(q);
+  Object.entries(st.drafts || {}).forEach(([k, v]) => { try { if (localStorage.getItem(k) == null) lsSet(k, v); } catch {} });
+  try { localStorage.removeItem(STASHK(uid)); } catch {}
+  const n = (st.outbox || []).length;
+  if (n) toast(`Se recuperaron ${n} cambio${n === 1 ? '' : 's'} sin subir de tu sesión anterior en este teléfono`);
+  draftChecked = '';
+}
+function clearUserData() { try { Object.keys(localStorage).filter(k => k === TEAMK || k === OUTK || k === OWNK || k.startsWith('bs-cache:') || k.startsWith('bs-draft:') || k.startsWith('bs-draft-done:')).forEach(k => localStorage.removeItem(k)); } catch {} }
 function markOwner() {
   if (!me || !me.id) return; let o = ''; try { o = localStorage.getItem(OWNK) || ''; } catch {}
   if (o === me.id) return false;
-  if (o) { clearUserData(); syncBadge(); } try { localStorage.setItem(OWNK, me.id); } catch {}
+  // Si no se pudo apartar lo pendiente (teléfono sin espacio), se conserva en la cola en vez de borrarlo
+  if (o) { if (stashUserData(o)) clearUserData(); else try { Object.keys(localStorage).filter(k => k === TEAMK || k.startsWith('bs-cache:')).forEach(k => localStorage.removeItem(k)); } catch {} syncBadge(); }
+  try { localStorage.setItem(OWNK, me.id); } catch {}
+  // Lo que estaba en pantalla era del usuario anterior (ya quedó apartado)
+  if (o) { draft = blankDraft(); draftSaved = ''; draftSavedKey = ''; draftBase = ''; cloudSent = ''; cloudDraft = null; cloudKnown = null; $('#draftBar').hidden = true; syncMetaInputs(); }
+  unstashUserData(me.id);
   return !!o;
 }
 // Equipo en la dirección (boxscoremx.vercel.app/aguilas). Sin equipo en la dirección se abre el inicio de la plataforma
@@ -1514,6 +1544,7 @@ async function loadHome() {
   }
   me = j.me; markOwner(); homeStats = j.stats || {}; curTeam = null; curTeamObj = null; apiCanEdit = false; SHARES = {};
   setPlat(true); renderAuthUI(); renderHome(); syncPath();
+  if (outbox().length) setTimeout(flushOutbox);
   if (curView !== 'admin') showView('inicio');
   if (me.mustChange && !$('#pwDlg').open) openPwDlg(true);
 }
@@ -1675,10 +1706,10 @@ function saveDraftLocal() {
 }
 // Copia en la nube: cada 8 s si hubo cambios, y en cuanto se sale de la app
 async function draftCloud(now) {
-  if (!api || !apiCanEdit || !curTeam || !storeReady || !draftHasContent(draft)) return;
+  if (!api || !me || !apiCanEdit || !curTeam || !storeReady || !draftHasContent(draft)) return;
   if (cloudTeam !== curTeam) { cloudTeam = curTeam; cloudSent = ''; }
   const dj = JSON.stringify(draft); if (dj === cloudSent || (cloudBusy && !now) || (!now && Date.now() - cloudLast < 8000)) return;
-  const body = { op: 'draftPut', team: curTeam, draft, at: draftAt || Date.now() };
+  const body = { op: 'draftPut', team: curTeam, owner: me.id, draft, at: draftAt || Date.now() };
   if (now) { try { fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true, credentials: 'same-origin' }); cloudSent = dj; } catch {} return; }
   cloudBusy = true; cloudLast = Date.now();
   try { await apiCall(body); cloudSent = dj; } catch {} finally { cloudBusy = false; }
@@ -4889,10 +4920,10 @@ $('#userBtn').addEventListener('click', () => {
 $('#udClose').addEventListener('click', () => $('#userDlg').close());
 $('#udPw').addEventListener('click', () => { $('#userDlg').close(); openPwDlg(false); });
 $('#udLogout').addEventListener('click', async () => {
-  // Antes de salir se intenta subir lo pendiente; lo que no suba se pierde al borrar los datos del teléfono
+  // Antes de salir se intenta subir lo pendiente; lo que no suba queda apartado a tu nombre en este teléfono
   await flushOutbox(); const n = outbox().length;
-  if (n && !confirm(`Hay ${n} cambio${n === 1 ? '' : 's'} sin subir (sin conexión). Si cierras sesión se pierde${n === 1 ? '' : 'n'}. ¿Cerrar sesión de todos modos?`)) return;
-  try { await apiCall({ op: 'logout' }); } catch {} clearUserData(); location.reload();
+  if (n && !confirm(`Hay ${n} cambio${n === 1 ? '' : 's'} sin subir (sin conexión). Se quedan guardados en este teléfono a tu nombre y se suben cuando vuelvas a entrar aquí. ¿Cerrar sesión?`)) return;
+  saveDraftLocal(); try { await apiCall({ op: 'logout' }); } catch {} if (stashUserData(me && me.id)) clearUserData(); location.reload();
 });
 
 const $$ = q => [...document.querySelectorAll(q)];

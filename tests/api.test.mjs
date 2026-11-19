@@ -180,11 +180,14 @@ await call({ op: 'login', email: 'coach@x.mx', password: 'secreta123' }, {}, { i
 // Copia en la nube del box score en curso
 r = await call(null, { team });
 ok('sin box score en curso la carga trae draft vacío', r.draft === null);
-r = await call({ op: 'draftPut', team, draft: { opp: 'Toros', cells: { '0_1': [{ res: 'H1' }] } }, at: 1000 });
+const myId = (await call(null, { team })).me.id;
+r = await call({ op: 'draftPut', team, draft: { opp: 'X' }, at: 1, owner: 'otro' });
+ok('una copia de otro usuario se rechaza', r.code === 409 && r.error === 'owner');
+r = await call({ op: 'draftPut', team, owner: myId, draft: { opp: 'Toros', cells: { '0_1': [{ res: 'H1' }] } }, at: 1000 });
 ok('se guarda el box score en curso', r.code === 200);
 r = await call(null, { team });
 ok('la carga lo devuelve para recuperarlo', r.draft && r.draft.at === 1000 && r.draft.draft.opp === 'Toros');
-await call({ op: 'draftPut', team, draft: { opp: 'Viejo' }, at: 500 });
+await call({ op: 'draftPut', team, owner: myId, draft: { opp: 'Viejo' }, at: 500 });
 r = await call(null, { team });
 ok('una copia más vieja no pisa a la nueva', r.draft.draft.opp === 'Toros');
 r = await call(null, { team, since: r.now });

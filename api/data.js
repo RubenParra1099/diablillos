@@ -369,6 +369,8 @@ export default async function handler(req, res) {
       // Box score en curso: se guarda solo el más reciente (at = hora del teléfono en ms)
       if (op === 'draftPut') {
         if (!isObj(b.draft)) fail(400, 'bad_request');
+        // La copia debe ser de quien tiene la sesión: si en el teléfono entró otro usuario, no se mezcla
+        if (b.owner !== me.id) fail(409, 'owner', 'Este box score es de otro usuario.');
         const json = JSON.stringify(b.draft); if (json.length > MAX_DOC) fail(413, 'too_big', 'El box score es demasiado grande.');
         const at = Number.isSafeInteger(b.at) && b.at > 0 ? b.at : Date.now();
         await p.query(`insert into bs_drafts (team_id, user_id, data, at) values ($1, $2, $3::jsonb, $4)
