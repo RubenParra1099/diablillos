@@ -4387,32 +4387,35 @@ async function pdfSave(doc, name) {
   if (pdfCapture) { pdfCapture.push({ name, data: doc.output('arraybuffer') }); return; }
   await saveFile(file, doc.output('arraybuffer'), 'application/pdf');
 }
-function recordLine() {
-  let w = 0, l = 0, rf = 0, ra = 0; seasonGames().forEach(g => { const s = gameScore(g); if (s.res === 'G') w++; else if (s.res === 'P') l++; rf += s.us; ra += s.them; });
+const MODE_LAB = { trad: 'Tradicional', chupon: 'Chupón', mzt: 'Torneo Mazatlán', all: 'Todas las modalidades' };
+const modeLab = () => MODE_LAB[curStatMode()] || '';
+function recordLine(gs = modeGames()) {
+  let w = 0, l = 0, rf = 0, ra = 0; gs.forEach(g => { const s = gameScore(g); if (s.res === 'G') w++; else if (s.res === 'P') l++; rf += s.us; ra += s.them; });
   return { w, l, rf, ra, pct: w + l ? fmtRate(w / (w + l)) : '.000' };
 }
 function pdfStats(kind) {
   const map = { b: ['#bTbl', 'Estadísticas de bateo', 'bateo'], p: ['#pTbl', 'Estadísticas de pitcheo', 'pitcheo'], f: ['#fTbl', 'Estadísticas de fildeo', 'fildeo'] }[kind];
-  const r = recordLine(), doc = pdfDoc('landscape', map[1], `Récord ${r.w}-${r.l} (${r.pct})`); if (!doc) return;
+  const gs = kind === 'b' ? rangeGames($('#bRange').value) : modeGames(), r = recordLine(gs);
+  const doc = pdfDoc('landscape', map[1], `${modeLab()} · ${gs.length} juegos · Récord ${r.w}-${r.l} (${r.pct})`, curStatMode() === 'mzt'); if (!doc) return;
   let y = pdfTable(doc, $(map[0]), 88);
   if (kind === 'b') { doc.setFontSize(7.5); doc.setTextColor(110); doc.text(pdfSafe($('#qualHint').textContent), 32, y - 6); }
   pdfSave(doc, map[2]);
 }
 function pdfSeason() {
-  const r = recordLine(), doc = pdfDoc('landscape', 'Reporte de temporada', `${seasonLabel()} · ${seasonGames().length} juegos`); if (!doc) return;
+  const gs = modeGames(), r = recordLine(gs), doc = pdfDoc('landscape', 'Reporte de temporada', `${seasonLabel()} · ${modeLab()} · ${gs.length} juegos`, curStatMode() === 'mzt'); if (!doc) return;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(26); doc.setTextColor(...RED);
   const stats = [[`${r.w}-${r.l}`, 'Récord'], [r.pct, 'Porcentaje'], [String(r.rf), 'Carreras a favor'], [String(r.ra), 'Carreras en contra'], [(r.rf - r.ra > 0 ? '+' : '') + (r.rf - r.ra), 'Diferencia']];
   stats.forEach(([v, k], i) => { const x = 32 + i * 146; doc.setFont('helvetica', 'bold'); doc.setFontSize(24); doc.setTextColor(...RED); doc.text(v, x, 112); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110); doc.text(k.toUpperCase(), x, 126); });
   let y = pdfSection(doc, 'Resultados', 156);
   doc.autoTable({ startY: y, theme: 'grid', margin: { left: 32, right: 32 }, head: [['#', 'Fecha', 'Rival', 'L/V', 'Marcador', 'Res.', 'Ganador / Perdedor']],
-    body: seasonGames().map(g => { const s = gameScore(g), dec = (g.pit || []).filter(p => p.dec === 'G' || p.dec === 'P').map(p => (p.dec === 'G' ? 'G: ' : 'P: ') + pName(p.pid)).join(' · ');
+    body: gs.map(g => { const s = gameScore(g), dec = (g.pit || []).filter(p => p.dec === 'G' || p.dec === 'P').map(p => (p.dec === 'G' ? 'G: ' : 'P: ') + pName(p.pid)).join(' · ');
       return [g.no || '', g.date, g.opp, g.ha === 'L' ? 'Local' : 'Visitante', `${s.us}-${s.them}`, s.res, dec].map(pdfSafe); }),
     styles: { fontSize: 8, cellPadding: 3, textColor: INK, lineColor: [225, 205, 207], lineWidth: .5 }, headStyles: { fillColor: RED, textColor: 255 },
     didParseCell: d => { if (d.section === 'body' && d.column.index === 5) { d.cell.styles.fontStyle = 'bold'; d.cell.styles.textColor = d.cell.raw === 'G' ? [47, 111, 79] : d.cell.raw === 'P' ? [122, 24, 32] : INK; } } });
   y = doc.lastAutoTable.finalY + 22;
   const prevB = [$('#bRange').value, $('#bQual').checked]; $('#bRange').value = 'all'; $('#bQual').checked = false; renderBat();
   y = pdfSection(doc, 'Bateo', y); y = pdfTable(doc, $('#bTbl'), y, { fs: 7 });
-  y = pdfSection(doc, 'Pitcheo', y); y = pdfTable(doc, $('#pTbl'), y);
+  renderPitStats(); y = pdfSection(doc, 'Pitcheo', y); y = pdfTable(doc, $('#pTbl'), y);
   const prevF = $('#fGroup').value; $('#fGroup').value = 'player'; renderFld();
   y = pdfSection(doc, 'Fildeo', y); y = pdfTable(doc, $('#fTbl'), y);
   $('#bRange').value = prevB[0]; $('#bQual').checked = prevB[1]; renderBat(); $('#fGroup').value = prevF; renderFld();
@@ -4778,7 +4781,8 @@ async function zipSeason() {
   const btn = $('#btnZipSeason'); btn.disabled = true;
   // Los box score y las fichas se arman en sus ventanas, ocultas mientras dura la descarga
   const hidden = ['#boxDlg', '#playerDlg'].map(s => $(s)); hidden.forEach(d => d.style.visibility = 'hidden');
-  const prevB = [$('#bRange').value, $('#bQual').checked], prevF = $('#fGroup').value;
+  const prevB = [$('#bRange').value, $('#bQual').checked], prevF = $('#fGroup').value, prevMode = statMode;
+  statMode = 'all'; // la temporada completa lleva todas las modalidades
   pdfCapture = [];
   try {
     const [JSZip, XLSX] = await Promise.all([loadLib('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'JSZip'), loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'XLSX')]);
@@ -4817,7 +4821,7 @@ async function zipSeason() {
     for (const [id, p] of Object.entries(S.roster)) { roster[id] = p.photo ? { ...p, photo: await photoData(p.photo) } : p; if (roster[id].photo === '') delete roster[id].photo; }
     const gs = Object.fromEntries(games.map(({ id, ...g }) => [id, g]));
     root.file(`Respaldo_${label}.json`, JSON.stringify({ app: 'dugout-boxscore', version: 1, exported: new Date().toISOString(), team: S.team, season: label, roster, games: gs })); step++;
-    const r = recordLine();
+    const r = recordLine(games);
     root.file('LEEME.txt', [`${S.team} · ${seasonLabel()}`, `Récord ${r.w}-${r.l} (${r.pct}) · ${games.length} juegos · descargado el ${today()}`, '',
       '01_Reporte_de_temporada.pdf  Récord, resultados y estadísticas del equipo.',
       gold ? '02 a 04  Bateo, pitcheo y fildeo de todos los jugadores.' : '', `Estadisticas_${label}.xlsx  Las mismas tablas en Excel.`,
@@ -4830,8 +4834,8 @@ async function zipSeason() {
     toast(`Temporada descargada: ${games.length} juegos${pids.length ? ' y ' + pids.length + ' fichas' : ''}`);
   } catch (e) { toast(e.message || 'No se pudo preparar la descarga.'); }
   finally {
-    pdfCapture = null; hidden.forEach(d => { if (d.open) d.close(); d.style.visibility = ''; });
-    $('#bRange').value = prevB[0]; $('#bQual').checked = prevB[1]; renderBat(); $('#fGroup').value = prevF; renderFld();
+    pdfCapture = null; statMode = prevMode; hidden.forEach(d => { if (d.open) d.close(); d.style.visibility = ''; });
+    renderPitStats(); $('#bRange').value = prevB[0]; $('#bQual').checked = prevB[1]; renderBat(); $('#fGroup').value = prevF; renderFld();
     btn.disabled = false; if (dlg.open) dlg.close();
   }
 }
