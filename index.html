@@ -3941,12 +3941,14 @@ $('#bdayDlg').addEventListener('click', e => { if (e.target === $('#bdayDlg')) $
 /* ---------- Tarjeta de temporada del jugador (Gold; en Básico se ve una muestra borrosa para invitar a subir de paquete) ---------- */
 const SC_DESIGNS = [{ k: 'season', name: 'Temporada', use: 'Toda la temporada' }, { k: 'last5', name: 'Últimos 5', use: 'Sus últimos 5 juegos' }];
 // Temporada elegida en el encabezado; con "Carrera completa" (y en el enlace para papás) se usa el año de su último juego
+// Usa la modalidad elegida (la misma de la ficha y las estadísticas); con "Todas" sale la temporada completa
 function seasonCardStats(pid) {
-  const played = sortedGames().filter(g => (g.lines || []).some(l => l.pid === pid && num(l.ab) + num(l.bb) + num(l.hbp) + num(l.sf) + num(l.sh) > 0));
+  const md = pfMode(), ml = md === 'all' ? '' : MODE_LAB[md];
+  const played = sortedGames().filter(g => (md === 'all' || gameMode(g) === md) && (g.lines || []).some(l => l.pid === pid && num(l.ab) + num(l.bb) + num(l.hbp) + num(l.sf) + num(l.sh) > 0));
   const sy = seasonNow(), y = sy === 'all' ? String((played[played.length - 1] || {}).date || today()).slice(0, 4) : sy;
   const ys = played.filter(g => String(g.date || '').slice(0, 4) === y);
   const mk = (gs, lab) => { const b = gs.length && aggBat(gs)[pid]; return b ? { b, g: gs.length, lab } : null; };
-  return { y, season: mk(ys, `Reporte de bateo · temporada ${y}`), last5: ys.length > 5 ? mk(ys.slice(-5), 'Reporte de bateo · últimos 5 juegos') : null };
+  return { y, season: mk(ys, ml ? `Bateo · ${ml} ${y}` : `Reporte de bateo · temporada ${y}`), last5: ys.length > 5 ? mk(ys.slice(-5), ml ? `Últimos 5 · ${ml}` : 'Reporte de bateo · últimos 5 juegos') : null };
 }
 function scBest(b) {
   const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`, parts = [pl(b.h, 'hit', 'hits')];
@@ -4002,7 +4004,7 @@ function scCardData(p, st) {
 async function openSeasonCard(pid) {
   const p = S.roster[pid]; if (!p) return;
   const st = seasonCardStats(pid);
-  if (!st.season) { toast(`${p.name} todavía no tiene turnos al bat en la temporada.`); return; }
+  if (!st.season) { toast(`${p.name} todavía no tiene turnos al bat en ${pfMode() === 'all' ? 'la temporada' : MODE_LAB[pfMode()]}.`); return; }
   if (!has('gold')) { teaserSeasonCard(p, st); return; }
   await openCards({ title: `Tarjeta de temporada · ${p.name}`, d: scCardData(p, st), designs: SC_DESIGNS.filter(x => st[x.k]),
     draw: { season: (ctx, d) => scDraw(ctx, { ...d, s: d.season }), last5: (ctx, d) => scDraw(ctx, { ...d, s: d.last5 }) },
