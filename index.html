@@ -814,7 +814,7 @@ body.live .record{display:none!important}
     <div class="plat-hero"><span id="platLogo"></span><div class="bsmx-word"><b>BoxScore</b><span>MX</span></div></div>
     <div class="brand">
       <div style="min-width:0;flex:1 1 220px">
-        <div class="eyebrow"><label class="season-lab">Temporada <select id="seasonSel" class="season-sel" aria-label="Temporada"></select></label> · Box score</div>
+        <div class="eyebrow"><label class="season-lab">Temporada <select id="seasonSel" class="season-sel" aria-label="Temporada"></select></label> · <select id="mSelTop" class="modeSel season-sel" aria-label="Modalidad del récord y las estadísticas"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select> · Box score</div>
         <h1><input id="teamName" aria-label="Nombre del equipo" value="Mi equipo" maxlength="40"></h1>
         <select id="teamSel" class="team-sel" hidden aria-label="Cambiar de equipo"></select>
       </div>
@@ -1934,7 +1934,7 @@ function pitTotals(od) { const t = { outs: 0, ...zero(PITK) }; effPit(od).forEac
 function renderHeader() {
   const inp = $('#teamName'); if (document.activeElement !== inp) inp.value = S.team;
   let w = 0, l = 0, rd = 0;
-  seasonGames().forEach(g => { const s = gameScore(g); if (s.res === 'G') w++; else if (s.res === 'P') l++; rd += s.us - s.them; });
+  syncModeSel(); pfGames().forEach(g => { const s = gameScore(g); if (s.res === 'G') w++; else if (s.res === 'P') l++; rd += s.us - s.them; });
   $('#recW').textContent = w; $('#recL').textContent = l;
   $('#recPct').textContent = w + l ? fmtRate(w / (w + l)) : '.000';
   $('#recRD').textContent = (rd > 0 ? '+' : '') + rd;
@@ -2558,8 +2558,8 @@ let statMode = null;
 const gameMode = g => g.mode || 'trad';
 function curStatMode() { if (statMode) return statMode; const gs = seasonGames(); return gs.length ? gameMode(gs[gs.length - 1]) : 'trad'; }
 const modeGames = () => { const m = curStatMode(); return seasonGames().filter(g => m === 'all' || gameMode(g) === m); };
-document.querySelectorAll('.modeSel').forEach(el => el.addEventListener('change', e => { statMode = e.target.value; renderBat(); renderPitStats(); renderFld(); }));
-function syncModeSel() { const m = curStatMode(); document.querySelectorAll('.modeSel').forEach(el => { if (el.value !== m) el.value = m; }); }
+document.querySelectorAll('.modeSel').forEach(el => el.addEventListener('change', e => { statMode = e.target.value; renderHeader(); renderBat(); renderPitStats(); renderFld(); }));
+function syncModeSel() { const m = pfMode(); document.querySelectorAll('.modeSel').forEach(el => { if (el.value !== m) el.value = m; }); }
 function rangeGames(sel) { const gs = modeGames(); return sel === 'all' ? gs : gs.slice(-Number(sel)); }
 
 /* ---------- BATEO ---------- */
@@ -3750,7 +3750,7 @@ function openPlayer(pid) {
     ${pitT ? `<div><h3 style="margin-bottom:6px">Pitcheo · temporada</h3><div class="scroll">${pitT}</div></div>` : ''}
     ${fldT ? `<div><h3 style="margin-bottom:6px">Fildeo por posición</h3><div class="scroll">${fldT}</div></div>` : ''}
     ${logT ? `<div><h3 style="margin-bottom:6px">Juego por juego</h3><div class="scroll">${logT}</div></div>` : ''}`;
-  $('#pfMode').onchange = e => { statMode = e.target.value; openPlayer(pid); if (!shareMode) { renderBat(); renderPitStats(); renderFld(); } };
+  $('#pfMode').onchange = e => { statMode = e.target.value; renderHeader(); openPlayer(pid); if (!shareMode) { renderBat(); renderPitStats(); renderFld(); } };
   $('#pfClose').onclick = () => $('#playerDlg').close();
   $('#pfPdf').onclick = () => pdfPlayer(pid);
   $('#pfProj').onclick = () => { pjPid = pid; $('#playerDlg').close(); showView('proy'); renderProj(); };
