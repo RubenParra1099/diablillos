@@ -212,9 +212,12 @@ nav.tabs .user-btn{margin-left:6px}
 .subtabs button:hover{background:rgba(255,255,255,.22)}
 .subtabs button[aria-selected="true"]{background:var(--bulb);color:var(--board-2)}
 .subtabs button:focus-visible{outline:2px solid var(--bulb);outline-offset:2px}
-.season-lab{display:inline-flex;align-items:center;gap:6px}
-.season-sel{font:inherit;letter-spacing:inherit;text-transform:inherit;background:transparent;color:inherit;border:1px solid rgba(255,255,255,.5);border-radius:4px;padding:1px 4px;cursor:pointer}
-.season-sel option{color:#1e1f22;background:#fff}
+/* Temporada y modalidad: mismos selectores que el de equipo; en el celular, uno por línea */
+.top-sels{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;opacity:1}
+.season-lab{display:inline-flex;align-items:center;gap:8px}
+.season-lab>span{opacity:.8}
+.season-lab .team-sel{margin-top:0;cursor:pointer}
+@media (max-width:600px){.top-sels{flex-direction:column;align-items:stretch}.season-lab>span{min-width:84px}.season-lab .team-sel{flex:1;min-width:0}}
 .team-logo{width:38px;height:38px;object-fit:contain;border-radius:6px;background:var(--chip);vertical-align:middle}
 .hero .team-name{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,7vw,72px);color:#fff;text-transform:uppercase;letter-spacing:.02em;text-shadow:0 4px 14px rgba(60,0,4,.55);justify-self:center;text-align:center;line-height:1}
 .auth{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:radial-gradient(ellipse at 50% 30%,#2a4a77 0%,#0c2340 55%,#06142a 100%);overflow:auto}
@@ -814,7 +817,7 @@ body.live .record{display:none!important}
     <div class="plat-hero"><span id="platLogo"></span><div class="bsmx-word"><b>BoxScore</b><span>MX</span></div></div>
     <div class="brand">
       <div style="min-width:0;flex:1 1 220px">
-        <div class="eyebrow"><label class="season-lab">Temporada <select id="seasonSel" class="season-sel" aria-label="Temporada"></select></label> · <select id="mSelTop" class="modeSel season-sel" aria-label="Modalidad del récord y las estadísticas"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select> · Box score</div>
+        <div class="eyebrow top-sels"><label class="season-lab"><span>Temporada</span><select id="seasonSel" class="team-sel" aria-label="Temporada"></select></label><label class="season-lab"><span>Modalidad</span><select id="mSelTop" class="modeSel team-sel" aria-label="Modalidad del récord y las estadísticas"><option value="trad">Tradicional</option><option value="chupon">Chupón</option><option value="mzt">Torneo Mazatlán</option><option value="all">Todas</option></select></label></div>
         <h1><input id="teamName" aria-label="Nombre del equipo" value="Mi equipo" maxlength="40"></h1>
         <select id="teamSel" class="team-sel" hidden aria-label="Cambiar de equipo"></select>
       </div>
