@@ -2092,7 +2092,7 @@ $('#card').addEventListener('change', e => {
 });
 $('#card').addEventListener('click', e => {
   const act = e.target.closest('button[data-act]');
-  if (act) { const s = cur().slots[+act.closest('tr').dataset.si]; s.sub = act.dataset.act === 'addsub' ? (side === 'us' ? { pid: '', pos: '', from: '' } : { num: '', name: '', pos: '', from: '' }) : null; renderSheet(); return; }
+  if (act) { if (act.dataset.act === 'rmsub' && !confirm('¿Quitar a este sustituto del box score?')) return; const s = cur().slots[+act.closest('tr').dataset.si]; s.sub = act.dataset.act === 'addsub' ? (side === 'us' ? { pid: '', pos: '', from: '' } : { num: '', name: '', pos: '', from: '' }) : null; renderSheet(); return; }
   const b = e.target.closest('td.cell button'); if (!b) return;
   openPA(+b.dataset.si, +b.dataset.inn, 0);
 });
@@ -2166,6 +2166,7 @@ $('#paTabs').addEventListener('click', e => { const b = e.target.closest('button
 $('#paCs').addEventListener('change', e => { if (e.target.checked && !num(paCtx.pa.out)) { paCtx.pa.out = nextOut(paCtx.si, paCtx.inn, paCtx.idx); paRender(); } });
 $('#paCancel').addEventListener('click', () => $('#paDlg').close());
 $('#paDel').addEventListener('click', () => {
+  if (!confirm('¿Borrar este turno? Se quita del box score.')) return;
   const c = cur(), key = paCtx.si + '_' + paCtx.inn, arr = c.cells[key] || [];
   arr.splice(paCtx.idx, 1); if (arr.length) c.cells[key] = arr; else delete c.cells[key];
   $('#paDlg').close(); renderSheet();
@@ -2256,7 +2257,7 @@ $('#pitTbl').addEventListener('change', e => {
   if (el.dataset.f === 'dec' && el.value) draft.pit.forEach(q => { if (q !== p && q.dec === el.value) q.dec = ''; });
   p[el.dataset.f] = el.value; renderPit(); renderFldTbl(); renderLine(); renderChecks();
 });
-$('#pitTbl').addEventListener('click', e => { const b = e.target.closest('button[data-act="rm"]'); if (!b) return; draft.pit.splice(+b.closest('tr').dataset.i, 1); renderPit(); renderFldTbl(); renderLine(); renderChecks(); });
+$('#pitTbl').addEventListener('click', e => { const b = e.target.closest('button[data-act="rm"]'); if (!b || !confirm('¿Quitar a este lanzador del box score?')) return; draft.pit.splice(+b.closest('tr').dataset.i, 1); renderPit(); renderFldTbl(); renderLine(); renderChecks(); });
 
 /* ---------- Defensiva ---------- */
 function renderFldTbl() {
@@ -3126,7 +3127,7 @@ function bindGoals(pid) {
   if (f) f.onsubmit = e => { e.preventDefault(); const k = host.querySelector('#goalK').value, raw = host.querySelector('#goalT').value.trim(); let v = parseFloat(raw.replace(',', '.').replace('%', ''));
     if (!isFinite(v)) { toast('Escribe la meta, por ejemplo 15% o .350.'); return; } if (GOAL_DEFS[k][1] === 'p' || v > 1) v = v > 1 ? v / 100 : v;
     save([...(Array.isArray(S.roster[pid].goals) ? S.roster[pid].goals : []).filter(g => g.k !== k), { k, t: v }]); };
-  host.querySelectorAll('[data-goal-rm]').forEach(b => b.onclick = () => save((S.roster[pid].goals || []).filter((_, i) => i !== +b.dataset.goalRm)));
+  host.querySelectorAll('[data-goal-rm]').forEach(b => b.onclick = () => confirm('¿Quitar esta meta?') && save((S.roster[pid].goals || []).filter((_, i) => i !== +b.dataset.goalRm)));
 }
 
 /* ---------- U4 resumen para WhatsApp ---------- */
@@ -3164,7 +3165,7 @@ function openShareDlg(pid) {
     if ($('#shCreate')) $('#shCreate').onclick = () => guarded(async () => { const r = await apiCall({ op: 'shareCreate', team: curTeam, pid }); SHARES[pid] = r.token; paint(); }, 'Enlace creado');
     if ($('#shCopy')) $('#shCopy').onclick = async () => { try { await navigator.clipboard.writeText(link(t)); toast('Enlace copiado'); } catch { $('#shLink').select(); } };
     if ($('#shWa')) $('#shWa').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(`Ficha de ${p.name} en ${S.team}: ${link(t)}`), '_blank', 'noopener');
-    if ($('#shRevoke')) $('#shRevoke').onclick = () => guarded(async () => { await apiCall({ op: 'shareRevoke', team: curTeam, pid }); delete SHARES[pid]; paint(); }, 'Enlace desactivado: el anterior ya no funciona');
+    if ($('#shRevoke')) $('#shRevoke').onclick = () => confirm('¿Desactivar el enlace? Quien lo tenga ya no podrá abrirlo.') && guarded(async () => { await apiCall({ op: 'shareRevoke', team: curTeam, pid }); delete SHARES[pid]; paint(); }, 'Enlace desactivado: el anterior ya no funciona');
   };
   paint(); if (!$('#shareDlg').open) $('#shareDlg').showModal();
 }
@@ -3261,7 +3262,7 @@ function openLiveDlg() {
     };
     if ($('#lvCopy')) $('#lvCopy').onclick = async () => { try { await navigator.clipboard.writeText(liveLink(t)); toast('Enlace copiado'); } catch { $('#lvLink').select(); } };
     if ($('#lvWa')) $('#lvWa').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(`Sigue en vivo a ${S.team}${draft.opp ? ' vs ' + draft.opp : ''}: ${liveLink(t)}`), '_blank', 'noopener');
-    if ($('#lvRevoke')) $('#lvRevoke').onclick = () => guarded(async () => { await apiCall({ op: 'liveRevoke', team: curTeam }); LIVE = ''; draft.live = false; liveSent = ''; paint(); renderLiveBtn(); }, 'Enlace desactivado: el anterior ya no funciona');
+    if ($('#lvRevoke')) $('#lvRevoke').onclick = () => confirm('¿Desactivar el enlace en vivo? Quien lo tenga ya no podrá seguir el juego.') && guarded(async () => { await apiCall({ op: 'liveRevoke', team: curTeam }); LIVE = ''; draft.live = false; liveSent = ''; paint(); renderLiveBtn(); }, 'Enlace desactivado: el anterior ya no funciona');
   };
   paint(); if (!$('#shareDlg').open) $('#shareDlg').showModal();
 }
